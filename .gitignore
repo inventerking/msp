@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+dist/
+build/
+bin/
+*.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local Docker data
+.data/
+
+# Editors and OS
+.idea/
+.DS_Store
+*.swp
+
+# Tool caches
+.pnpm-store/
+.eslintcache
+.vite/
+graphify-out/
