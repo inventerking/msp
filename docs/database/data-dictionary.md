@@ -735,6 +735,7 @@ MSP user sessions; the active tenant is held server-side.
 | `ip_hash` | `bytea` | yes |  |  |
 | `user_agent` | `text` | yes |  |  |
 | `mfa_verified_at` | `timestamptz` | yes |  |  |
+| `last_auth_at` | `timestamptz` |  |  |  |
 | `expires_at` | `timestamptz` |  |  |  |
 | `idle_expires_at` | `timestamptz` |  |  |  |
 | `revoked_at` | `timestamptz` | yes |  |  |
@@ -877,6 +878,7 @@ Mandatory MFA factors for platform admins.
 | `credential_id` | `bytea` | yes |  |  |
 | `public_key` | `bytea` | yes |  |  |
 | `verified_at` | `timestamptz` | yes |  |  |
+| `last_used_at` | `timestamptz` | yes |  |  |
 
 ### `identity.platform_admin_sessions`
 
@@ -896,8 +898,10 @@ Short-lived admin sessions, never interchangeable with MSP sessions.
 | `token_hash` | `bytea` |  |  |  |
 | `ip_hash` | `bytea` | yes |  |  |
 | `user_agent` | `text` | yes |  |  |
-| `mfa_verified_at` | `timestamptz` |  |  |  |
+| `mfa_verified_at` | `timestamptz` | yes |  |  |
+| `last_auth_at` | `timestamptz` |  |  |  |
 | `expires_at` | `timestamptz` |  |  |  |
+| `idle_expires_at` | `timestamptz` |  |  |  |
 | `revoked_at` | `timestamptz` | yes |  |  |
 
 ## Schema `shared` — Shared identity and reference data
@@ -4214,6 +4218,7 @@ Tamper-evident audit trail, partitioned monthly.
 | `correlation_id` | `uuid` | yes |  |  |
 | `before` | `jsonb` | yes |  | redacted |
 | `after` | `jsonb` | yes |  | redacted |
+| `chain_seq` | `bigint` |  |  | per-tenant order, assigned under a lock |
 | `prev_hash` | `bytea` | yes |  |  |
 | `row_hash` | `bytea` |  |  |  |
 | `occurred_at` | `timestamptz` |  | PK |  |

@@ -28,7 +28,7 @@ Deny by default; authorize on the server; assume input is hostile; least privile
 | Rate limits | By IP, user, tenant, route class and provider; stricter on login, reset, public forms and search |
 | Secrets | Managed secret store; never in images or source. The specific product is D-23 |
 | Provider credentials | Envelope encryption with `key_id`; rotation supported |
-| Audit | Same-transaction audit events, hash chained, no update or delete rights |
+| Audit | Same-transaction audit events, hash chained with a per-tenant sequence, no update or delete rights; `audit.verify_chain` reports altered, missing or unlinked rows |
 | Idempotency | Keys on all external effects |
 | Safe errors | Problem Details; no internals; `404` for other tenants' objects |
 | Dependency scanning | Go and npm vulnerability scans, image scan, licence check and pinned versions in CI; secret scanning |

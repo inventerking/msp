@@ -2049,6 +2049,7 @@ erDiagram
         uuid correlation_id
         jsonb before
         jsonb after
+        bigint chain_seq
         bytea prev_hash
         bytea row_hash
         timestamptz occurred_at PK

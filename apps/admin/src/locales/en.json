@@ -1,0 +1,214 @@
+{
+  "common": {
+    "loading": "Loading",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "signOut": "Sign out",
+    "loadMore": "Load more"
+  },
+  "shell": {
+    "title": "Platform Admin",
+    "banner": "Platform administration: changes here affect customer workspaces"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "tenants": "Tenants",
+    "catalog": "Catalog",
+    "subscriptions": "Subscriptions",
+    "audit": "Audit log",
+    "admins": "Platform admins"
+  },
+  "login": {
+    "title": "Administrator sign-in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Continue",
+    "verifyTitle": "Two-step verification",
+    "verifyBody": "Enter the code from your authenticator app.",
+    "enrollTitle": "Set up two-step verification",
+    "enrollBody": "This is required for all platform administrators. Add this key to your authenticator app, then enter the code it shows.",
+    "openApp": "Open in authenticator app",
+    "code": "Code",
+    "verify": "Verify"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Signed in as {{name}}.",
+    "awaiting": "Subscriptions awaiting activation",
+    "tenants": "Tenants (first 100)",
+    "suspended": "Suspended tenants",
+    "limited": "Your role has access to the catalog and provider configuration."
+  },
+  "tenants": {
+    "title": "Tenants",
+    "empty": "No tenants yet",
+    "name": "Name",
+    "status": "Status",
+    "created": "Created",
+    "states": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "pending": "Pending",
+      "offboarding": "Offboarding"
+    }
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Not purchased",
+    "pending": "Pending activation",
+    "suspended": "Suspended",
+    "expired": "Expired",
+    "revoked": "Revoked"
+  },
+  "tenant": {
+    "modules": "Module access",
+    "module": "Module",
+    "status": "Status",
+    "suspend": "Suspend tenant",
+    "reactivate": "Reactivate tenant",
+    "actions": {
+      "activate": "Activate",
+      "suspend": "Suspend",
+      "expire": "Expire",
+      "revoke": "Revoke"
+    },
+    "confirm": {
+      "activate": "Activate {{module}} for {{tenant}}?",
+      "suspend": "Suspend {{module}} for {{tenant}}?",
+      "expire": "Expire {{module}} for {{tenant}}?",
+      "revoke": "Revoke {{module}} for {{tenant}}?"
+    },
+    "confirmBody": {
+      "activate": "All members of the workspace with a suitable role gain access immediately. Without an existing purchase, this needs a Super Admin.",
+      "suspend": "Access stops immediately. Data is retained, and this can be reversed.",
+      "expire": "Access stops immediately because the entitlement has ended.",
+      "revoke": "Access stops immediately. Only a Super Admin can restore it."
+    },
+    "tenantConfirm": {
+      "suspend": "Suspend {{tenant}}?",
+      "reactivate": "Reactivate {{tenant}}?"
+    },
+    "reason": "Reason (kept in the audit log)",
+    "recordSubscription": "Record a subscription",
+    "plan": "Plan",
+    "planHint": "This records the subscription as awaiting activation. It grants no access yet.",
+    "choosePlan": "Choose a plan",
+    "record": "Record",
+    "planHasNoPrice": "This plan has no current price. Set one in the catalog first.",
+    "users": "Workspace users",
+    "noUsers": "No users",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role"
+  },
+  "subscriptions": {
+    "title": "Subscriptions",
+    "subtitle": "Access begins only when an administrator activates a subscription.",
+    "empty": "No subscriptions yet",
+    "plan": "Plan",
+    "tenant": "Tenant",
+    "status": "Status",
+    "created": "Created",
+    "openTenant": "Open tenant",
+    "activate": "Activate",
+    "confirmTitle": "Activate this subscription?",
+    "confirmBody": "All modules in the plan become available to the workspace immediately.",
+    "states": {
+      "pending_activation": "Awaiting activation",
+      "active": "Active",
+      "trialing": "Trial",
+      "past_due": "Past due",
+      "suspended": "Suspended",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    }
+  },
+  "catalog": {
+    "title": "Catalog",
+    "subtitle": "Modules are what the product can do. Products are what is sold. A published version never changes.",
+    "modules": "Modules",
+    "products": "Products and bundles",
+    "name": "Name",
+    "key": "Key",
+    "status": "Status",
+    "kind": "Kind",
+    "version": "Version",
+    "versionLabel": "v{{version}} {{status}}",
+    "contents": "Modules included",
+    "publish": "Publish",
+    "newProduct": "New product or bundle",
+    "newProductHint": "Saved as a draft. Publish it before creating plans.",
+    "description": "Description",
+    "createProduct": "Create draft",
+    "plans": "Plans and prices",
+    "period": "Billing period",
+    "prices": "Current prices (minor units)",
+    "noPrice": "No price",
+    "setPrice": "Set price",
+    "currency": "Currency",
+    "amountMinor": "Amount in minor units",
+    "amountHint": "For example, 1000 means 10.00 in USD. Setting a price ends the current one.",
+    "savePrice": "Save price",
+    "newPlan": "New plan",
+    "product": "Published product",
+    "chooseProduct": "Choose a product",
+    "trialDays": "Trial days",
+    "createPlan": "Create plan"
+  },
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "Every accountable action, across all tenants. This record cannot be changed.",
+    "empty": "No events yet",
+    "when": "When",
+    "action": "Action",
+    "actor": "Actor",
+    "tenant": "Tenant",
+    "outcome": "Outcome"
+  },
+  "admins": {
+    "title": "Platform admins",
+    "subtitle": "These accounts are entirely separate from workspace users.",
+    "name": "Name",
+    "email": "Email",
+    "roles": "Roles",
+    "role": "Role",
+    "status": "Status",
+    "add": "Add an administrator",
+    "initialPassword": "Initial password",
+    "passwordHint": "They will set up two-step verification at first sign-in.",
+    "create": "Create administrator",
+    "roleNames": {
+      "super_admin": "Super Admin",
+      "platform_support": "Platform Support",
+      "billing_admin": "Billing Admin",
+      "integration_admin": "Integration Admin",
+      "platform_analyst": "Platform Analyst"
+    }
+  },
+  "validation": {
+    "required": "This field is required",
+    "email": "Enter a valid email address",
+    "passwordLength": "Use between 12 and 256 characters",
+    "mfaCode": "Enter the full code",
+    "tooShort": "Use at least 2 characters",
+    "currencyCode": "Use a 3-letter currency code, such as USD",
+    "key": "Use 2 to 64 lowercase letters, digits or underscores",
+    "pickModule": "Choose at least one module"
+  },
+  "errors": {
+    "internal_error": "Something went wrong on our side. Please try again.",
+    "invalid_credentials": "Incorrect email or password.",
+    "rate_limited": "Too many attempts. Please wait a while and try again.",
+    "csrf_failed": "Please refresh the page and try again.",
+    "mfa_code_invalid": "That code is not valid.",
+    "mfa_required": "Two-step verification is required.",
+    "insufficient_role": "Your role does not allow this.",
+    "invalid_transition": "That change is not possible from the current state.",
+    "not_found": "We could not find that.",
+    "price_unavailable": "This plan has no price in that currency.",
+    "product_key_taken": "A product with this key already exists.",
+    "plan_key_taken": "A plan with this key already exists.",
+    "admin_exists": "An administrator with this email already exists.",
+    "validation_failed": "Some fields need attention."
+  }
+}

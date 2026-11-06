@@ -1,0 +1,3 @@
+package: modulesapi
+output: internal/api/modulesapi/gen.go
+generate: {models: true, embedded-spec: true}

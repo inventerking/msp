@@ -1,0 +1,3 @@
+package: adminapi
+output: internal/api/adminapi/gen.go
+generate: {chi-server: true, models: true, embedded-spec: true}

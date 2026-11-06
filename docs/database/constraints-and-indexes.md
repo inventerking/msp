@@ -1872,6 +1872,7 @@ A foreign key may cross a schema boundary only to `identity.tenants`, `shared.co
 - **Check:** `outcome IN ('success','denied','failed')`
 - **Index:** `(tenant_id, occurred_at DESC)`
 - **Index:** `(resource_type, resource_id, occurred_at DESC)`
+- **Index:** `(tenant_id, chain_seq DESC)`
 - **Partitioning:** `RANGE (occurred_at) monthly`
 
 ### `audit.security_events`

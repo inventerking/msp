@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info: {title: MSP Growth Engine Module API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /lead-generation/status:
+    get:
+      operationId: getLeadGenerationStatus
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /competitor-intelligence/status:
+    get:
+      operationId: getCompetitorIntelligenceStatus
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /outreach/status:
+    get:
+      operationId: getOutreachStatus
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /it-assessments/status:
+    get:
+      operationId: getItAssessmentsStatus
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /crm/status:
+    get:
+      operationId: getCrmStatus
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /proposals/status:
+    get:
+      operationId: getProposalsStatus
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /visitor-intelligence/status:
+    get:
+      operationId: getVisitorIntelligenceStatus
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /chatbot/status:
+    get:
+      operationId: getChatbotStatus
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /customer-expansion/status:
+    get:
+      operationId: getCustomerExpansionStatus
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+  /sales-intelligence/status:
+    get:
+      operationId: getSalesIntelligenceStatus
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleStatus"}}}}
+        default: {description: Error, content: {application/problem+json: {schema: {$ref: "#/components/schemas/Problem"}}}}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  schemas:
+    ModuleStatus:
+      type: object
+      required: [module, status]
+      properties:
+        module: {type: string}
+        status: {type: string}
+    Problem:
+      type: object
+      required: [code, title, status]
+      properties:
+        code: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        module_key: {type: string}
+        module_status: {type: string}

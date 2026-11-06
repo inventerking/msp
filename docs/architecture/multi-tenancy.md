@@ -47,7 +47,7 @@ Public surfaces derive the tenant from a server-side lookup of a credential: the
 | `msp_owner` | Migrations only | Owner | Never used at runtime |
 | `msp_app` | API and workers for tenant work | Enforced | No `BYPASSRLS`, no DDL |
 | `msp_platform` | Platform-admin use cases | Scoped policies | Explicit cross-tenant read on named tables only; each use case audited |
-| `msp_system` | Schedulers and dispatch | Limited | Reads only job, schedule and outbox tables across tenants |
+| `msp_system` | Schedulers, dispatch and housekeeping | Limited | Reads job, schedule and outbox tables across tenants, and removes expired sessions and tokens |
 | `msp_ingest` | Visitor batch writer | Enforced | Insert only on visitor tables, with per-batch tenant context |
 | `msp_readonly` | Support diagnostics, backups verification | Enforced | Excludes credential and PII columns |
 

@@ -64,6 +64,7 @@ These are suggested defaults, stored as data. **Y** allows, **R** is read-only, 
 | Permission | Owner | MSP Admin | Sales Mgr | Sales Rep | Marketing Mgr | Analyst | Viewer |
 |---|---|---|---|---|---|---|---|
 | `team.manage` | Y | Y | – | – | – | – | – |
+| `team.read` | Y | Y | Y | Y | Y | Y | Y |
 | `settings.manage` | Y | Y | – | – | – | – | – |
 | `integrations.manage` | Y | Y | – | – | – | – | – |
 | `billing.manage` | Y | Y* | – | – | – | – | – |

@@ -1,0 +1,23 @@
+version: "2"
+overrides:
+  go:
+    overrides:
+      - {db_type: uuid, go_type: github.com/google/uuid.UUID}
+      - {db_type: uuid, nullable: true, go_type: {import: github.com/google/uuid, type: UUID, pointer: true}}
+      - {db_type: citext, go_type: string}
+      - {db_type: citext, nullable: true, go_type: {type: string, pointer: true}}
+      - {db_type: timestamptz, go_type: time.Time}
+      - {db_type: timestamptz, nullable: true, go_type: {import: time, type: Time, pointer: true}}
+sql:
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/platform/identity/queries.sql
+    gen: {go: {package: repo, out: internal/platform/identity/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/platform/commercial/queries.sql
+    gen: {go: {package: repo, out: internal/platform/commercial/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/platform/audit/queries.sql
+    gen: {go: {package: repo, out: internal/platform/audit/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}

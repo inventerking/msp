@@ -1,0 +1,13 @@
+version: "2"
+linters:
+  default: standard
+  enable: [bodyclose, errorlint, gosec, misspell, nilerr, rowserrcheck, sqlclosecheck, unconvert]
+  settings:
+    gosec:
+      excludes:
+        - G117 # API request types legitimately have password fields.
+  exclusions:
+    generated: strict
+    rules:
+      - path: _test\.go
+        linters: [gosec, errcheck, bodyclose]

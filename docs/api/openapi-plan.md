@@ -1,10 +1,10 @@
 # OpenAPI plan
 
-Status: planning, pending approval. This is an outline: no OpenAPI files exist yet.
+Status: Phase 1 contracts exist in `api/openapi/`: `tenant.yaml`, `admin.yaml` and `modules.yaml`. The rest of this plan describes where they are heading.
 
 ## Approach
 
-- OpenAPI 3.1, with the contract as the source of truth, written before handlers (contract-first).
+- OpenAPI 3.0.3, with the contract as the source of truth, written before handlers (contract-first). The plan said 3.1, but oapi-codegen does not fully support it yet.
 - One document per surface, so internal and public APIs can be published and reviewed separately.
 
 | Document | Scope |

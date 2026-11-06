@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "@msp/design-tokens/tokens.css";
+@source "../../../packages/ui/src";
+
+/* A distinct look, so nobody mistakes the platform console for a customer workspace. */
+@theme {
+  --color-brand: #8a4b08;
+  --color-brand-strong: #6f3c06;
+  --color-brand-soft: #f8ecd9;
+  --color-rail: #231a10;
+  --color-rail-hover: #3a2b1a;
+  --color-rail-ink: #e2d6c6;
+}

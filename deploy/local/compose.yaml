@@ -1,0 +1,32 @@
+# Local development dependencies. Ports avoid the common defaults on purpose.
+name: msp-engine
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg18-trixie
+    environment:
+      POSTGRES_PASSWORD: dev_superuser
+    ports: ["127.0.0.1:55432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./postgres/00-roles.sql:/docker-entrypoint-initdb.d/00-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d msp_engine"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:8.8-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports: ["127.0.0.1:56379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:51025:1025"
+      - "127.0.0.1:58025:8025"
+volumes:
+  pgdata:

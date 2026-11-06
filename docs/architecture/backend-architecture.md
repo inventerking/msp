@@ -12,14 +12,17 @@ backend/
       leadgeneration/  competitorintel/  outreach/  itassessment/  crm/
       proposals/  visitorintel/  chatbot/  customerexpansion/  salesintel/
     platform/              shared services with business meaning
-      identity/  tenancy/  catalog/  subscription/  billing/  entitlement/
-      companyidentity/  contactidentity/  aigateway/  integration/
-      email/  calendar/  companydata/  notification/  audit/  usage/  files/  pdf/
+      identity/    users, sessions, MFA, tenants, memberships, platform admins (identity schema)
+      commercial/  modules, products, plans, subscriptions, entitlements (platform schema)
+      audit/       audit and security events (audit schema)
+      Phase 2 adds: companyidentity/  contactidentity/  aigateway/  integration/
+      email/  calendar/  companydata/  notification/  usage/  files/  pdf/
     kernel/                technical building blocks with no business meaning
-      db/  tenantctx/  httpserver/  authz/  outbox/  eventbus/  jobs/
-      egress/  crypto/  money/  logging/  metrics/  tracing/  idempotency/  redis/
-db/migrations/             central, ordered, prefixed by schema
-api/openapi/               OpenAPI source
+      config/  db/  crypto/  apperr/  authctx/  mailer/  ratelimit/  realtime/  modulekit/
+      Phase 2 adds: outbox/  eventbus/  jobs/  egress/  money/  metrics/  tracing/  idempotency/
+    api/                   HTTP layer: generated contract code, guards and handlers
+  db/migrations/           central, ordered migrations, embedded in the binary
+api/openapi/               OpenAPI source: tenant.yaml, admin.yaml, modules.yaml
 deploy/                    Docker and Traefik configuration
 apps/  packages/           frontend, see frontend-architecture
 docs/

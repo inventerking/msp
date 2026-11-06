@@ -1,0 +1,22 @@
+extends: ["spectral:oas"]
+rules:
+  operation-tags: off
+  operation-description: off
+  info-contact: off
+  info-description: off
+  oas3-api-servers: error
+  oas3-unused-component: off
+  msp-operation-declares-access:
+    description: Every operation must declare who may call it.
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then: { field: x-access, function: truthy }
+  msp-operation-has-id:
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then: { field: operationId, function: truthy }
+  msp-error-response:
+    description: Every operation must document its error response.
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete].responses"
+    then: { field: default, function: truthy }

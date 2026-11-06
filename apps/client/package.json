@@ -1,0 +1,37 @@
+{
+  "name": "@msp/client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": { "dev": "vite", "build": "tsc --noEmit && vite build", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "dependencies": {
+    "@hookform/resolvers": "7.0.3",
+    "@msp/api-client": "workspace:*",
+    "@msp/design-tokens": "workspace:*",
+    "@msp/types": "workspace:*",
+    "@msp/ui": "workspace:*",
+    "@msp/validation": "workspace:*",
+    "@tanstack/react-query": "5.106.1",
+    "i18next": "26.7.2",
+    "lucide-react": "1.70.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-hook-form": "7.91.0",
+    "react-i18next": "17.1.13",
+    "react-router": "8.5.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@msp/config": "workspace:*",
+    "@tailwindcss/vite": "4.3.5",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "6.2.1",
+    "jsdom": "^27",
+    "tailwindcss": "4.3.5",
+    "typescript": "6.0.3",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  }
+}

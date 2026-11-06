@@ -41,7 +41,7 @@ Versions and licences were looked up on 2026-11-06 from the Go module proxy, npm
 | Need | Choice | Version | Licence | Why |
 |---|---|---|---|---|
 | Monorepo | pnpm workspaces | 12.18.0 | MIT | Enough on its own, with no extra build orchestrator for now |
-| UI framework | React, Vite, TypeScript | 19.3.1, 8.3.6, 7.0.2 | MIT, MIT, Apache-2.0 | Named in the brief |
+| UI framework | React, Vite, TypeScript | 19.3.1, 8.3.6, 6.0.3 | MIT, MIT, Apache-2.0 | Named in the brief |
 | Styling and components | Tailwind CSS, shadcn/ui, Lucide | 4.3.5, 4.23.0, 1.70.0 | MIT, MIT, ISC | Named in the brief |
 | Routing | React Router | 8.5.1 | MIT | Supports the lazy-loaded module routes |
 | Server state | TanStack Query | 5.106.1 | MIT | Tenant-prefixed query keys, as the plan requires |
@@ -66,6 +66,6 @@ Versions and licences were looked up on 2026-11-06 from the Go module proxy, npm
 ## Flags
 
 1. **Redis licence.** From memory, not checked in this review: Redis 8 is offered under AGPLv3, RSALv2 or SSPLv1 rather than an older permissive licence. This matters for a commercial SaaS, so it should be on your boss's legal list. Valkey is a BSD-licensed, Redis-compatible alternative, and switching later should be low effort. The brief names Redis, so it stays unless you decide otherwise.
-2. **TypeScript 7** is a major new release. Some tools may lag behind it. If one doesn't work during setup, the fallback is to pin the last 5.x or 6.x release rather than replace the tool, and I'll report it if that happens.
+2. **TypeScript 7 is not used yet.** typescript-eslint requires a version below 6.1 and openapi-typescript failed on 7.0.2, so the workspace is pinned to 6.0.3. Revisit when those tools support 7.
 3. **pquerna/otp** has had no release since 2024. This is low risk, and it is noted so it isn't a surprise.
 4. **golangci-lint** is GPL-licensed. It only runs during development and isn't shipped in the product.

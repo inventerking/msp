@@ -1,0 +1,62 @@
+# Common commands. Run `make setup` once, then `make up migrate`, then `make api` and `make web`.
+SHELL := /bin/bash
+COMPOSE := docker compose -f deploy/local/compose.yaml
+GO_TOOL := go tool -modfile=tools.mod
+ENV := set -a; source ../.env; set +a;
+
+.PHONY: setup up down reset migrate api worker web gen test test-go test-web lint e2e admin check
+
+setup: ## Create a local .env with fresh keys and install dependencies
+	@test -f .env || (cp .env.example .env && sed -i "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=$$(openssl rand -base64 32)|; s|^HMAC_KEY=.*|HMAC_KEY=$$(openssl rand -base64 32)|" .env && echo "created .env")
+	pnpm install
+
+up: ## Start PostgreSQL, Redis and Mailpit
+	$(COMPOSE) up -d --wait
+
+down:
+	$(COMPOSE) down
+
+reset: ## Delete local data and start clean
+	$(COMPOSE) down -v
+	$(COMPOSE) up -d --wait
+
+migrate:
+	cd backend && $(ENV) go run ./cmd/engine migrate
+
+api:
+	cd backend && $(ENV) go run ./cmd/engine api
+
+worker:
+	cd backend && $(ENV) go run ./cmd/engine worker
+
+web: ## Start the client on 5180 and the admin app on 5181
+	pnpm -r --parallel --filter @msp/client --filter @msp/admin dev
+
+admin: ## Create a Super Admin: make admin EMAIL=you@example.test NAME="You" (prompts for a password)
+	@read -rsp "Password (12+ characters): " ADMIN_PASSWORD; echo; export ADMIN_PASSWORD; cd backend && $(ENV) go run ./cmd/engine create-admin --email "$(EMAIL)" --name "$(NAME)"
+
+gen: ## Regenerate code from the contracts and SQL
+	cd backend && $(GO_TOOL) sqlc generate
+	cd backend && $(GO_TOOL) oapi-codegen -config internal/api/tenantapi/oapi.yaml ../api/openapi/tenant.yaml
+	cd backend && $(GO_TOOL) oapi-codegen -config internal/api/adminapi/oapi.yaml ../api/openapi/admin.yaml
+	cd backend && $(GO_TOOL) oapi-codegen -config internal/api/modulesapi/oapi.yaml ../api/openapi/modules.yaml
+	pnpm gen:api
+
+test: test-go test-web
+
+test-go: ## Needs Docker: the suite runs against a real PostgreSQL
+	cd backend && go test -race -count=1 ./...
+
+test-web:
+	pnpm test
+
+lint:
+	cd backend && $(GO_TOOL) golangci-lint run ./...
+	pnpm lint
+	pnpm typecheck
+
+e2e: ## Full browser flow. Needs `make up migrate` first
+	pnpm e2e
+
+check: gen lint test ## Everything CI runs, except the browser tests
+	git diff --exit-code --stat -- '*.gen.go' 'backend/internal/**/repo/*' 'packages/types/src/*.gen.ts' || (echo "generated code is out of date" && exit 1)

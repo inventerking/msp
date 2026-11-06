@@ -1,0 +1,548 @@
+openapi: 3.0.3
+info: {title: MSP Growth Engine Admin API, version: 1.0.0}
+servers:
+  - url: /api/v1/admin
+security: [{sessionCookie: []}]
+paths:
+  /auth/login:
+    post:
+      operationId: adminLogin
+      x-access: public
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AdminLogin"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminLoginResult"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/logout:
+    post:
+      operationId: adminLogout
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, integration_admin, platform_analyst]
+      x-mfa-exempt: true
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/mfa/enroll:
+    post:
+      operationId: adminEnrollTotp
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, integration_admin, platform_analyst]
+      x-mfa-exempt: true
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TotpEnrollment"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/mfa/confirm:
+    post:
+      operationId: adminConfirmTotp
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, integration_admin, platform_analyst]
+      x-mfa-exempt: true
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MfaCode"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/mfa/verify:
+    post:
+      operationId: adminVerifyMfa
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, integration_admin, platform_analyst]
+      x-mfa-exempt: true
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MfaCode"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /me:
+    get:
+      operationId: getAdminContext
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, integration_admin, platform_analyst]
+      x-mfa-exempt: true
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminContext"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /admins:
+    get:
+      operationId: listAdmins
+      x-access: admin
+      x-admin-roles: [super_admin]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createAdmin
+      x-access: admin
+      x-admin-roles: [super_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateAdmin"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Admin"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants:
+    get:
+      operationId: listTenants
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, platform_analyst]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants/{tenantId}:
+    get:
+      operationId: getTenant
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, platform_analyst]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Tenant"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants/{tenantId}/suspend:
+    post:
+      operationId: suspendTenant
+      x-access: admin
+      x-admin-roles: [super_admin]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Reason"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Tenant"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants/{tenantId}/reactivate:
+    post:
+      operationId: reactivateTenant
+      x-access: admin
+      x-admin-roles: [super_admin]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Reason"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Tenant"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants/{tenantId}/users:
+    get:
+      operationId: listTenantUsers
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantUserList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /modules:
+    get:
+      operationId: listModules
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, integration_admin, platform_analyst]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /products:
+    get:
+      operationId: listProducts
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, platform_analyst]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProductList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createProduct
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateProduct"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Product"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /products/{id}/versions:
+    post:
+      operationId: createProductVersion
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateProductVersion"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Product"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /product-versions/{id}/publish:
+    post:
+      operationId: publishProductVersion
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Product"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /plans:
+    get:
+      operationId: listPlans
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, platform_analyst]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PlanList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createPlan
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreatePlan"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Plan"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /plans/{id}/prices:
+    post:
+      operationId: createPrice
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreatePrice"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Price"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /subscriptions:
+    get:
+      operationId: listAdminSubscriptions
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, platform_analyst]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SubscriptionList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants/{tenantId}/subscriptions:
+    post:
+      operationId: createSubscription
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateSubscription"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Subscription"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /subscriptions/{id}/activate:
+    post:
+      operationId: activateSubscription
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Reason"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Subscription"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants/{tenantId}/entitlements:
+    get:
+      operationId: listTenantEntitlements
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, platform_analyst]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/EntitlementList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants/{tenantId}/entitlements/{moduleKey}/{action}:
+    post:
+      operationId: changeEntitlement
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: moduleKey, in: path, required: true, schema: {type: string}}
+        - {name: action, in: path, required: true, schema: {type: string, enum: [activate, suspend, expire, revoke]}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/EntitlementChange"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/EntitlementDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /audit-events:
+    get:
+      operationId: listAuditEvents
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AuditEventList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: admin_session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+    Cursor: {name: cursor, in: query, schema: {type: string}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code]
+            properties:
+              field: {type: string}
+              code: {type: string}
+    MfaCode:
+      type: object
+      required: [code]
+      properties:
+        code: {type: string, minLength: 6, maxLength: 32}
+    TotpEnrollment:
+      type: object
+      required: [secret, otpauth_url]
+      properties:
+        secret: {type: string}
+        otpauth_url: {type: string}
+    RecoveryCodes:
+      type: object
+      required: [recovery_codes]
+      properties:
+        recovery_codes: {type: array, items: {type: string}}
+    Module:
+      type: object
+      required: [id, key, name, description, status]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        name: {type: string}
+        description: {type: string}
+        status: {type: string}
+    ModuleList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Module"}}
+    Entitlement:
+      type: object
+      required: [key, status]
+      properties:
+        key: {type: string}
+        status: {type: string, description: "active, inactive, pending, suspended, expired or revoked"}
+        effective_until: {type: string, format: date-time, nullable: true}
+    EntitlementList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Entitlement"}}
+    Product:
+      type: object
+      required: [id, key, kind, name, description, status, version_id, version, version_status, modules]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        kind: {type: string, enum: [module, bundle, suite, addon]}
+        name: {type: string}
+        description: {type: string}
+        status: {type: string}
+        version_id: {type: string, format: uuid}
+        version: {type: integer}
+        version_status: {type: string}
+        modules: {type: array, items: {type: string}}
+    ProductList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Product"}}
+    Subscription:
+      type: object
+      required: [id, tenant_id, plan_id, plan_name, status, currency, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid}
+        plan_id: {type: string, format: uuid}
+        plan_name: {type: string}
+        status: {type: string}
+        currency: {type: string}
+        current_period_end: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+    SubscriptionList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Subscription"}}
+    AuditEvent:
+      type: object
+      required: [id, actor_type, action, resource_type, outcome, occurred_at]
+      properties:
+        id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid, nullable: true}
+        actor_type: {type: string}
+        actor_id: {type: string, format: uuid, nullable: true}
+        action: {type: string}
+        resource_type: {type: string}
+        resource_id: {type: string, format: uuid, nullable: true}
+        outcome: {type: string}
+        occurred_at: {type: string, format: date-time}
+    AuditEventList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/AuditEvent"}}
+        next_cursor: {type: string, nullable: true}
+    AdminLogin:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, maxLength: 254}
+        password: {type: string, maxLength: 256}
+    AdminLoginResult:
+      type: object
+      required: [mfa_enrolled]
+      properties:
+        mfa_enrolled: {type: boolean}
+    Admin:
+      type: object
+      required: [id, email, display_name, status, roles]
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: string}
+        display_name: {type: string}
+        status: {type: string}
+        roles: {type: array, items: {type: string}}
+    AdminList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Admin"}}
+    AdminContext:
+      type: object
+      required: [admin, csrf_token, mfa_verified]
+      properties:
+        admin: {$ref: "#/components/schemas/Admin"}
+        csrf_token: {type: string}
+        mfa_verified: {type: boolean}
+    CreateAdmin:
+      type: object
+      required: [email, display_name, password, roles]
+      properties:
+        email: {type: string, format: email, maxLength: 254}
+        display_name: {type: string, minLength: 1, maxLength: 120}
+        password: {type: string, minLength: 12, maxLength: 256}
+        roles: {type: array, minItems: 1, items: {type: string, enum: [super_admin, platform_support, billing_admin, integration_admin, platform_analyst]}}
+    Tenant:
+      type: object
+      required: [id, name, slug, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        status: {type: string}
+        suspended_at: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+    TenantList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Tenant"}}
+        next_cursor: {type: string, nullable: true}
+    TenantUser:
+      type: object
+      required: [user_id, email, display_name, role, status]
+      properties:
+        user_id: {type: string, format: uuid}
+        email: {type: string}
+        display_name: {type: string}
+        role: {type: string}
+        status: {type: string}
+    TenantUserList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/TenantUser"}}
+    Reason:
+      type: object
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 3, maxLength: 500}
+    CreateProduct:
+      type: object
+      required: [key, kind, name, description, module_keys]
+      properties:
+        key: {type: string, pattern: "^[a-z0-9_]{2,64}$"}
+        kind: {type: string, enum: [module, bundle, suite, addon]}
+        name: {type: string, minLength: 2, maxLength: 120}
+        description: {type: string, maxLength: 2000}
+        module_keys: {type: array, minItems: 1, items: {type: string}}
+    CreateProductVersion:
+      type: object
+      required: [module_keys]
+      properties:
+        module_keys: {type: array, minItems: 1, items: {type: string}}
+    Plan:
+      type: object
+      required: [id, product_version_id, key, name, billing_period, trial_days, status, prices]
+      properties:
+        id: {type: string, format: uuid}
+        product_version_id: {type: string, format: uuid}
+        key: {type: string}
+        name: {type: string}
+        billing_period: {type: string}
+        trial_days: {type: integer}
+        status: {type: string}
+        prices: {type: array, items: {$ref: "#/components/schemas/Price"}}
+    PlanList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Plan"}}
+    CreatePlan:
+      type: object
+      required: [product_version_id, key, name, billing_period, trial_days]
+      properties:
+        product_version_id: {type: string, format: uuid}
+        key: {type: string, pattern: "^[a-z0-9_]{2,64}$"}
+        name: {type: string, minLength: 2, maxLength: 120}
+        billing_period: {type: string, enum: [monthly, annual, custom]}
+        trial_days: {type: integer, minimum: 0, maximum: 365}
+    Price:
+      type: object
+      required: [id, currency, amount_minor, valid_from]
+      properties:
+        id: {type: string, format: uuid}
+        currency: {type: string}
+        amount_minor: {type: integer, format: int64}
+        valid_from: {type: string, format: date-time}
+        valid_to: {type: string, format: date-time, nullable: true}
+    CreatePrice:
+      type: object
+      required: [currency, amount_minor]
+      properties:
+        currency: {type: string, minLength: 3, maxLength: 3}
+        amount_minor: {type: integer, format: int64, minimum: 0}
+    CreateSubscription:
+      type: object
+      required: [plan_id, currency]
+      properties:
+        plan_id: {type: string, format: uuid}
+        currency: {type: string, minLength: 3, maxLength: 3}
+    EntitlementChange:
+      type: object
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 3, maxLength: 500}
+        effective_until: {type: string, format: date-time, nullable: true}
+    EntitlementDetail:
+      type: object
+      required: [tenant_id, module, status, entitlement_version]
+      properties:
+        tenant_id: {type: string, format: uuid}
+        module: {type: string}
+        status: {type: string}
+        entitlement_version: {type: integer, format: int64}

@@ -1,0 +1,306 @@
+{
+  "app": {
+    "name": "MSP Growth Engine"
+  },
+  "common": {
+    "loading": "Loading",
+    "retry": "Try again",
+    "save": "Save changes",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "signOut": "Sign out",
+    "requestId": "Reference",
+    "remove": "Remove",
+    "optional": "optional"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "prospect": "Prospect",
+    "engage": "Engage",
+    "sell": "Sell",
+    "grow": "Grow",
+    "team": "Team",
+    "settings": "Settings",
+    "subscription": "Subscription",
+    "profile": "Your account",
+    "menu": "Open navigation",
+    "close": "Close navigation",
+    "workspace": "Workspace",
+    "locked": "Not active"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signInTitle": "Sign in to your workspace",
+    "email": "Email",
+    "password": "Password",
+    "forgot": "Forgot password?",
+    "noAccount": "New here?",
+    "createAccount": "Create an account",
+    "registerTitle": "Create your account",
+    "yourName": "Your name",
+    "passwordHint": "At least 12 characters. A short phrase works well.",
+    "haveAccount": "Already have an account?",
+    "checkEmailTitle": "Check your email",
+    "checkEmailBody": "If that address can be used, we have sent a link to it. It may take a minute to arrive.",
+    "resend": "Send the link again",
+    "resent": "If the account needs it, a new link is on its way.",
+    "verifying": "Confirming your email address",
+    "verifiedTitle": "Email confirmed",
+    "verifiedBody": "You can sign in now.",
+    "verifyFailedTitle": "That link did not work",
+    "verifyFailedBody": "It may have expired or already been used. Sign in to request a new one.",
+    "forgotTitle": "Reset your password",
+    "sendLink": "Send reset link",
+    "resetTitle": "Choose a new password",
+    "newPassword": "New password",
+    "setPassword": "Set password",
+    "resetDone": "Password changed. Please sign in again.",
+    "mfaTitle": "Two-step verification",
+    "mfaBody": "Enter the code from your authenticator app, or one of your recovery codes.",
+    "mfaCode": "Code",
+    "verify": "Verify",
+    "backToSignIn": "Back to sign in"
+  },
+  "workspace": {
+    "title": "Your workspaces",
+    "create": "Create a workspace",
+    "createBody": "A workspace holds your team, your modules and your data.",
+    "name": "Workspace name",
+    "createButton": "Create workspace",
+    "choose": "Choose a workspace",
+    "role": "Role: {{role}}",
+    "open": "Open",
+    "invite": {
+      "title": "Join a workspace",
+      "body": "You have been invited to join a workspace.",
+      "accept": "Accept invitation",
+      "failed": "This invitation is not valid for your account. It may have expired, or it may have been sent to a different email address.",
+      "needAccount": "Sign in or create an account with the invited email address to accept."
+    }
+  },
+  "dashboard": {
+    "title": "Welcome, {{name}}",
+    "subtitle": "Here is what your workspace can use.",
+    "yourModules": "Your modules",
+    "nextSteps": "Next steps",
+    "stepProfile": "Complete your company profile",
+    "stepTeam": "Invite your team",
+    "stepModules": "Request modules for your workspace",
+    "noModules": "No modules are active yet",
+    "noModulesBody": "Choose modules in Subscription. A platform administrator activates them after review."
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Not purchased",
+    "pending": "Pending activation",
+    "suspended": "Suspended",
+    "expired": "Expired",
+    "revoked": "Revoked"
+  },
+  "moduleStatus": {
+    "inactiveTitle": "This module is not part of your workspace yet",
+    "inactiveBody": "See the plans that include it in Subscription.",
+    "inactiveNoBilling": "Ask your workspace admin about adding it.",
+    "pendingTitle": "Activation is pending",
+    "pendingBody": "A platform administrator is reviewing this request. This page updates as soon as it is activated.",
+    "suspendedTitle": "This module is suspended",
+    "suspendedBody": "Access is paused and your data is retained. Contact support for details.",
+    "expiredTitle": "This module has expired",
+    "expiredBody": "Your data is retained for now. See Subscription to renew.",
+    "revokedTitle": "Access to this module was revoked",
+    "revokedBody": "Contact support for details.",
+    "viewPlans": "View plans",
+    "noPermissionTitle": "You do not have access to this",
+    "noPermissionBody": "Ask your workspace admin if you need it.",
+    "tenantSuspendedTitle": "This workspace is suspended",
+    "tenantSuspendedBody": "Access is paused and your data is retained. Please contact support.",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "This page does not exist, or you do not have access to it.",
+    "goHome": "Go to dashboard"
+  },
+  "team": {
+    "title": "Team",
+    "subtitle": "Everyone here can use the modules your workspace has, according to their role.",
+    "members": "Members",
+    "invitations": "Pending invitations",
+    "noInvitations": "No pending invitations",
+    "invite": "Invite member",
+    "email": "Email",
+    "role": "Role",
+    "name": "Name",
+    "status": "Status",
+    "expires": "Expires",
+    "you": "You",
+    "revoke": "Revoke",
+    "removeTitle": "Remove {{name}}?",
+    "removeBody": "Their access to this workspace ends immediately.",
+    "sent": "Invitation sent",
+    "roleChanged": "Role changed",
+    "confirmPassword": "Please confirm your password in Your account, then try again."
+  },
+  "roles": {
+    "owner": "Owner",
+    "msp_admin": "MSP Admin",
+    "sales_manager": "Sales Manager",
+    "sales_rep": "Sales Representative",
+    "marketing_manager": "Marketing Manager",
+    "analyst": "Analyst",
+    "viewer": "Viewer"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your company details and workspace preferences.",
+    "profile": "Company profile",
+    "name": "Workspace name",
+    "legalName": "Legal name",
+    "website": "Website domain",
+    "country": "Country code",
+    "timezone": "Time zone",
+    "currency": "Reporting currency",
+    "audit": "Activity log",
+    "auditBody": "Recent actions in this workspace. This record cannot be changed.",
+    "noAudit": "No activity yet",
+    "when": "When",
+    "action": "Action",
+    "actor": "By",
+    "loadMore": "Load more",
+    "actors": {
+      "user": "Team member",
+      "platform_admin": "Platform administrator",
+      "system": "System",
+      "public": "Public"
+    }
+  },
+  "subscription": {
+    "title": "Subscription",
+    "subtitle": "Modules are activated for your whole workspace by a platform administrator.",
+    "modules": "Modules",
+    "plans": "Available packages",
+    "includes": "Includes",
+    "kinds": {
+      "module": "Module",
+      "bundle": "Bundle",
+      "suite": "Complete suite",
+      "addon": "Add-on"
+    },
+    "requestNote": "Online purchasing is not available yet. Contact your platform administrator to request a package.",
+    "subscriptions": "Subscriptions",
+    "noSubscriptions": "No subscriptions yet",
+    "plan": "Plan",
+    "status": "Status",
+    "started": "Started",
+    "noBilling": "Ask your workspace admin about subscriptions."
+  },
+  "profile": {
+    "title": "Your account",
+    "subtitle": "Your sign-in security and active sessions.",
+    "mfa": "Two-step verification",
+    "mfaOn": "On",
+    "mfaOff": "Off",
+    "mfaBody": "Protects your account with a code from an authenticator app.",
+    "mfaEnable": "Turn on",
+    "mfaDisable": "Turn off",
+    "mfaSetup": "Add this key to your authenticator app, then enter the code it shows.",
+    "mfaKey": "Setup key",
+    "mfaOpen": "Open in authenticator app",
+    "mfaConfirm": "Confirm",
+    "recoveryTitle": "Save your recovery codes",
+    "recoveryBody": "Each code works once if you lose your device. They will not be shown again.",
+    "recoveryDone": "I have saved them",
+    "mfaDisableTitle": "Turn off two-step verification?",
+    "mfaDisableBody": "Your account will be protected by your password alone.",
+    "reauthTitle": "Confirm your password",
+    "reauthBody": "This is a sensitive action, so please confirm it is you.",
+    "confirm": "Confirm",
+    "sessions": "Active sessions",
+    "device": "Device",
+    "signedIn": "Signed in",
+    "expires": "Expires",
+    "thisDevice": "This device",
+    "revoke": "Sign out",
+    "unknownDevice": "Unknown device"
+  },
+  "modules": {
+    "lead_generation": {
+      "name": "Lead Generation",
+      "description": "Discover and qualify potential B2B customers, with scores that explain themselves."
+    },
+    "competitor_intelligence": {
+      "name": "Competitor Intelligence",
+      "description": "Understand competitors and find underserved markets, with every claim labelled by how certain it is."
+    },
+    "outreach": {
+      "name": "Outreach",
+      "description": "Run compliant outbound campaigns, with human approval before anything is sent."
+    },
+    "visitor_intelligence": {
+      "name": "Visitor Intelligence",
+      "description": "See website traffic and conversions, within the consent your visitors give."
+    },
+    "chatbot": {
+      "name": "Chatbot",
+      "description": "Answer website visitors from your own knowledge, qualify them and book appointments."
+    },
+    "crm": {
+      "name": "CRM",
+      "description": "Manage companies, contacts, deals and your sales pipeline."
+    },
+    "it_assessment": {
+      "name": "IT Assessment",
+      "description": "Offer authorized, non-invasive IT and security assessments as a lead-generation tool."
+    },
+    "proposals": {
+      "name": "Proposals",
+      "description": "Build professional proposals and quotations, with commercial terms that cannot change after issue."
+    },
+    "customer_expansion": {
+      "name": "Customer Expansion",
+      "description": "Track coverage and renewals, and find evidence-backed expansion opportunities."
+    },
+    "sales_intelligence": {
+      "name": "Sales Intelligence",
+      "description": "Analyze sales performance and forecast recurring revenue, keeping actuals and forecasts apart."
+    },
+    "placeholderTitle": "This module is active",
+    "placeholderPhase": "Your workspace has access. Its features arrive in build phase {{phase}}."
+  },
+  "validation": {
+    "required": "This field is required",
+    "email": "Enter a valid email address",
+    "passwordLength": "Use between 12 and 256 characters",
+    "mfaCode": "Enter the full code",
+    "tooShort": "Use at least 2 characters",
+    "countryCode": "Use a 2-letter country code, such as GB",
+    "currencyCode": "Use a 3-letter currency code, such as USD"
+  },
+  "fieldErrors": {
+    "invalid": "This value is not valid",
+    "invalid_email": "Enter a valid email address",
+    "password_length": "Use between 12 and 256 characters",
+    "password_too_common": "That password is too common. Please choose another.",
+    "unknown_timezone": "That is not a recognized time zone",
+    "unknown_role": "That role does not exist",
+    "too_short": "This is too short",
+    "required": "This field is required"
+  },
+  "errors": {
+    "internal_error": "Something went wrong on our side. Please try again.",
+    "invalid_credentials": "Incorrect email or password.",
+    "email_not_verified": "Please confirm your email address first. Check your inbox for the link.",
+    "rate_limited": "Too many attempts. Please wait a while and try again.",
+    "csrf_failed": "Please refresh the page and try again.",
+    "mfa_code_invalid": "That code is not valid.",
+    "token_invalid": "This link is invalid or has expired.",
+    "not_found": "We could not find that.",
+    "insufficient_permission": "You do not have permission to do this.",
+    "role_exceeds_own_permissions": "You cannot grant a role with more access than your own.",
+    "last_owner": "A workspace must keep at least one owner.",
+    "invitation_exists": "This person already has a pending invitation.",
+    "recent_auth_required": "Please confirm your password to continue.",
+    "mfa_already_enabled": "Two-step verification is already on.",
+    "validation_failed": "Some fields need attention.",
+    "no_active_tenant": "Choose a workspace to continue.",
+    "tenant_suspended": "This workspace is suspended.",
+    "malformed_request": "Please check what you entered and try again."
+  }
+}

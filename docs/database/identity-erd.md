@@ -141,6 +141,7 @@ erDiagram
         bytea ip_hash
         text user_agent
         timestamptz mfa_verified_at
+        timestamptz last_auth_at
         timestamptz expires_at
         timestamptz idle_expires_at
         timestamptz revoked_at
@@ -213,6 +214,7 @@ erDiagram
         bytea credential_id
         bytea public_key
         timestamptz verified_at
+        timestamptz last_used_at
     }
     identity__platform_admin_sessions {
         uuid id PK
@@ -223,7 +225,9 @@ erDiagram
         bytea ip_hash
         text user_agent
         timestamptz mfa_verified_at
+        timestamptz last_auth_at
         timestamptz expires_at
+        timestamptz idle_expires_at
         timestamptz revoked_at
     }
 ```

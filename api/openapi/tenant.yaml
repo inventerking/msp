@@ -1,0 +1,593 @@
+openapi: 3.0.3
+info: {title: MSP Growth Engine Tenant API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /auth/register:
+    post:
+      operationId: register
+      x-access: public
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Register"}}}}
+      responses:
+        "202": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Accepted"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/login:
+    post:
+      operationId: login
+      x-access: public
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Login"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/LoginResult"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      x-access: public
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TokenRequest"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/verify-email/resend:
+    post:
+      operationId: resendVerification
+      x-access: public
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/EmailRequest"}}}}
+      responses:
+        "202": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Accepted"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/password/forgot:
+    post:
+      operationId: forgotPassword
+      x-access: public
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/EmailRequest"}}}}
+      responses:
+        "202": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Accepted"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/password/reset:
+    post:
+      operationId: resetPassword
+      x-access: public
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PasswordReset"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/logout:
+    post:
+      operationId: logout
+      x-access: session
+      x-mfa-exempt: true
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/mfa/verify:
+    post:
+      operationId: verifyMfa
+      x-access: session
+      x-mfa-exempt: true
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MfaCode"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/mfa/totp/enroll:
+    post:
+      operationId: enrollTotp
+      x-access: session
+      x-recent-auth: true
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TotpEnrollment"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/mfa/totp/confirm:
+    post:
+      operationId: confirmTotp
+      x-access: session
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MfaCode"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/RecoveryCodes"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/mfa:
+    delete:
+      operationId: disableMfa
+      x-access: session
+      x-recent-auth: true
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/reauthenticate:
+    post:
+      operationId: reauthenticate
+      x-access: session
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PasswordRequest"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/sessions:
+    get:
+      operationId: listSessions
+      x-access: session
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SessionList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /auth/sessions/{id}:
+    delete:
+      operationId: revokeSession
+      x-access: session
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /me/context:
+    get:
+      operationId: getMeContext
+      x-access: session
+      x-mfa-exempt: true
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/MeContext"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /me/active-tenant:
+    post:
+      operationId: setActiveTenant
+      x-access: session
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ActiveTenant"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenants:
+    post:
+      operationId: createTenant
+      x-access: session
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateTenant"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantSummary"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /invitations/accept:
+    post:
+      operationId: acceptInvitation
+      x-access: session
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TokenRequest"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantSummary"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenant:
+    get:
+      operationId: getTenant
+      x-access: tenant
+      x-permission: team.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateTenant
+      x-access: tenant
+      x-permission: settings.manage
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/UpdateTenant"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenant/roles:
+    get:
+      operationId: listRoles
+      x-access: tenant
+      x-permission: team.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/RoleList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenant/members:
+    get:
+      operationId: listMembers
+      x-access: tenant
+      x-permission: team.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/MemberList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenant/members/{id}:
+    patch:
+      operationId: updateMember
+      x-access: tenant
+      x-permission: team.manage
+      x-recent-auth: true
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/UpdateMember"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Member"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: removeMember
+      x-access: tenant
+      x-permission: team.manage
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenant/invitations:
+    get:
+      operationId: listInvitations
+      x-access: tenant
+      x-permission: team.manage
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/InvitationList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createInvitation
+      x-access: tenant
+      x-permission: team.manage
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateInvitation"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Invitation"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenant/invitations/{id}:
+    delete:
+      operationId: revokeInvitation
+      x-access: tenant
+      x-permission: team.manage
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenant/audit-events:
+    get:
+      operationId: listTenantAuditEvents
+      x-access: tenant
+      x-permission: audit.read
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AuditEventList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /catalog/modules:
+    get:
+      operationId: listCatalogModules
+      x-access: tenant
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ModuleList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /catalog/products:
+    get:
+      operationId: listCatalogProducts
+      x-access: tenant
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProductList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /entitlements:
+    get:
+      operationId: listEntitlements
+      x-access: tenant
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/EntitlementList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /subscriptions:
+    get:
+      operationId: listSubscriptions
+      x-access: tenant
+      x-permission: billing.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SubscriptionList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /events/stream:
+    get:
+      operationId: streamEvents
+      x-access: tenant
+      responses:
+        "200": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+    Cursor: {name: cursor, in: query, schema: {type: string}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code]
+            properties:
+              field: {type: string}
+              code: {type: string}
+    MfaCode:
+      type: object
+      required: [code]
+      properties:
+        code: {type: string, minLength: 6, maxLength: 32}
+    TotpEnrollment:
+      type: object
+      required: [secret, otpauth_url]
+      properties:
+        secret: {type: string}
+        otpauth_url: {type: string}
+    RecoveryCodes:
+      type: object
+      required: [recovery_codes]
+      properties:
+        recovery_codes: {type: array, items: {type: string}}
+    Module:
+      type: object
+      required: [id, key, name, description, status]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        name: {type: string}
+        description: {type: string}
+        status: {type: string}
+    ModuleList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Module"}}
+    Entitlement:
+      type: object
+      required: [key, status]
+      properties:
+        key: {type: string}
+        status: {type: string, description: "active, inactive, pending, suspended, expired or revoked"}
+        effective_until: {type: string, format: date-time, nullable: true}
+    EntitlementList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Entitlement"}}
+    Product:
+      type: object
+      required: [id, key, kind, name, description, status, version_id, version, version_status, modules]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        kind: {type: string, enum: [module, bundle, suite, addon]}
+        name: {type: string}
+        description: {type: string}
+        status: {type: string}
+        version_id: {type: string, format: uuid}
+        version: {type: integer}
+        version_status: {type: string}
+        modules: {type: array, items: {type: string}}
+    ProductList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Product"}}
+    Subscription:
+      type: object
+      required: [id, tenant_id, plan_id, plan_name, status, currency, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid}
+        plan_id: {type: string, format: uuid}
+        plan_name: {type: string}
+        status: {type: string}
+        currency: {type: string}
+        current_period_end: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+    SubscriptionList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Subscription"}}
+    AuditEvent:
+      type: object
+      required: [id, actor_type, action, resource_type, outcome, occurred_at]
+      properties:
+        id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid, nullable: true}
+        actor_type: {type: string}
+        actor_id: {type: string, format: uuid, nullable: true}
+        action: {type: string}
+        resource_type: {type: string}
+        resource_id: {type: string, format: uuid, nullable: true}
+        outcome: {type: string}
+        occurred_at: {type: string, format: date-time}
+    AuditEventList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/AuditEvent"}}
+        next_cursor: {type: string, nullable: true}
+    Register:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email: {type: string, format: email, maxLength: 254}
+        password: {type: string, minLength: 12, maxLength: 256}
+        display_name: {type: string, minLength: 1, maxLength: 120}
+    Accepted:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string}
+    Login:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, maxLength: 254}
+        password: {type: string, maxLength: 256}
+    LoginResult:
+      type: object
+      required: [mfa_required]
+      properties:
+        mfa_required: {type: boolean}
+    TokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token: {type: string, maxLength: 256}
+    EmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email: {type: string, maxLength: 254}
+    PasswordReset:
+      type: object
+      required: [token, password]
+      properties:
+        token: {type: string, maxLength: 256}
+        password: {type: string, minLength: 12, maxLength: 256}
+    PasswordRequest:
+      type: object
+      required: [password]
+      properties:
+        password: {type: string, maxLength: 256}
+    SessionInfo:
+      type: object
+      required: [id, current, created_at, expires_at]
+      properties:
+        id: {type: string, format: uuid}
+        current: {type: boolean}
+        user_agent: {type: string, nullable: true}
+        created_at: {type: string, format: date-time}
+        expires_at: {type: string, format: date-time}
+    SessionList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/SessionInfo"}}
+    UserSummary:
+      type: object
+      required: [id, email, display_name, mfa_enabled]
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: string}
+        display_name: {type: string}
+        mfa_enabled: {type: boolean}
+    TenantSummary:
+      type: object
+      required: [id, name, slug, status]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        status: {type: string}
+    MembershipSummary:
+      type: object
+      required: [tenant_id, tenant_name, role]
+      properties:
+        tenant_id: {type: string, format: uuid}
+        tenant_name: {type: string}
+        role: {type: string}
+    MeContext:
+      type: object
+      required: [user, mfa_required, memberships, permissions, modules, csrf_token]
+      properties:
+        user: {$ref: "#/components/schemas/UserSummary"}
+        mfa_required: {type: boolean, description: "True until this session completes two-step verification. Other fields stay empty until then."}
+        tenant: {allOf: [{$ref: "#/components/schemas/TenantSummary"}], nullable: true}
+        role: {type: string, nullable: true}
+        memberships: {type: array, items: {$ref: "#/components/schemas/MembershipSummary"}}
+        permissions: {type: array, items: {type: string}}
+        modules: {type: array, items: {$ref: "#/components/schemas/Entitlement"}}
+        csrf_token: {type: string}
+    ActiveTenant:
+      type: object
+      required: [tenant_id]
+      properties:
+        tenant_id: {type: string, format: uuid}
+    CreateTenant:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string, minLength: 2, maxLength: 120}
+    TenantDetail:
+      type: object
+      required: [id, name, slug, status, default_locale, default_timezone, reporting_currency, onboarding_status]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        status: {type: string}
+        default_locale: {type: string}
+        default_timezone: {type: string}
+        reporting_currency: {type: string}
+        legal_name: {type: string, nullable: true}
+        website_domain: {type: string, nullable: true}
+        country_code: {type: string, nullable: true}
+        onboarding_status: {type: string}
+    UpdateTenant:
+      type: object
+      properties:
+        name: {type: string, minLength: 2, maxLength: 120}
+        default_locale: {type: string, maxLength: 20}
+        default_timezone: {type: string, maxLength: 64}
+        reporting_currency: {type: string, minLength: 3, maxLength: 3}
+        legal_name: {type: string, maxLength: 200}
+        website_domain: {type: string, maxLength: 253}
+        country_code: {type: string, minLength: 2, maxLength: 2}
+    Role:
+      type: object
+      required: [id, key, name]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        name: {type: string}
+    RoleList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Role"}}
+    Member:
+      type: object
+      required: [id, user_id, email, display_name, role, status]
+      properties:
+        id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        email: {type: string}
+        display_name: {type: string}
+        role: {type: string}
+        status: {type: string}
+    MemberList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Member"}}
+    UpdateMember:
+      type: object
+      required: [role]
+      properties:
+        role: {type: string}
+    Invitation:
+      type: object
+      required: [id, email, role, expires_at]
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: string}
+        role: {type: string}
+        expires_at: {type: string, format: date-time}
+    InvitationList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Invitation"}}
+    CreateInvitation:
+      type: object
+      required: [email, role]
+      properties:
+        email: {type: string, format: email, maxLength: 254}
+        role: {type: string}
