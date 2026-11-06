@@ -36,6 +36,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/password/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["adminChangePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/mfa/enroll": {
         parameters: {
             query?: never;
@@ -110,6 +126,22 @@ export interface paths {
         get: operations["listAdmins"];
         put?: never;
         post: operations["createAdmin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admins/{id}/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["recoverAdmin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -493,6 +525,14 @@ export interface components {
             data: components["schemas"]["AuditEvent"][];
             next_cursor?: string | null;
         };
+        PasswordChange: {
+            current_password: string;
+            new_password: string;
+        };
+        AdminRecovery: {
+            new_password: string;
+            reason: string;
+        };
         AdminLogin: {
             email: string;
             password: string;
@@ -688,6 +728,29 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    adminChangePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     adminEnrollTotp: {
         parameters: {
             query?: never;
@@ -818,6 +881,31 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Admin"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    recoverAdmin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminRecovery"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

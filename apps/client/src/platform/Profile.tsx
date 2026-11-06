@@ -1,10 +1,45 @@
 import { ApiError, unwrap } from "@msp/api-client";
 import { Badge, Button, Card, ConfirmDialog, ErrorState, Field, Input, PageHeader, SkeletonRows, Table } from "@msp/ui";
+import { changePasswordSchema } from "@msp/validation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import type { z } from "zod";
 import { api, tenantKey, useMe } from "../app/api";
-import { errorText } from "../app/errors";
+import { applyServerError, errorText } from "../app/errors";
+
+function ChangePassword({ onChanged }: { onChanged: () => void }) {
+  const { t } = useTranslation();
+  const form = useForm<z.infer<typeof changePasswordSchema>>({ resolver: zodResolver(changePasswordSchema), defaultValues: { current_password: "", new_password: "" } });
+  const [failure, setFailure] = useState<string>();
+  const [done, setDone] = useState(false);
+  const e = form.formState.errors;
+  const submit = form.handleSubmit(async (values) => {
+    setFailure(undefined);
+    setDone(false);
+    try {
+      await unwrap(api.POST("/auth/password/change", { body: values }));
+      form.reset();
+      setDone(true);
+      onChanged();
+    } catch (err) {
+      setFailure(applyServerError(t, err, form.setError, ["new_password"]));
+    }
+  });
+  return (
+    <form onSubmit={(ev) => void submit(ev)} noValidate className="max-w-md space-y-3">
+      {failure ? <ErrorState title={failure} /> : null}
+      <Field label={t("profile.currentPassword")} error={e.current_password?.message && t(e.current_password.message)}>{(ids) => <Input {...ids} type="password" autoComplete="current-password" {...form.register("current_password")} />}</Field>
+      <Field label={t("auth.newPassword")} hint={t("auth.passwordHint")} error={e.new_password?.message && t(e.new_password.message, { defaultValue: e.new_password.message })}>{(ids) => <Input {...ids} type="password" autoComplete="new-password" {...form.register("new_password")} />}</Field>
+      <div className="flex items-center gap-3">
+        <Button type="submit" disabled={form.formState.isSubmitting}>{t("profile.changePassword")}</Button>
+        {done ? <span role="status" className="text-sm text-ok">{t("profile.passwordChanged")}</span> : null}
+      </div>
+    </form>
+  );
+}
 
 export function Profile() {
   const { t } = useTranslation();
@@ -97,6 +132,10 @@ export function Profile() {
             </div>
           )}
         </Card>
+      </section>
+      <section className="mb-6">
+        <h2 className="mb-2 text-sm font-medium text-ink-soft">{t("profile.password")}</h2>
+        <Card className="p-4"><ChangePassword onChanged={() => void qc.invalidateQueries({ queryKey: tenantKey(me, "sessions") })} /></Card>
       </section>
       <section>
         <h2 className="mb-2 text-sm font-medium text-ink-soft">{t("profile.sessions")}</h2>

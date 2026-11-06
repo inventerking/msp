@@ -173,6 +173,12 @@ type AdminLoginResult struct {
 	MfaEnrolled bool `json:"mfa_enrolled"`
 }
 
+// AdminRecovery defines model for AdminRecovery.
+type AdminRecovery struct {
+	NewPassword string `json:"new_password"`
+	Reason      string `json:"reason"`
+}
+
 // AuditEvent defines model for AuditEvent.
 type AuditEvent struct {
 	Action       string              `json:"action"`
@@ -289,6 +295,12 @@ type Module struct {
 // ModuleList defines model for ModuleList.
 type ModuleList struct {
 	Data []Module `json:"data"`
+}
+
+// PasswordChange defines model for PasswordChange.
+type PasswordChange struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
 }
 
 // Plan defines model for Plan.
@@ -440,6 +452,9 @@ type ChangeEntitlementParamsAction string
 // CreateAdminJSONRequestBody defines body for CreateAdmin for application/json ContentType.
 type CreateAdminJSONRequestBody = CreateAdmin
 
+// RecoverAdminJSONRequestBody defines body for RecoverAdmin for application/json ContentType.
+type RecoverAdminJSONRequestBody = AdminRecovery
+
 // AdminLoginJSONRequestBody defines body for AdminLogin for application/json ContentType.
 type AdminLoginJSONRequestBody = AdminLogin
 
@@ -448,6 +463,9 @@ type AdminConfirmTotpJSONRequestBody = MfaCode
 
 // AdminVerifyMfaJSONRequestBody defines body for AdminVerifyMfa for application/json ContentType.
 type AdminVerifyMfaJSONRequestBody = MfaCode
+
+// AdminChangePasswordJSONRequestBody defines body for AdminChangePassword for application/json ContentType.
+type AdminChangePasswordJSONRequestBody = PasswordChange
 
 // CreatePlanJSONRequestBody defines body for CreatePlan for application/json ContentType.
 type CreatePlanJSONRequestBody = CreatePlan
@@ -485,6 +503,9 @@ type ServerInterface interface {
 	// (POST /admins)
 	CreateAdmin(w http.ResponseWriter, r *http.Request)
 
+	// (POST /admins/{id}/recover)
+	RecoverAdmin(w http.ResponseWriter, r *http.Request, id Id)
+
 	// (GET /audit-events)
 	ListAuditEvents(w http.ResponseWriter, r *http.Request, params ListAuditEventsParams)
 
@@ -502,6 +523,9 @@ type ServerInterface interface {
 
 	// (POST /auth/mfa/verify)
 	AdminVerifyMfa(w http.ResponseWriter, r *http.Request)
+
+	// (POST /auth/password/change)
+	AdminChangePassword(w http.ResponseWriter, r *http.Request)
 
 	// (GET /me)
 	GetAdminContext(w http.ResponseWriter, r *http.Request)
@@ -575,6 +599,11 @@ func (_ Unimplemented) CreateAdmin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// (POST /admins/{id}/recover)
+func (_ Unimplemented) RecoverAdmin(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // (GET /audit-events)
 func (_ Unimplemented) ListAuditEvents(w http.ResponseWriter, r *http.Request, params ListAuditEventsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -602,6 +631,11 @@ func (_ Unimplemented) AdminEnrollTotp(w http.ResponseWriter, r *http.Request) {
 
 // (POST /auth/mfa/verify)
 func (_ Unimplemented) AdminVerifyMfa(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /auth/password/change)
+func (_ Unimplemented) AdminChangePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -737,6 +771,32 @@ func (siw *ServerInterfaceWrapper) CreateAdmin(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// RecoverAdmin operation middleware
+func (siw *ServerInterfaceWrapper) RecoverAdmin(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecoverAdmin(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAuditEvents operation middleware
 func (siw *ServerInterfaceWrapper) ListAuditEvents(w http.ResponseWriter, r *http.Request) {
 
@@ -844,6 +904,20 @@ func (siw *ServerInterfaceWrapper) AdminVerifyMfa(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AdminVerifyMfa(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AdminChangePassword operation middleware
+func (siw *ServerInterfaceWrapper) AdminChangePassword(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AdminChangePassword(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1421,6 +1495,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/logout", wrapper.AdminLogout)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/password/change", wrapper.AdminChangePassword)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/mfa/enroll", wrapper.AdminEnrollTotp)
 	})
 	r.Group(func(r chi.Router) {
@@ -1437,6 +1514,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admins", wrapper.CreateAdmin)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admins/{id}/recover", wrapper.RecoverAdmin)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tenants", wrapper.ListTenants)
@@ -1504,47 +1584,49 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"R8bRBKdkcn9ipqPR5mbz/wEA",
+	"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",
+	"lEwezkynNtrcbv47AA==",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

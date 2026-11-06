@@ -1,0 +1,17 @@
+# Add this file only when the hostnames are public and ACME_EMAIL is set, for real certificates:
+#   docker compose -f compose.yaml -f compose.acme.yaml up -d --build
+services:
+  traefik:
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.web.address=:8000
+      - --entrypoints.web.http.redirections.entrypoint.to=:${HTTPS_PORT:-443}
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:8443
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/acme/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    volumes:
+      - acme:/acme
+volumes:
+  acme:

@@ -16,6 +16,7 @@ import (
 	"mspengine/internal/kernel/authctx"
 	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
+	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/platform/audit"
 	auditrepo "mspengine/internal/platform/audit/repo"
 	"mspengine/internal/platform/identity/repo"
@@ -266,6 +267,111 @@ func (s *Service) CreateAdmin(ctx context.Context, creator *authctx.AdminPrincip
 			}
 		}
 		return audit.Record(ctx, tx, audit.Event{ActorType: actor, ActorID: by, Action: "platform_admin.created", ResourceType: "platform_admin", ResourceID: &id, After: map[string]any{"roles": roles}})
+	})
+	return id, err
+}
+
+// AdminChangePassword sets a new password for the signed-in admin and ends their other sessions.
+func (s *Service) AdminChangePassword(ctx context.Context, a authctx.AdminPrincipal, current, next string) error {
+	if err := checkPassword("new_password", next); err != nil {
+		return err
+	}
+	emailHash := s.keys.HMACValue("login-email", normalizeEmail(a.Email))
+	ipHash := authctx.MetaFrom(ctx).IPHash
+	if ipHash == nil {
+		ipHash = s.keys.HMACValue("ip", "")
+	}
+	if err := s.checkThrottle(ctx, "platform", emailHash, ipHash); err != nil {
+		return err
+	}
+	var row repo.GetAdminByIDRow
+	err := db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
+		var err error
+		row, err = repo.New(tx).GetAdminByID(ctx, a.AdminID)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	if ok, _ := crypto.VerifyPassword(row.PasswordHash, current); !ok {
+		s.recordFailure(ctx, emailHash, ipHash, "platform", "bad_current_password")
+		return apperr.InvalidCredentials()
+	}
+	hash, err := crypto.HashPassword(next)
+	if err != nil {
+		return err
+	}
+	return db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
+		q := repo.New(tx)
+		if err := q.SetAdminPassword(ctx, repo.SetAdminPasswordParams{ID: a.AdminID, PasswordHash: hash}); err != nil {
+			return err
+		}
+		if err := q.RevokeAdminSessions(ctx, repo.RevokeAdminSessionsParams{AdminID: a.AdminID, ExceptID: &a.SessionID}); err != nil {
+			return err
+		}
+		return audit.Record(ctx, tx, adminEvent(a, nil, "platform_admin.password_changed", "platform_admin", &a.AdminID, nil))
+	})
+}
+
+// RecoverAdmin handles a lost password or authenticator: it sets a new password, removes the MFA
+// factor and ends all sessions, so the admin must enrol again at next sign-in. actor is nil only
+// for the break-glass command, which needs server access. Nobody can recover themselves through
+// the API, because a stolen session could otherwise remove its own account's MFA.
+func (s *Service) RecoverAdmin(ctx context.Context, actor *authctx.AdminPrincipal, target uuid.UUID, password, reason string) error {
+	if actor != nil && actor.AdminID == target {
+		return apperr.Conflict("cannot_recover_self", "Ask another Super Admin to do this")
+	}
+	if err := checkPassword("new_password", password); err != nil {
+		return err
+	}
+	hash, err := crypto.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	var email string
+	err = db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
+		q := repo.New(tx)
+		row, err := q.GetAdminByID(ctx, target)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperr.NotFound()
+		}
+		if err != nil {
+			return err
+		}
+		email = row.Email
+		if err := q.SetAdminPassword(ctx, repo.SetAdminPasswordParams{ID: target, PasswordHash: hash}); err != nil {
+			return err
+		}
+		if err := q.DeleteAdminFactors(ctx, target); err != nil {
+			return err
+		}
+		if err := q.RevokeAdminSessions(ctx, repo.RevokeAdminSessionsParams{AdminID: target}); err != nil {
+			return err
+		}
+		ev := audit.Event{ActorType: "system", Action: "platform_admin.recovered", ResourceType: "platform_admin", ResourceID: &target, After: map[string]any{"reason": reason}}
+		if actor != nil {
+			ev.ActorType, ev.ActorID = "platform_admin", &actor.AdminID
+		}
+		return audit.Record(ctx, tx, ev)
+	})
+	if err != nil {
+		return err
+	}
+	s.sendAsync(ctx, mailer.Message{To: email, Subject: "Your administrator account was recovered",
+		Body: "Your platform administrator password and two-step verification were reset, and all your sessions were signed out. If you did not ask for this, contact another Super Admin immediately.\n"})
+	return nil
+}
+
+// AdminIDByEmail finds an admin for the break-glass command.
+func (s *Service) AdminIDByEmail(ctx context.Context, email string) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
+		row, err := repo.New(tx).GetAdminByEmail(ctx, normalizeEmail(email))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperr.NotFound()
+		}
+		id = row.ID
+		return err
 	})
 	return id, err
 }

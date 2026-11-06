@@ -229,6 +229,36 @@ func TestSignInRightAfterEnrollingMFA(t *testing.T) {
 	login.must(204, http.MethodPost, "/api/v1/auth/mfa/verify", map[string]any{"code": code(t, secret, time.Now())})
 }
 
+func TestChangePassword(t *testing.T) {
+	c, email := signUp(t, "changepw")
+	other := newClient(t)
+	other.must(200, http.MethodPost, "/api/v1/auth/login", map[string]any{"email": email, "password": testPassword})
+	const next = "a-completely-new-passphrase"
+
+	c.wantCode(401, "invalid_credentials", http.MethodPost, "/api/v1/auth/password/change", map[string]any{"current_password": "wrong-password-value", "new_password": next})
+	c.wantCode(422, "validation_failed", http.MethodPost, "/api/v1/auth/password/change", map[string]any{"current_password": testPassword, "new_password": "password1234"})
+	c.must(200, http.MethodGet, "/api/v1/me/context", nil) // Nothing has changed yet.
+	other.must(200, http.MethodGet, "/api/v1/me/context", nil)
+
+	c.must(204, http.MethodPost, "/api/v1/auth/password/change", map[string]any{"current_password": testPassword, "new_password": next})
+	c.must(200, http.MethodGet, "/api/v1/me/context", nil) // This session stays signed in.
+	other.wantCode(401, "authentication_required", http.MethodGet, "/api/v1/me/context", nil)
+	env.Mail.waitFor(t, email, "password was changed")
+
+	fresh := newClient(t)
+	fresh.wantCode(401, "invalid_credentials", http.MethodPost, "/api/v1/auth/login", map[string]any{"email": email, "password": testPassword})
+	fresh.must(200, http.MethodPost, "/api/v1/auth/login", map[string]any{"email": email, "password": next})
+}
+
+// A stolen session must not allow fast password guessing.
+func TestPasswordChecksAreThrottled(t *testing.T) {
+	c, _ := signUp(t, "guesser")
+	for i := 0; i < 5; i++ {
+		c.wantCode(401, "invalid_credentials", http.MethodPost, "/api/v1/auth/reauthenticate", map[string]any{"password": "wrong-password-value"})
+	}
+	c.wantCode(429, "rate_limited", http.MethodPost, "/api/v1/auth/password/change", map[string]any{"current_password": testPassword, "new_password": "a-completely-new-passphrase"})
+}
+
 func TestRecentAuthRequiredForSensitiveActions(t *testing.T) {
 	c, email := signUp(t, "recent")
 	if _, err := env.Owner.Exec(context.Background(), `UPDATE identity.sessions s SET last_auth_at = now() - interval '1 hour' FROM identity.users u WHERE u.id = s.user_id AND u.email = $1`, email); err != nil {

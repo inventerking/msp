@@ -99,6 +99,14 @@ paths:
       responses:
         "204": {description: Done}
         default: {$ref: "#/components/responses/Problem"}
+  /auth/password/change:
+    post:
+      operationId: changePassword
+      x-access: session
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PasswordChange"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
   /auth/reauthenticate:
     post:
       operationId: reauthenticate
@@ -451,6 +459,12 @@ components:
       properties:
         token: {type: string, maxLength: 256}
         password: {type: string, minLength: 12, maxLength: 256}
+    PasswordChange:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password: {type: string, maxLength: 256}
+        new_password: {type: string, minLength: 12, maxLength: 256}
     PasswordRequest:
       type: object
       required: [password]

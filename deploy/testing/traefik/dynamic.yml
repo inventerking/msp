@@ -1,0 +1,31 @@
+# Uses a file instead of Traefik's Docker provider, so Traefik needs no access to the Docker socket.
+http:
+  routers:
+    client:
+      rule: 'Host(`{{ env "APP_HOST" }}`)'
+      service: client
+      tls: {{ if env "ACME_EMAIL" }}{certResolver: letsencrypt}{{ else }}{}{{ end }}
+    # The customer host never serves admin routes, and the admin host serves only those.
+    client-api:
+      rule: 'Host(`{{ env "APP_HOST" }}`) && PathPrefix(`/api/`) && !PathPrefix(`/api/v1/admin`)'
+      service: api
+      tls: {{ if env "ACME_EMAIL" }}{certResolver: letsencrypt}{{ else }}{}{{ end }}
+    admin:
+      rule: 'Host(`{{ env "ADMIN_HOST" }}`)'
+      service: admin
+      tls: {{ if env "ACME_EMAIL" }}{certResolver: letsencrypt}{{ else }}{}{{ end }}
+    admin-api:
+      rule: 'Host(`{{ env "ADMIN_HOST" }}`) && PathPrefix(`/api/v1/admin`)'
+      service: api
+      tls: {{ if env "ACME_EMAIL" }}{certResolver: letsencrypt}{{ else }}{}{{ end }}
+  services:
+    api:
+      loadBalancer: {servers: [{url: "http://api:8088"}]}
+    client:
+      loadBalancer: {servers: [{url: "http://client:8080"}]}
+    admin:
+      loadBalancer: {servers: [{url: "http://admin:8080"}]}
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12

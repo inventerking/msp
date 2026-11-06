@@ -8,11 +8,12 @@ Status: built and verified locally. **Phase 1 gate approved by the product owner
 |---|---|
 | Repository | pnpm and Go monorepo, Makefile, CI workflow (not yet run, as there is no remote) |
 | Local environment | PostgreSQL 18, Redis and Mailpit in Docker, on non-default ports |
-| Backend | One `engine` binary: `api`, `worker` (housekeeping only), `migrate`, `create-admin` |
+| Testing server | Docker images and a Compose stack with Traefik over HTTPS. See [deploy/testing](../../deploy/testing/README.md) |
+| Backend | One `engine` binary: `api`, `worker` (housekeeping only), `migrate`, `healthcheck`, `create-admin`, `recover-admin` |
 | Database | All 18 schemas created. `identity`, `platform` and `audit` tables built, with forced RLS and least-privilege roles. Other schemas are empty |
-| Authentication | Registration, email verification, Argon2id, sessions and revocation, password reset, TOTP MFA with recovery codes, recent-authentication checks, login throttling |
+| Authentication | Registration, email verification, Argon2id, sessions and revocation, password reset and change, TOTP MFA with recovery codes, recent-authentication checks, login throttling |
 | Tenancy | Workspaces, invitations, memberships, seven seeded roles with the permission matrix, last-owner protection, workspace switching |
-| Platform admin | Separate identity domain, mandatory MFA, five roles enforced per route |
+| Platform admin | Separate identity domain, mandatory MFA, five roles enforced per route, password change, and recovery for a lost password or authenticator |
 | Commercial | Module catalog, products and bundles with immutable versions, plans, prices, subscription records, entitlement grants, admin activate, suspend, expire and revoke |
 | Audit | Same-transaction, tamper-evident audit trail with a verification function |
 | Client app | Shell, authentication screens, workspace, dashboard, team, settings, subscription, account, status pages, ten module manifests with placeholder screens |
@@ -27,12 +28,13 @@ Each operation in the OpenAPI contract must declare `x-access`, and any module o
 
 | Check | Result |
 |---|---|
-| Backend tests, with race detector, against real PostgreSQL | 186 pass, none skipped |
+| Backend tests, with race detector, against real PostgreSQL | 200 pass, none skipped |
 | Frontend unit and component tests | 31 pass across five packages |
-| Browser end-to-end (real API, database and email sink) | 2 flows pass, three runs in a row |
+| Browser end-to-end (real API, database and email sink) | 2 flows pass, locally and against the deployed testing stack through Traefik over HTTPS, with no Content-Security-Policy violations |
+| Testing stack smoke test from outside | All checks pass |
 | Go lint, ESLint, dependency boundaries, OpenAPI lint | Clean |
 | pnpm audit (production dependencies) | No known vulnerabilities |
-| govulncheck | Nothing reachable from our code. GO-2026-5932 exists in `golang.org/x/crypto` 0.58.0, in code we do not call. Only a pre-release fix exists, so update when 0.59 ships |
+| govulncheck | Nothing reachable from our code. GO-2026-5932 exists in `golang.org/x/crypto` 0.58.0, in code we do not call. Only a pre-release fix exists, so update when the next release ships |
 | Clean rebuild from an empty database using the Makefile | Works |
 
 **Mutation checks.** To confirm that tests detect real faults, these were broken one at a time, and each was caught: entitlement check, permission check, CSRF check, tenant suspension check, admin role check, invitation email check, role escalation check, session revocation on password reset, entitlement end date, forced RLS, and the tenant-status column grant.
@@ -51,6 +53,9 @@ The security review was done by the same author as the code. It does not replace
 | The audit chain could fork under concurrent writes, its hash depended on the session time zone, and nothing could verify it | Security review |
 | Housekeeping functions were executable by every database role | Security review |
 | Go standard library vulnerability GO-2026-6809 | govulncheck; fixed by moving to Go 1.27.3 |
+| The API required the database owner password, though only migrations use it | Testing server work |
+| Traefik's HTTP redirect pointed at its internal port, not the public one | Testing server smoke test |
+| Re-entering a password for a sensitive action had no guessing limit | Password change work |
 
 ## Differences from the plan
 
@@ -71,7 +76,6 @@ Not yet built, and to be scheduled:
 
 **Security and accounts**
 - WebAuthn. TOTP is the only MFA factor so far, although the tables support both.
-- Signed-in password change. Users can only use the reset flow, and admins have no way to change a password or recover a lost MFA device. A second Super Admin cannot reset them either.
 - Workspace policy requiring MFA for all members.
 - Breached-password checking. There is only a small bundled list of common passwords.
 - Field encryption reads one key from the environment. A managed secret store with envelope encryption is due before production.
@@ -87,7 +91,8 @@ Not yet built, and to be scheduled:
 - Tenant ICP editing. The table exists, and Lead Generation will need it in Phase 3.
 
 **Operations**
-- No Dockerfile or Traefik setup yet, so the testing server needs this next.
+- The testing stack has no backups or failover, and traffic between containers on its private network is not encrypted. Production needs both, and D-23 still decides how.
+- The Mailpit image uses the `latest` tag. Pin it before relying on the stack.
 - Metrics and tracing are not wired in. Structured logs and request IDs are.
 - Accessibility has only been checked through label and role use in tests. There is no automated audit yet, and no manual review.
 - CI is written but has not run, because the repository has no remote.
@@ -95,4 +100,4 @@ Not yet built, and to be scheduled:
 
 ## Before anyone uses the testing server
 
-Keep the rules in [open-decisions](open-decisions.md): synthetic data only, and email going to a test sink. Generate new keys and database passwords: the values in `deploy/local/postgres/00-roles.sql` are for local use only.
+Keep the rules in [open-decisions](open-decisions.md): synthetic data only, and email going to a test sink. `deploy/testing/init-env.sh` generates fresh secrets, and the backend refuses the local development passwords.

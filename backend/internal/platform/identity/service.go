@@ -462,19 +462,72 @@ func (s *Service) ListSessions(ctx context.Context, userID uuid.UUID) ([]repo.Li
 	return out, err
 }
 
+// checkCurrentPassword verifies a signed-in user's password. Failures count toward the login
+// throttle, so a stolen session cannot be used to guess the password at speed.
+func (s *Service) checkCurrentPassword(ctx context.Context, p authctx.Principal, password string) error {
+	emailHash := s.keys.HMACValue("login-email", normalizeEmail(p.Email))
+	ipHash := authctx.MetaFrom(ctx).IPHash
+	if ipHash == nil {
+		ipHash = s.keys.HMACValue("ip", "")
+	}
+	if err := s.checkThrottle(ctx, "tenant", emailHash, ipHash); err != nil {
+		return err
+	}
+	var stored string
+	err := db.Tx(ctx, s.pools.App, func(tx pgx.Tx) error {
+		var err error
+		stored, err = repo.New(tx).GetCredential(ctx, p.UserID)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	if ok, _ := crypto.VerifyPassword(stored, password); !ok {
+		s.recordFailure(ctx, emailHash, ipHash, "tenant", "bad_current_password")
+		return apperr.InvalidCredentials()
+	}
+	return nil
+}
+
 // Reauthenticate refreshes the recent-authentication time for sensitive actions.
 func (s *Service) Reauthenticate(ctx context.Context, p authctx.Principal, password string) error {
+	if err := s.checkCurrentPassword(ctx, p, password); err != nil {
+		return err
+	}
 	return db.Tx(ctx, s.pools.App, func(tx pgx.Tx) error {
+		return repo.New(tx).SetSessionLastAuth(ctx, p.SessionID)
+	})
+}
+
+// ChangePassword sets a new password and signs out every other session, which removes an
+// attacker who may hold one. The current session stays signed in.
+func (s *Service) ChangePassword(ctx context.Context, p authctx.Principal, current, next string) error {
+	if err := checkPassword("new_password", next); err != nil {
+		return err
+	}
+	if err := s.checkCurrentPassword(ctx, p, current); err != nil {
+		return err
+	}
+	hash, err := crypto.HashPassword(next)
+	if err != nil {
+		return err
+	}
+	err = db.Tx(ctx, s.pools.App, func(tx pgx.Tx) error {
 		q := repo.New(tx)
-		stored, err := q.GetCredential(ctx, p.UserID)
-		if err != nil {
+		if err := q.UpsertCredential(ctx, repo.UpsertCredentialParams{UserID: p.UserID, PasswordHash: hash}); err != nil {
 			return err
 		}
-		if ok, _ := crypto.VerifyPassword(stored, password); !ok {
-			return apperr.InvalidCredentials()
+		if err := q.RevokeUserSessions(ctx, repo.RevokeUserSessionsParams{UserID: p.UserID, Reason: strPtr("password_changed"), ExceptID: &p.SessionID}); err != nil {
+			return err
 		}
-		return q.SetSessionLastAuth(ctx, p.SessionID)
+		return audit.Record(ctx, tx, audit.Event{ActorType: "user", ActorID: &p.UserID, Action: "user.password_changed", ResourceType: "user", ResourceID: &p.UserID})
 	})
+	if err != nil {
+		return err
+	}
+	s.sendAsync(ctx, mailer.Message{To: p.Email, Subject: "Your password was changed",
+		Body: "Your password was just changed and your other sessions were signed out. If this was not you, reset your password immediately.\n"})
+	return nil
 }
 
 // --- Password reset ---

@@ -70,6 +70,96 @@ func TestAdminCanSignInRightAfterEnrolling(t *testing.T) {
 	again.must(200, http.MethodGet, "/api/v1/admin/tenants", nil)
 }
 
+// adminWithEmail is adminClient, but also returns the email and the TOTP secret.
+func adminWithEmail(t *testing.T, roles ...string) (*Client, string, string) {
+	t.Helper()
+	email := unique("adminrec")
+	if _, err := env.IDs.CreateAdmin(context.Background(), nil, email, "Admin", testPassword, roles); err != nil {
+		t.Fatal(err)
+	}
+	c := newClient(t)
+	c.must(200, http.MethodPost, "/api/v1/admin/auth/login", map[string]any{"email": email, "password": testPassword})
+	c.refreshCSRF("/api/v1/admin/me")
+	secret := c.must(200, http.MethodPost, "/api/v1/admin/auth/mfa/enroll", nil)["secret"].(string)
+	c.must(204, http.MethodPost, "/api/v1/admin/auth/mfa/confirm", map[string]any{"code": code(t, secret, time.Now().Add(-30*time.Second))})
+	return c, email, secret
+}
+
+func TestAdminChangePassword(t *testing.T) {
+	c, email, secret := adminWithEmail(t, "billing_admin")
+	other := newClient(t)
+	other.must(200, http.MethodPost, "/api/v1/admin/auth/login", map[string]any{"email": email, "password": testPassword})
+	const next = "a-completely-new-passphrase"
+	c.wantCode(401, "invalid_credentials", http.MethodPost, "/api/v1/admin/auth/password/change", map[string]any{"current_password": "wrong-password-value", "new_password": next})
+	c.must(204, http.MethodPost, "/api/v1/admin/auth/password/change", map[string]any{"current_password": testPassword, "new_password": next})
+	c.must(200, http.MethodGet, "/api/v1/admin/products", nil)
+	other.wantCode(401, "authentication_required", http.MethodGet, "/api/v1/admin/me", nil)
+
+	fresh := newClient(t)
+	fresh.wantCode(401, "invalid_credentials", http.MethodPost, "/api/v1/admin/auth/login", map[string]any{"email": email, "password": testPassword})
+	fresh.must(200, http.MethodPost, "/api/v1/admin/auth/login", map[string]any{"email": email, "password": next})
+	fresh.refreshCSRF("/api/v1/admin/me")
+	fresh.must(204, http.MethodPost, "/api/v1/admin/auth/mfa/verify", map[string]any{"code": code(t, secret, time.Now())}) // MFA is unchanged.
+}
+
+func TestRecoverAdmin(t *testing.T) {
+	super := adminClient(t, "super_admin")
+	billing := adminClient(t, "billing_admin")
+	target, email, _ := adminWithEmail(t, "platform_support")
+	var id string
+	for _, a := range super.must(200, http.MethodGet, "/api/v1/admin/admins", nil)["data"].([]any) {
+		if a.(map[string]any)["email"] == email {
+			id = a.(map[string]any)["id"].(string)
+		}
+	}
+	const next = "a-recovered-admin-passphrase"
+	body := map[string]any{"new_password": next, "reason": "lost their phone"}
+	path := "/api/v1/admin/admins/" + id + "/recover"
+
+	billing.wantCode(403, "insufficient_role", http.MethodPost, path, body)
+	target.wantCode(403, "insufficient_role", http.MethodPost, path, body)
+	super.wantCode(422, "validation_failed", http.MethodPost, path, map[string]any{"new_password": "password1234", "reason": "weak password"})
+	super.wantCode(404, "not_found", http.MethodPost, "/api/v1/admin/admins/01a1b22d-0000-7000-8000-000000000000/recover", body)
+	target.must(200, http.MethodGet, "/api/v1/admin/me", nil)
+
+	super.must(204, http.MethodPost, path, body)
+	target.wantCode(401, "authentication_required", http.MethodGet, "/api/v1/admin/me", nil) // All sessions ended.
+	env.Mail.waitFor(t, email, "account was recovered")
+
+	fresh := newClient(t)
+	fresh.wantCode(401, "invalid_credentials", http.MethodPost, "/api/v1/admin/auth/login", map[string]any{"email": email, "password": testPassword})
+	// The new password gives no access until two-step verification is set up again.
+	out := fresh.must(200, http.MethodPost, "/api/v1/admin/auth/login", map[string]any{"email": email, "password": next})
+	if out["mfa_enrolled"] != false {
+		t.Fatal("the old factor should be gone")
+	}
+	fresh.refreshCSRF("/api/v1/admin/me")
+	fresh.wantCode(401, "mfa_required", http.MethodGet, "/api/v1/admin/tenants", nil)
+	secret := fresh.must(200, http.MethodPost, "/api/v1/admin/auth/mfa/enroll", nil)["secret"].(string)
+	fresh.must(204, http.MethodPost, "/api/v1/admin/auth/mfa/confirm", map[string]any{"code": code(t, secret, time.Now())})
+	fresh.must(200, http.MethodGet, "/api/v1/admin/tenants", nil)
+
+	found := false
+	for _, e := range super.must(200, http.MethodGet, "/api/v1/admin/audit-events?limit=100", nil)["data"].([]any) {
+		found = found || e.(map[string]any)["action"] == "platform_admin.recovered"
+	}
+	if !found {
+		t.Error("recovery was not audited")
+	}
+}
+
+func TestAdminCannotRecoverSelf(t *testing.T) {
+	super, email, _ := adminWithEmail(t, "super_admin")
+	var id string
+	for _, a := range super.must(200, http.MethodGet, "/api/v1/admin/admins", nil)["data"].([]any) {
+		if a.(map[string]any)["email"] == email {
+			id = a.(map[string]any)["id"].(string)
+		}
+	}
+	super.wantCode(409, "cannot_recover_self", http.MethodPost, "/api/v1/admin/admins/"+id+"/recover", map[string]any{"new_password": "a-recovered-admin-passphrase", "reason": "stolen session attempt"})
+	super.must(200, http.MethodGet, "/api/v1/admin/me", nil)
+}
+
 func TestAdminSessionCannotUseTenantRoutes(t *testing.T) {
 	a := adminClient(t, "super_admin")
 	a.wantCode(401, "authentication_required", http.MethodGet, "/api/v1/me/context", nil)

@@ -45,6 +45,10 @@ These ports avoid the defaults on purpose: PostgreSQL is on 55432 and Redis on 5
 | `make gen` | Regenerate code after changing SQL queries or the OpenAPI contracts |
 | `make reset` | Delete local data and start again, then run `make migrate` |
 
+## Testing server
+
+See [deploy/testing](deploy/testing/README.md).
+
 ## Layout
 
 ```text

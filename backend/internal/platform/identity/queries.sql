@@ -266,6 +266,19 @@ UPDATE identity.platform_admin_sessions SET mfa_verified_at = now(), last_auth_a
 -- name: RevokeAdminSession :exec
 UPDATE identity.platform_admin_sessions SET revoked_at = now() WHERE id = @id;
 
+-- name: GetAdminByID :one
+SELECT id, email, display_name, password_hash, status FROM identity.platform_admins WHERE id = @id;
+
+-- name: SetAdminPassword :exec
+UPDATE identity.platform_admins SET password_hash = @password_hash WHERE id = @id;
+
+-- name: RevokeAdminSessions :exec
+UPDATE identity.platform_admin_sessions SET revoked_at = now()
+WHERE admin_id = @admin_id AND revoked_at IS NULL AND (sqlc.narg(except_id)::uuid IS NULL OR id <> sqlc.narg(except_id)::uuid);
+
+-- name: DeleteAdminFactors :exec
+DELETE FROM identity.platform_admin_mfa_factors WHERE admin_id = @admin_id;
+
 -- name: CreateAdminFactor :one
 INSERT INTO identity.platform_admin_mfa_factors (admin_id, kind, secret_ciphertext, key_id)
 VALUES (@admin_id, 'totp', @secret_ciphertext, @key_id) RETURNING id;

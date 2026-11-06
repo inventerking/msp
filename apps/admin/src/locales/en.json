@@ -16,7 +16,8 @@
     "catalog": "Catalog",
     "subscriptions": "Subscriptions",
     "audit": "Audit log",
-    "admins": "Platform admins"
+    "admins": "Platform admins",
+    "account": "Your account"
   },
   "login": {
     "title": "Administrator sign-in",
@@ -183,7 +184,13 @@
       "billing_admin": "Billing Admin",
       "integration_admin": "Integration Admin",
       "platform_analyst": "Platform Analyst"
-    }
+    },
+    "recover": "Recover",
+    "recoverTitle": "Recover {{name}}",
+    "recoverBody": "For a lost password or authenticator. This sets a new password, removes their two-step verification and signs them out. They set up two-step verification again at next sign-in, and they are told by email.",
+    "newPassword": "Temporary password",
+    "reason": "Reason (kept in the audit log)",
+    "you": "You"
   },
   "validation": {
     "required": "This field is required",
@@ -209,6 +216,17 @@
     "product_key_taken": "A product with this key already exists.",
     "plan_key_taken": "A plan with this key already exists.",
     "admin_exists": "An administrator with this email already exists.",
-    "validation_failed": "Some fields need attention."
+    "validation_failed": "Some fields need attention.",
+    "cannot_recover_self": "Ask another Super Admin to do this.",
+    "mfa_already_enabled": "Two-step verification is already on."
+  },
+  "account": {
+    "title": "Your account",
+    "subtitle": "Changing your password signs out your other sessions.",
+    "current": "Current password",
+    "new": "New password",
+    "hint": "At least 12 characters.",
+    "submit": "Change password",
+    "done": "Password changed."
   }
 }

@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -42,17 +43,33 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
+	// Each command checks only what it uses, so a process holds no extra credentials.
+	needRuntime := func() error { return errors.Join(cfg.RequireKeys(), cfg.RequireDB("app", "platform", "system")) }
 	switch os.Args[1] {
 	case "api":
-		err = runAPI(ctx, cfg)
+		if err = needRuntime(); err == nil {
+			err = runAPI(ctx, cfg)
+		}
 	case "worker":
-		err = runWorker(ctx, cfg)
+		if err = cfg.RequireDB("system"); err == nil {
+			err = runWorker(ctx, cfg)
+		}
 	case "ingest":
 		err = errors.New("the ingest role arrives with Visitor Intelligence in Phase 5")
 	case "migrate":
-		err = runMigrate(ctx, cfg)
+		if err = cfg.RequireDB("owner"); err == nil {
+			err = runMigrate(ctx, cfg)
+		}
 	case "create-admin":
-		err = runCreateAdmin(ctx, cfg, os.Args[2:])
+		if err = needRuntime(); err == nil {
+			err = runCreateAdmin(ctx, cfg, os.Args[2:])
+		}
+	case "recover-admin":
+		if err = needRuntime(); err == nil {
+			err = runRecoverAdmin(ctx, cfg, os.Args[2:])
+		}
+	case "healthcheck":
+		err = runHealthcheck(ctx, cfg)
 	default:
 		usage()
 	}
@@ -62,7 +79,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: engine api | worker | migrate | create-admin --email E --name N")
+	fmt.Fprintln(os.Stderr, "usage: engine api | worker | migrate | healthcheck | create-admin --email E --name N | recover-admin --email E --reason R")
 	os.Exit(2)
 }
 
@@ -165,6 +182,63 @@ func runWorker(ctx context.Context, c config.Config) error {
 			tick()
 		}
 	}
+}
+
+// runHealthcheck lets a minimal container image, with no shell or curl, check its own API.
+func runHealthcheck(ctx context.Context, c config.Config) error {
+	_, port, err := net.SplitHostPort(c.HTTPAddr)
+	if err != nil {
+		return err
+	}
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(cctx, http.MethodGet, "http://127.0.0.1:"+port+"/readyz", nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("not ready: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// runRecoverAdmin is the break-glass path for when no Super Admin can sign in. It needs access to
+// the server and its secrets, and the action is recorded in the audit log.
+func runRecoverAdmin(ctx context.Context, c config.Config, args []string) error {
+	fs := flag.NewFlagSet("recover-admin", flag.ExitOnError)
+	email := fs.String("email", "", "admin email")
+	reason := fs.String("reason", "", "why this is needed")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	password := os.Getenv("ADMIN_PASSWORD")
+	if *email == "" || *reason == "" || password == "" {
+		return errors.New("--email, --reason and the ADMIN_PASSWORD environment variable are required")
+	}
+	pools, err := openPools(ctx, c)
+	if err != nil {
+		return err
+	}
+	defer pools.Close()
+	ids, err := identity.New(pools, crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}, mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, c.AppBaseURL)
+	if err != nil {
+		return err
+	}
+	id, err := ids.AdminIDByEmail(ctx, *email)
+	if err != nil {
+		return err
+	}
+	if err := ids.RecoverAdmin(ctx, nil, id, password, *reason); err != nil {
+		return err
+	}
+	time.Sleep(time.Second) // Gives the notice email time to leave before the process exits.
+	slog.Info("recovered admin; they must set up two-step verification at next sign-in", "id", id)
+	return nil
 }
 
 // runCreateAdmin bootstraps a Super Admin. The password comes from the environment, so it never

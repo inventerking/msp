@@ -61,14 +61,6 @@ func Load() (Config, error) {
 		}
 	}
 	var errs []error
-	for name, v := range map[string]string{
-		"DB_OWNER_PASSWORD": c.DBOwnerPassword, "DB_APP_PASSWORD": c.DBAppPassword,
-		"DB_PLATFORM_PASSWORD": c.DBPlatformPass, "DB_SYSTEM_PASSWORD": c.DBSystemPassword,
-	} {
-		if v == "" {
-			errs = append(errs, fmt.Errorf("%s is required", name))
-		}
-	}
 	var err error
 	if c.EncryptionKey, err = key("ENCRYPTION_KEY"); err != nil {
 		errs = append(errs, err)
@@ -77,6 +69,31 @@ func Load() (Config, error) {
 		errs = append(errs, err)
 	}
 	return c, errors.Join(errs...)
+}
+
+// RequireKeys checks the secrets needed to serve requests.
+func (c Config) RequireKeys() error {
+	if len(c.EncryptionKey) == 0 || len(c.HMACKey) == 0 {
+		return errors.New("ENCRYPTION_KEY and HMAC_KEY are required")
+	}
+	return nil
+}
+
+// RequireDB checks that each named role has a usable password. A process asks only for the roles
+// it uses, so the running API never holds the migration role's password.
+func (c Config) RequireDB(roles ...string) error {
+	passwords := map[string]string{"owner": c.DBOwnerPassword, "app": c.DBAppPassword, "platform": c.DBPlatformPass, "system": c.DBSystemPassword}
+	var errs []error
+	for _, role := range roles {
+		pw := passwords[role]
+		switch {
+		case pw == "":
+			errs = append(errs, fmt.Errorf("the password for database role %s is required", role))
+		case !c.IsLocal() && strings.HasPrefix(pw, "dev_"):
+			errs = append(errs, fmt.Errorf("database role %s uses a local development password outside local development", role))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // authRate is the limit on authentication requests per IP. Test runs raise it through the
@@ -89,6 +106,9 @@ func authRate() int {
 }
 
 func key(name string) ([]byte, error) {
+	if os.Getenv(name) == "" {
+		return nil, nil
+	}
 	k, err := base64.StdEncoding.DecodeString(os.Getenv(name))
 	if err != nil || len(k) != 32 {
 		return nil, fmt.Errorf("%s must be 32 bytes of base64", name)

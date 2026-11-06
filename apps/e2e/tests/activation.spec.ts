@@ -4,9 +4,13 @@ import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { TOTP } from "otpauth";
 
-const client = "http://localhost:5180";
-const admin = "http://localhost:5181";
-const mailpit = "http://127.0.0.1:58025";
+// Defaults are the local stack. To test a running testing server, set DEPLOYED_COMPOSE_DIR and:
+// CLIENT_URL, ADMIN_URL and MAILPIT_URL.
+const client = process.env.CLIENT_URL ?? "http://localhost:5180";
+const admin = process.env.ADMIN_URL ?? "http://localhost:5181";
+const mailpit = process.env.MAILPIT_URL ?? "http://127.0.0.1:58025";
+const composeDir = process.env.DEPLOYED_COMPOSE_DIR;
+const escapedClient = client.replace(/[.:/]/g, "\\$&");
 const password = "a-long-e2e-passphrase";
 const stamp = Date.now();
 
@@ -40,7 +44,7 @@ async function register(page: Page, email: string, name: string) {
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Create an account" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
-  await page.goto(await latestLink(email, /http:\/\/localhost:5180\/verify-email\?token=[\w-]+/));
+  await page.goto(await latestLink(email, new RegExp(`${escapedClient}\\/verify-email\\?token=[\\w-]+`)));
   await expect(page.getByRole("heading", { name: "Email confirmed" })).toBeVisible();
   await page.getByRole("link", { name: "Sign in" }).click();
   await page.getByLabel("Email").fill(email);
@@ -51,11 +55,15 @@ async function register(page: Page, email: string, name: string) {
 
 test("an admin activates a module and the workspace updates, then suspension blocks it at the API", async ({ browser }) => {
   const adminEmail = `e2e-admin-${stamp}@example.test`;
-  execFileSync("go", ["run", "./cmd/engine", "create-admin", "--email", adminEmail, "--name", "E2E Admin"], {
-    cwd: resolve(import.meta.dirname, "../../../backend"),
-    env: { ...process.env, ...dotenv(), ADMIN_PASSWORD: password },
-    stdio: "ignore",
-  });
+  if (composeDir) {
+    execFileSync("docker", ["compose", "exec", "-T", "-e", `ADMIN_PASSWORD=${password}`, "api", "/engine", "create-admin", "--email", adminEmail, "--name", "E2E Admin"], { cwd: composeDir, stdio: "ignore" });
+  } else {
+    execFileSync("go", ["run", "./cmd/engine", "create-admin", "--email", adminEmail, "--name", "E2E Admin"], {
+      cwd: resolve(import.meta.dirname, "../../../backend"),
+      env: { ...process.env, ...dotenv(), ADMIN_PASSWORD: password },
+      stdio: "ignore",
+    });
+  }
 
   // A new customer registers, verifies by email and creates a workspace.
   const customer = await (await browser.newContext()).newPage();
@@ -122,7 +130,11 @@ test("an admin activates a module and the workspace updates, then suspension blo
 });
 
 test("a removed member loses access, and a signed-in user is held at MFA", async ({ browser }) => {
+  const cspViolations: string[] = [];
   const owner = await (await browser.newContext()).newPage();
+  owner.on("console", (m) => {
+    if (/Content Security Policy/i.test(m.text())) cspViolations.push(m.text());
+  });
   await register(owner, `e2e-team-${stamp}@example.test`, "Tess Owner");
   await owner.getByLabel("Workspace name").fill(`E2E Team ${stamp}`);
   await owner.getByRole("button", { name: "Create workspace" }).click();
@@ -156,12 +168,15 @@ test("a removed member loses access, and a signed-in user is held at MFA", async
   await owner.getByLabel("Email").fill(memberEmail);
   await owner.getByRole("button", { name: "Invite member" }).click();
   await expect(owner.getByRole("cell", { name: memberEmail })).toBeVisible();
-  const invite = await latestLink(memberEmail, /http:\/\/localhost:5180\/invite\/[\w.-]+/);
+  const invite = await latestLink(memberEmail, new RegExp(`${escapedClient}\\/invite\\/[\\w.-]+`));
   const member = await (await browser.newContext()).newPage();
   await register(member, memberEmail, "Mo Member");
   await member.goto(invite);
   await member.getByRole("button", { name: "Accept invitation" }).click();
   await expect(member.getByRole("heading", { name: "Welcome, Mo Member" })).toBeVisible();
+
+  // Nothing the app does may be blocked by the Content-Security-Policy on a deployed server.
+  expect(cspViolations).toEqual([]);
 
   // Remove them. Their very next request is refused.
   await owner.reload();

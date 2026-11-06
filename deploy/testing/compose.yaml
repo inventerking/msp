@@ -1,0 +1,159 @@
+# Testing server. Run ./init-env.sh once, then: docker compose up -d --build
+# Keep the rules in docs/implementation/open-decisions.md: synthetic data only, and all email
+# stays in Mailpit. Mailpit cannot deliver to real inboxes.
+name: msp-testing
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  read_only: true
+
+x-backend-env: &backend-env
+  APP_ENV: testing
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: msp_engine
+  REDIS_ADDR: redis:6379
+  SMTP_ADDR: mailpit:1025
+  MAIL_FROM: no-reply@${APP_HOST}
+  APP_BASE_URL: https://${APP_HOST}${PUBLIC_PORT_SUFFIX:-}
+  ALLOWED_ORIGINS: https://${APP_HOST}${PUBLIC_PORT_SUFFIX:-},https://${ADMIN_HOST}${PUBLIC_PORT_SUFFIX:-}
+
+services:
+  traefik:
+    <<: *hardening
+    image: traefik:v3.7
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.web.address=:8000
+      - --entrypoints.web.http.redirections.entrypoint.to=:${HTTPS_PORT:-443}
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:8443
+      - --log.level=WARN
+      - --accesslog=true
+      - --accesslog.fields.names.ClientAddr=drop
+      - --accesslog.fields.names.ClientHost=drop
+      - --accesslog.fields.names.RequestPath=drop
+      - --accesslog.fields.headers.defaultmode=drop
+    environment:
+      APP_HOST: ${APP_HOST}
+      ADMIN_HOST: ${ADMIN_HOST}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "${HTTP_PORT:-80}:8000"
+      - "${HTTPS_PORT:-443}:8443"
+    volumes:
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    networks: [edge]
+    depends_on:
+      api: {condition: service_healthy}
+
+  migrate:
+    image: msp-engine-backend:testing
+    build: {context: ../.., dockerfile: deploy/docker/backend.Dockerfile}
+    command: [migrate]
+    environment:
+      <<: *backend-env
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
+    networks: [internal]
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+
+  api:
+    <<: *hardening
+    image: msp-engine-backend:testing
+    command: [api]
+    environment:
+      <<: *backend-env
+      HTTP_ADDR: 0.0.0.0:8088
+      TRUST_FORWARDED: "true"
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      DB_PLATFORM_PASSWORD: ${DB_PLATFORM_PASSWORD}
+      DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      HMAC_KEY: ${HMAC_KEY}
+    networks: [edge, internal]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "/engine", "healthcheck"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  worker:
+    <<: *hardening
+    image: msp-engine-backend:testing
+    command: [worker]
+    environment:
+      <<: *backend-env
+      DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
+    networks: [internal]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  client:
+    <<: *hardening
+    image: msp-engine-client:testing
+    build: {context: ../.., dockerfile: deploy/docker/web.Dockerfile, args: {APP: client}}
+    tmpfs: [/tmp]
+    networks: [edge]
+
+  admin:
+    <<: *hardening
+    image: msp-engine-admin:testing
+    build: {context: ../.., dockerfile: deploy/docker/web.Dockerfile, args: {APP: admin}}
+    tmpfs: [/tmp]
+    networks: [edge]
+
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg18-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      DB_PLATFORM_PASSWORD: ${DB_PLATFORM_PASSWORD}
+      DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./postgres/00-roles.sh:/docker-entrypoint-initdb.d/00-roles.sh:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d msp_engine"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:8.8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # The email sink. Its web page is published to the server's loopback only: reach it by SSH tunnel.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports: ["127.0.0.1:${MAILPIT_PORT:-58025}:8025"]
+    networks: [internal, mail_ui]
+
+networks:
+  edge:
+  # No route to the internet, so the database and backend cannot reach or be reached from outside.
+  internal: {internal: true}
+  mail_ui:
+
+volumes:
+  pgdata:

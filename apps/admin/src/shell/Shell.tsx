@@ -1,6 +1,6 @@
 import { unwrap } from "@msp/api-client";
 import { Button, cn, ErrorState, SkeletonRows } from "@msp/ui";
-import { Boxes, Building2, CreditCard, LayoutDashboard, LogOut, ScrollText, UserCog, type LucideIcon } from "lucide-react";
+import { Boxes, Building2, CreditCard, KeyRound, LayoutDashboard, LogOut, ScrollText, UserCog, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router";
 import { api, hasRole, queryClient, useAdmin } from "../app/api";
@@ -45,6 +45,7 @@ export function Shell() {
             {hasRole(me, "super_admin", "platform_support", "billing_admin", "platform_analyst") ? <Item to="/subscriptions" icon={CreditCard} label={t("nav.subscriptions")} /> : null}
             {hasRole(me, "super_admin", "platform_support") ? <Item to="/audit" icon={ScrollText} label={t("nav.audit")} /> : null}
             {hasRole(me, "super_admin") ? <Item to="/admins" icon={UserCog} label={t("nav.admins")} /> : null}
+            <Item to="/account" icon={KeyRound} label={t("nav.account")} />
           </nav>
           <div className="border-t border-white/10 p-3">
             <p className="truncate text-xs text-rail-ink">{me?.admin.email}</p>

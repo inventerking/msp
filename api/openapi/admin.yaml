@@ -22,6 +22,15 @@ paths:
       responses:
         "204": {description: Done}
         default: {$ref: "#/components/responses/Problem"}
+  /auth/password/change:
+    post:
+      operationId: adminChangePassword
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, integration_admin, platform_analyst]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PasswordChange"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
   /auth/mfa/enroll:
     post:
       operationId: adminEnrollTotp
@@ -75,6 +84,17 @@ paths:
       requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateAdmin"}}}}
       responses:
         "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Admin"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /admins/{id}/recover:
+    post:
+      operationId: recoverAdmin
+      x-access: admin
+      x-admin-roles: [super_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AdminRecovery"}}}}
+      responses:
+        "204": {description: Done}
         default: {$ref: "#/components/responses/Problem"}
   /tenants:
     get:
@@ -396,6 +416,18 @@ components:
       properties:
         data: {type: array, items: {$ref: "#/components/schemas/AuditEvent"}}
         next_cursor: {type: string, nullable: true}
+    PasswordChange:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password: {type: string, maxLength: 256}
+        new_password: {type: string, minLength: 12, maxLength: 256}
+    AdminRecovery:
+      type: object
+      required: [new_password, reason]
+      properties:
+        new_password: {type: string, minLength: 12, maxLength: 256}
+        reason: {type: string, minLength: 3, maxLength: 500}
     AdminLogin:
       type: object
       required: [email, password]

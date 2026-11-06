@@ -139,6 +139,18 @@ func (h tenantHandlers) DisableMfa(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h tenantHandlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	var b tenantapi.PasswordChange
+	if !decode(w, r, &b) {
+		return
+	}
+	if err := h.identity.ChangePassword(r.Context(), authctx.PrincipalFrom(r.Context()), b.CurrentPassword, b.NewPassword); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h tenantHandlers) Reauthenticate(w http.ResponseWriter, r *http.Request) {
 	var b tenantapi.PasswordRequest
 	if !decode(w, r, &b) {

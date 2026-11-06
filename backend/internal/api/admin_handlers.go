@@ -39,6 +39,31 @@ func (h adminHandlers) AdminLogout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h adminHandlers) AdminChangePassword(w http.ResponseWriter, r *http.Request) {
+	var b adminapi.PasswordChange
+	if !decode(w, r, &b) {
+		return
+	}
+	if err := h.identity.AdminChangePassword(r.Context(), authctx.AdminFrom(r.Context()), b.CurrentPassword, b.NewPassword); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h adminHandlers) RecoverAdmin(w http.ResponseWriter, r *http.Request, id adminapi.Id) {
+	var b adminapi.AdminRecovery
+	if !decode(w, r, &b) {
+		return
+	}
+	actor := authctx.AdminFrom(r.Context())
+	if err := h.identity.RecoverAdmin(r.Context(), &actor, id, b.NewPassword, b.Reason); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h adminHandlers) AdminEnrollTotp(w http.ResponseWriter, r *http.Request) {
 	e, err := h.identity.AdminEnrollTOTP(r.Context(), authctx.AdminFrom(r.Context()))
 	if err != nil {

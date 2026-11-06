@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router";
+import { Account } from "../features/Account";
 import { Admins } from "../features/Admins";
 import { Audit } from "../features/Audit";
 import { Catalog } from "../features/Catalog";
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
           { path: "/subscriptions", Component: Subscriptions },
           { path: "/audit", Component: Audit },
           { path: "/admins", Component: Admins },
+          { path: "/account", Component: Account },
         ],
       },
     ],

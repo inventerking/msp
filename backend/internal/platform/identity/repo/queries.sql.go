@@ -520,6 +520,15 @@ func (q *Queries) CreateVerificationToken(ctx context.Context, arg CreateVerific
 	return err
 }
 
+const deleteAdminFactors = `-- name: DeleteAdminFactors :exec
+DELETE FROM identity.platform_admin_mfa_factors WHERE admin_id = $1
+`
+
+func (q *Queries) DeleteAdminFactors(ctx context.Context, adminID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAdminFactors, adminID)
+	return err
+}
+
 const deleteAllFactors = `-- name: DeleteAllFactors :exec
 DELETE FROM identity.mfa_factors WHERE user_id = $1
 `
@@ -598,6 +607,31 @@ type GetAdminByEmailRow struct {
 func (q *Queries) GetAdminByEmail(ctx context.Context, email string) (GetAdminByEmailRow, error) {
 	row := q.db.QueryRow(ctx, getAdminByEmail, email)
 	var i GetAdminByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.DisplayName,
+		&i.PasswordHash,
+		&i.Status,
+	)
+	return i, err
+}
+
+const getAdminByID = `-- name: GetAdminByID :one
+SELECT id, email, display_name, password_hash, status FROM identity.platform_admins WHERE id = $1
+`
+
+type GetAdminByIDRow struct {
+	ID           uuid.UUID
+	Email        string
+	DisplayName  string
+	PasswordHash string
+	Status       string
+}
+
+func (q *Queries) GetAdminByID(ctx context.Context, id uuid.UUID) (GetAdminByIDRow, error) {
+	row := q.db.QueryRow(ctx, getAdminByID, id)
+	var i GetAdminByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -1335,6 +1369,21 @@ func (q *Queries) RevokeAdminSession(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const revokeAdminSessions = `-- name: RevokeAdminSessions :exec
+UPDATE identity.platform_admin_sessions SET revoked_at = now()
+WHERE admin_id = $1 AND revoked_at IS NULL AND ($2::uuid IS NULL OR id <> $2::uuid)
+`
+
+type RevokeAdminSessionsParams struct {
+	AdminID  uuid.UUID
+	ExceptID *uuid.UUID
+}
+
+func (q *Queries) RevokeAdminSessions(ctx context.Context, arg RevokeAdminSessionsParams) error {
+	_, err := q.db.Exec(ctx, revokeAdminSessions, arg.AdminID, arg.ExceptID)
+	return err
+}
+
 const revokeInvitation = `-- name: RevokeInvitation :execrows
 UPDATE identity.invitations SET revoked_at = now()
 WHERE tenant_id = $1 AND id = $2 AND accepted_at IS NULL AND revoked_at IS NULL
@@ -1385,6 +1434,20 @@ type RevokeUserSessionsParams struct {
 
 func (q *Queries) RevokeUserSessions(ctx context.Context, arg RevokeUserSessionsParams) error {
 	_, err := q.db.Exec(ctx, revokeUserSessions, arg.Reason, arg.UserID, arg.ExceptID)
+	return err
+}
+
+const setAdminPassword = `-- name: SetAdminPassword :exec
+UPDATE identity.platform_admins SET password_hash = $1 WHERE id = $2
+`
+
+type SetAdminPasswordParams struct {
+	PasswordHash string
+	ID           uuid.UUID
+}
+
+func (q *Queries) SetAdminPassword(ctx context.Context, arg SetAdminPasswordParams) error {
+	_, err := q.db.Exec(ctx, setAdminPassword, arg.PasswordHash, arg.ID)
 	return err
 }
 

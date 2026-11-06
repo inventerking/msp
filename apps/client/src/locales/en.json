@@ -218,7 +218,11 @@
     "expires": "Expires",
     "thisDevice": "This device",
     "revoke": "Sign out",
-    "unknownDevice": "Unknown device"
+    "unknownDevice": "Unknown device",
+    "password": "Password",
+    "currentPassword": "Current password",
+    "changePassword": "Change password",
+    "passwordChanged": "Password changed. Your other sessions were signed out."
   },
   "modules": {
     "lead_generation": {
