@@ -29,6 +29,11 @@ type Config struct {
 	EncryptionKey     []byte
 	HMACKey           []byte
 	AuthRatePerMinute int
+	S3Endpoint, S3Bucket, S3AccessKey, S3SecretKey string
+	GotenbergURL                                   string
+	ClamAVAddr                                     string
+	// FileScanner is clamav, or allow-all, which is refused outside local development.
+	FileScanner string
 	// TrustForwarded uses X-Forwarded-For. Enable only behind a trusted proxy such as Traefik.
 	TrustForwarded bool
 }
@@ -54,6 +59,13 @@ func Load() (Config, error) {
 		AppBaseURL:        strings.TrimRight(get("APP_BASE_URL", "http://localhost:5180"), "/"),
 		AuthRatePerMinute: authRate(),
 		TrustForwarded:    os.Getenv("TRUST_FORWARDED") == "true",
+		S3Endpoint:        os.Getenv("S3_ENDPOINT"),
+		S3Bucket:          get("S3_BUCKET", "msp-files"),
+		S3AccessKey:       os.Getenv("S3_ACCESS_KEY"),
+		S3SecretKey:       os.Getenv("S3_SECRET_KEY"),
+		GotenbergURL:      os.Getenv("GOTENBERG_URL"),
+		ClamAVAddr:        os.Getenv("CLAMAV_ADDR"),
+		FileScanner:       get("FILE_SCANNER", "clamav"),
 	}
 	for _, o := range strings.Split(get("ALLOWED_ORIGINS", "http://localhost:5180,http://localhost:5181"), ",") {
 		if o = strings.TrimSpace(o); o != "" {
@@ -75,6 +87,14 @@ func Load() (Config, error) {
 func (c Config) RequireKeys() error {
 	if len(c.EncryptionKey) == 0 || len(c.HMACKey) == 0 {
 		return errors.New("ENCRYPTION_KEY and HMAC_KEY are required")
+	}
+	return nil
+}
+
+// RequireScanner refuses to mark files clean without scanning them, except in local development.
+func (c Config) RequireScanner() error {
+	if c.FileScanner == "allow-all" && !c.IsLocal() {
+		return errors.New("FILE_SCANNER=allow-all is only allowed in local development")
 	}
 	return nil
 }

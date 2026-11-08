@@ -18,6 +18,7 @@ type policy struct {
 	MFAExempt  bool
 	RecentAuth bool
 	AdminRoles []string
+	RawBody    bool
 	route      *routers.Route
 }
 
@@ -36,7 +37,7 @@ func loadPolicies(spec *openapi3.T, base string) (map[string]*policy, error) {
 			default:
 				return nil, fmt.Errorf("%s: declares no valid x-access", key)
 			}
-			for name, target := range map[string]any{"x-permission": &p.Permission, "x-module": &p.Module, "x-mfa-exempt": &p.MFAExempt, "x-recent-auth": &p.RecentAuth, "x-admin-roles": &p.AdminRoles} {
+			for name, target := range map[string]any{"x-permission": &p.Permission, "x-module": &p.Module, "x-mfa-exempt": &p.MFAExempt, "x-recent-auth": &p.RecentAuth, "x-admin-roles": &p.AdminRoles, "x-raw-body": &p.RawBody} {
 				if err := ext(op, name, target); err != nil {
 					return nil, fmt.Errorf("%s: %w", key, err)
 				}

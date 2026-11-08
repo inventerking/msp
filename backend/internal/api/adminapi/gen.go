@@ -117,6 +117,42 @@ func (e ProductKind) Valid() bool {
 	}
 }
 
+// Defines values for ProviderStatusStatus.
+const (
+	ProviderStatusStatusDisabled ProviderStatusStatus = "disabled"
+	ProviderStatusStatusEnabled  ProviderStatusStatus = "enabled"
+)
+
+// Valid indicates whether the value is a known member of the ProviderStatusStatus enum.
+func (e ProviderStatusStatus) Valid() bool {
+	switch e {
+	case ProviderStatusStatusDisabled:
+		return true
+	case ProviderStatusStatusEnabled:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateAiRouteStatus.
+const (
+	UpdateAiRouteStatusActive   UpdateAiRouteStatus = "active"
+	UpdateAiRouteStatusDisabled UpdateAiRouteStatus = "disabled"
+)
+
+// Valid indicates whether the value is a known member of the UpdateAiRouteStatus enum.
+func (e UpdateAiRouteStatus) Valid() bool {
+	switch e {
+	case UpdateAiRouteStatusActive:
+		return true
+	case UpdateAiRouteStatusDisabled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ChangeEntitlementParamsAction.
 const (
 	Activate ChangeEntitlementParamsAction = "activate"
@@ -179,6 +215,38 @@ type AdminRecovery struct {
 	Reason      string `json:"reason"`
 }
 
+// AiPrompt defines model for AiPrompt.
+type AiPrompt struct {
+	ActionClass   string             `json:"action_class"`
+	ActiveVersion int                `json:"active_version"`
+	Id            openapi_types.UUID `json:"id"`
+	Key           string             `json:"key"`
+	Status        string             `json:"status"`
+	TaskKey       string             `json:"task_key"`
+	Versions      int                `json:"versions"`
+}
+
+// AiPromptList defines model for AiPromptList.
+type AiPromptList struct {
+	Data []AiPrompt `json:"data"`
+}
+
+// AiRoute defines model for AiRoute.
+type AiRoute struct {
+	Id              openapi_types.UUID `json:"id"`
+	MaxInputTokens  int                `json:"max_input_tokens"`
+	MaxOutputTokens int                `json:"max_output_tokens"`
+	Model           string             `json:"model"`
+	ProviderKey     string             `json:"provider_key"`
+	Status          string             `json:"status"`
+	TaskKey         string             `json:"task_key"`
+}
+
+// AiRouteList defines model for AiRouteList.
+type AiRouteList struct {
+	Data []AiRoute `json:"data"`
+}
+
 // AuditEvent defines model for AuditEvent.
 type AuditEvent struct {
 	Action       string              `json:"action"`
@@ -208,6 +276,12 @@ type CreateAdmin struct {
 
 // CreateAdminRoles defines model for CreateAdmin.Roles.
 type CreateAdminRoles string
+
+// CreateAiPromptVersion defines model for CreateAiPromptVersion.
+type CreateAiPromptVersion struct {
+	SystemText string `json:"system_text"`
+	UserText   string `json:"user_text"`
+}
 
 // CreatePlan defines model for CreatePlan.
 type CreatePlan struct {
@@ -250,6 +324,47 @@ type CreateSubscription struct {
 	PlanId   openapi_types.UUID `json:"plan_id"`
 }
 
+// CreateWebhookEndpoint defines model for CreateWebhookEndpoint.
+type CreateWebhookEndpoint struct {
+	ProviderKey string              `json:"provider_key"`
+	TenantId    *openapi_types.UUID `json:"tenant_id,omitempty"`
+}
+
+// CreatedId defines model for CreatedId.
+type CreatedId struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+// CreditBalance defines model for CreditBalance.
+type CreditBalance struct {
+	Balance  int64  `json:"balance"`
+	MeterKey string `json:"meter_key"`
+	Name     string `json:"name"`
+	Reserved int64  `json:"reserved"`
+}
+
+// CreditDetail defines model for CreditDetail.
+type CreditDetail struct {
+	Balances []CreditBalance `json:"balances"`
+	Ledger   []LedgerEntry   `json:"ledger"`
+}
+
+// DeadLetter defines model for DeadLetter.
+type DeadLetter struct {
+	CreatedAt  time.Time           `json:"created_at"`
+	Error      string              `json:"error"`
+	Id         openapi_types.UUID  `json:"id"`
+	Kind       string              `json:"kind"`
+	Origin     string              `json:"origin"`
+	Resolution *string             `json:"resolution,omitempty"`
+	TenantId   *openapi_types.UUID `json:"tenant_id,omitempty"`
+}
+
+// DeadLetterList defines model for DeadLetterList.
+type DeadLetterList struct {
+	Data []DeadLetter `json:"data"`
+}
+
 // Entitlement defines model for Entitlement.
 type Entitlement struct {
 	EffectiveUntil *time.Time `json:"effective_until,omitempty"`
@@ -276,6 +391,51 @@ type EntitlementDetail struct {
 // EntitlementList defines model for EntitlementList.
 type EntitlementList struct {
 	Data []Entitlement `json:"data"`
+}
+
+// GrantCredits defines model for GrantCredits.
+type GrantCredits struct {
+	Amount         int64  `json:"amount"`
+	IdempotencyKey string `json:"idempotency_key"`
+	MeterKey       string `json:"meter_key"`
+	Reason         string `json:"reason"`
+}
+
+// IntegrationProvider defines model for IntegrationProvider.
+type IntegrationProvider struct {
+	Calls24h      map[string]int64   `json:"calls_24h"`
+	CircuitOpen   bool               `json:"circuit_open"`
+	HasCredential bool               `json:"has_credential"`
+	Id            openapi_types.UUID `json:"id"`
+	Key           string             `json:"key"`
+	Kind          string             `json:"kind"`
+	Name          string             `json:"name"`
+	Status        string             `json:"status"`
+}
+
+// JobStats defines model for JobStats.
+type JobStats struct {
+	DeadDeliveries           int64       `json:"dead_deliveries"`
+	OldestUnpublishedSeconds int64       `json:"oldest_unpublished_seconds"`
+	PendingDeliveries        int64       `json:"pending_deliveries"`
+	Queues                   []QueueStat `json:"queues"`
+}
+
+// LedgerEntry defines model for LedgerEntry.
+type LedgerEntry struct {
+	ActorType    string             `json:"actor_type"`
+	Amount       int64              `json:"amount"`
+	CreatedAt    time.Time          `json:"created_at"`
+	EntryType    string             `json:"entry_type"`
+	Id           openapi_types.UUID `json:"id"`
+	SourceModule *string            `json:"source_module,omitempty"`
+}
+
+// MergeCompanies defines model for MergeCompanies.
+type MergeCompanies struct {
+	Reason   string             `json:"reason"`
+	SourceId openapi_types.UUID `json:"source_id"`
+	TargetId openapi_types.UUID `json:"target_id"`
 }
 
 // MfaCode defines model for MfaCode.
@@ -367,9 +527,49 @@ type ProductList struct {
 	Data []Product `json:"data"`
 }
 
+// ProviderCredential defines model for ProviderCredential.
+type ProviderCredential struct {
+	Label  string `json:"label"`
+	Secret string `json:"secret"`
+}
+
+// ProviderList defines model for ProviderList.
+type ProviderList struct {
+	Data []IntegrationProvider `json:"data"`
+}
+
+// ProviderStatus defines model for ProviderStatus.
+type ProviderStatus struct {
+	Status ProviderStatusStatus `json:"status"`
+}
+
+// ProviderStatusStatus defines model for ProviderStatus.Status.
+type ProviderStatusStatus string
+
+// QueueStat defines model for QueueStat.
+type QueueStat struct {
+	Jobs          int64  `json:"jobs"`
+	OldestSeconds int64  `json:"oldest_seconds"`
+	Queue         string `json:"queue"`
+	Status        string `json:"status"`
+}
+
 // Reason defines model for Reason.
 type Reason struct {
 	Reason string `json:"reason"`
+}
+
+// ReplayEvents defines model for ReplayEvents.
+type ReplayEvents struct {
+	Consumer  string    `json:"consumer"`
+	EventType string    `json:"event_type"`
+	Reason    string    `json:"reason"`
+	Since     time.Time `json:"since"`
+}
+
+// ReplayResult defines model for ReplayResult.
+type ReplayResult struct {
+	Replayed int64 `json:"replayed"`
 }
 
 // Subscription defines model for Subscription.
@@ -425,6 +625,26 @@ type TotpEnrollment struct {
 	Secret     string `json:"secret"`
 }
 
+// UpdateAiRoute defines model for UpdateAiRoute.
+type UpdateAiRoute struct {
+	MaxInputTokens  int                 `json:"max_input_tokens"`
+	MaxOutputTokens int                 `json:"max_output_tokens"`
+	Model           string              `json:"model"`
+	Status          UpdateAiRouteStatus `json:"status"`
+}
+
+// UpdateAiRouteStatus defines model for UpdateAiRoute.Status.
+type UpdateAiRouteStatus string
+
+// WebhookEndpoint defines model for WebhookEndpoint.
+type WebhookEndpoint struct {
+	Id        openapi_types.UUID `json:"id"`
+	PathToken string             `json:"path_token"`
+
+	// Secret Shown once.
+	Secret string `json:"secret"`
+}
+
 // Cursor defines model for Cursor.
 type Cursor = string
 
@@ -455,6 +675,12 @@ type CreateAdminJSONRequestBody = CreateAdmin
 // RecoverAdminJSONRequestBody defines body for RecoverAdmin for application/json ContentType.
 type RecoverAdminJSONRequestBody = AdminRecovery
 
+// CreateAiPromptVersionJSONRequestBody defines body for CreateAiPromptVersion for application/json ContentType.
+type CreateAiPromptVersionJSONRequestBody = CreateAiPromptVersion
+
+// UpdateAiRouteJSONRequestBody defines body for UpdateAiRoute for application/json ContentType.
+type UpdateAiRouteJSONRequestBody = UpdateAiRoute
+
 // AdminLoginJSONRequestBody defines body for AdminLogin for application/json ContentType.
 type AdminLoginJSONRequestBody = AdminLogin
 
@@ -466,6 +692,27 @@ type AdminVerifyMfaJSONRequestBody = MfaCode
 
 // AdminChangePasswordJSONRequestBody defines body for AdminChangePassword for application/json ContentType.
 type AdminChangePasswordJSONRequestBody = PasswordChange
+
+// MergeCompaniesJSONRequestBody defines body for MergeCompanies for application/json ContentType.
+type MergeCompaniesJSONRequestBody = MergeCompanies
+
+// DiscardDeadLetterJSONRequestBody defines body for DiscardDeadLetter for application/json ContentType.
+type DiscardDeadLetterJSONRequestBody = Reason
+
+// RequeueDeadLetterJSONRequestBody defines body for RequeueDeadLetter for application/json ContentType.
+type RequeueDeadLetterJSONRequestBody = Reason
+
+// ReplayEventsJSONRequestBody defines body for ReplayEvents for application/json ContentType.
+type ReplayEventsJSONRequestBody = ReplayEvents
+
+// SetProviderCredentialJSONRequestBody defines body for SetProviderCredential for application/json ContentType.
+type SetProviderCredentialJSONRequestBody = ProviderCredential
+
+// SetProviderStatusJSONRequestBody defines body for SetProviderStatus for application/json ContentType.
+type SetProviderStatusJSONRequestBody = ProviderStatus
+
+// CreateWebhookEndpointJSONRequestBody defines body for CreateWebhookEndpoint for application/json ContentType.
+type CreateWebhookEndpointJSONRequestBody = CreateWebhookEndpoint
 
 // CreatePlanJSONRequestBody defines body for CreatePlan for application/json ContentType.
 type CreatePlanJSONRequestBody = CreatePlan
@@ -481,6 +728,9 @@ type CreateProductVersionJSONRequestBody = CreateProductVersion
 
 // ActivateSubscriptionJSONRequestBody defines body for ActivateSubscription for application/json ContentType.
 type ActivateSubscriptionJSONRequestBody = Reason
+
+// GrantCreditsJSONRequestBody defines body for GrantCredits for application/json ContentType.
+type GrantCreditsJSONRequestBody = GrantCredits
 
 // ChangeEntitlementJSONRequestBody defines body for ChangeEntitlement for application/json ContentType.
 type ChangeEntitlementJSONRequestBody = EntitlementChange
@@ -506,6 +756,21 @@ type ServerInterface interface {
 	// (POST /admins/{id}/recover)
 	RecoverAdmin(w http.ResponseWriter, r *http.Request, id Id)
 
+	// (POST /ai/prompt-versions/{id}/activate)
+	ActivateAiPromptVersion(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (GET /ai/prompts)
+	ListAiPrompts(w http.ResponseWriter, r *http.Request)
+
+	// (POST /ai/prompts/{id}/versions)
+	CreateAiPromptVersion(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (GET /ai/routes)
+	ListAiRoutes(w http.ResponseWriter, r *http.Request)
+
+	// (PUT /ai/routes/{id})
+	UpdateAiRoute(w http.ResponseWriter, r *http.Request, id Id)
+
 	// (GET /audit-events)
 	ListAuditEvents(w http.ResponseWriter, r *http.Request, params ListAuditEventsParams)
 
@@ -526,6 +791,36 @@ type ServerInterface interface {
 
 	// (POST /auth/password/change)
 	AdminChangePassword(w http.ResponseWriter, r *http.Request)
+
+	// (POST /companies/merge)
+	MergeCompanies(w http.ResponseWriter, r *http.Request)
+
+	// (GET /dead-letters)
+	ListDeadLetters(w http.ResponseWriter, r *http.Request)
+
+	// (POST /dead-letters/{id}/discard)
+	DiscardDeadLetter(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /dead-letters/{id}/requeue)
+	RequeueDeadLetter(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /events/replay)
+	ReplayEvents(w http.ResponseWriter, r *http.Request)
+
+	// (GET /integrations/providers)
+	ListProviders(w http.ResponseWriter, r *http.Request)
+
+	// (PUT /integrations/providers/{id}/credentials)
+	SetProviderCredential(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (PUT /integrations/providers/{id}/status)
+	SetProviderStatus(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /integrations/webhook-endpoints)
+	CreateWebhookEndpoint(w http.ResponseWriter, r *http.Request)
+
+	// (GET /jobs/stats)
+	GetJobStats(w http.ResponseWriter, r *http.Request)
 
 	// (GET /me)
 	GetAdminContext(w http.ResponseWriter, r *http.Request)
@@ -566,6 +861,12 @@ type ServerInterface interface {
 	// (GET /tenants/{tenantId})
 	GetTenant(w http.ResponseWriter, r *http.Request, tenantId openapi_types.UUID)
 
+	// (GET /tenants/{tenantId}/credits)
+	GetTenantCredits(w http.ResponseWriter, r *http.Request, tenantId openapi_types.UUID)
+
+	// (POST /tenants/{tenantId}/credits)
+	GrantCredits(w http.ResponseWriter, r *http.Request, tenantId openapi_types.UUID)
+
 	// (GET /tenants/{tenantId}/entitlements)
 	ListTenantEntitlements(w http.ResponseWriter, r *http.Request, tenantId openapi_types.UUID)
 
@@ -604,6 +905,31 @@ func (_ Unimplemented) RecoverAdmin(w http.ResponseWriter, r *http.Request, id I
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// (POST /ai/prompt-versions/{id}/activate)
+func (_ Unimplemented) ActivateAiPromptVersion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /ai/prompts)
+func (_ Unimplemented) ListAiPrompts(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /ai/prompts/{id}/versions)
+func (_ Unimplemented) CreateAiPromptVersion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /ai/routes)
+func (_ Unimplemented) ListAiRoutes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /ai/routes/{id})
+func (_ Unimplemented) UpdateAiRoute(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // (GET /audit-events)
 func (_ Unimplemented) ListAuditEvents(w http.ResponseWriter, r *http.Request, params ListAuditEventsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -636,6 +962,56 @@ func (_ Unimplemented) AdminVerifyMfa(w http.ResponseWriter, r *http.Request) {
 
 // (POST /auth/password/change)
 func (_ Unimplemented) AdminChangePassword(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /companies/merge)
+func (_ Unimplemented) MergeCompanies(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /dead-letters)
+func (_ Unimplemented) ListDeadLetters(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /dead-letters/{id}/discard)
+func (_ Unimplemented) DiscardDeadLetter(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /dead-letters/{id}/requeue)
+func (_ Unimplemented) RequeueDeadLetter(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /events/replay)
+func (_ Unimplemented) ReplayEvents(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /integrations/providers)
+func (_ Unimplemented) ListProviders(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /integrations/providers/{id}/credentials)
+func (_ Unimplemented) SetProviderCredential(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /integrations/providers/{id}/status)
+func (_ Unimplemented) SetProviderStatus(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /integrations/webhook-endpoints)
+func (_ Unimplemented) CreateWebhookEndpoint(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /jobs/stats)
+func (_ Unimplemented) GetJobStats(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -701,6 +1077,16 @@ func (_ Unimplemented) ListTenants(w http.ResponseWriter, r *http.Request, param
 
 // (GET /tenants/{tenantId})
 func (_ Unimplemented) GetTenant(w http.ResponseWriter, r *http.Request, tenantId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /tenants/{tenantId}/credits)
+func (_ Unimplemented) GetTenantCredits(w http.ResponseWriter, r *http.Request, tenantId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /tenants/{tenantId}/credits)
+func (_ Unimplemented) GrantCredits(w http.ResponseWriter, r *http.Request, tenantId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -788,6 +1174,112 @@ func (siw *ServerInterfaceWrapper) RecoverAdmin(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecoverAdmin(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ActivateAiPromptVersion operation middleware
+func (siw *ServerInterfaceWrapper) ActivateAiPromptVersion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ActivateAiPromptVersion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAiPrompts operation middleware
+func (siw *ServerInterfaceWrapper) ListAiPrompts(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAiPrompts(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAiPromptVersion operation middleware
+func (siw *ServerInterfaceWrapper) CreateAiPromptVersion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAiPromptVersion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAiRoutes operation middleware
+func (siw *ServerInterfaceWrapper) ListAiRoutes(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAiRoutes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAiRoute operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAiRoute(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAiRoute(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -918,6 +1410,194 @@ func (siw *ServerInterfaceWrapper) AdminChangePassword(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AdminChangePassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MergeCompanies operation middleware
+func (siw *ServerInterfaceWrapper) MergeCompanies(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeCompanies(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDeadLetters operation middleware
+func (siw *ServerInterfaceWrapper) ListDeadLetters(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDeadLetters(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscardDeadLetter operation middleware
+func (siw *ServerInterfaceWrapper) DiscardDeadLetter(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardDeadLetter(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequeueDeadLetter operation middleware
+func (siw *ServerInterfaceWrapper) RequeueDeadLetter(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequeueDeadLetter(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplayEvents operation middleware
+func (siw *ServerInterfaceWrapper) ReplayEvents(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplayEvents(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProviders operation middleware
+func (siw *ServerInterfaceWrapper) ListProviders(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetProviderCredential operation middleware
+func (siw *ServerInterfaceWrapper) SetProviderCredential(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProviderCredential(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetProviderStatus operation middleware
+func (siw *ServerInterfaceWrapper) SetProviderStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetProviderStatus(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateWebhookEndpoint operation middleware
+func (siw *ServerInterfaceWrapper) CreateWebhookEndpoint(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateWebhookEndpoint(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetJobStats operation middleware
+func (siw *ServerInterfaceWrapper) GetJobStats(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetJobStats(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1192,6 +1872,58 @@ func (siw *ServerInterfaceWrapper) GetTenant(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTenant(w, r, tenantId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTenantCredits operation middleware
+func (siw *ServerInterfaceWrapper) GetTenantCredits(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "tenantId" -------------
+	var tenantId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tenantId", chi.URLParam(r, "tenantId"), &tenantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tenantId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTenantCredits(w, r, tenantId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GrantCredits operation middleware
+func (siw *ServerInterfaceWrapper) GrantCredits(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "tenantId" -------------
+	var tenantId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tenantId", chi.URLParam(r, "tenantId"), &tenantId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tenantId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GrantCredits(w, r, tenantId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1575,6 +2307,57 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/audit-events", wrapper.ListAuditEvents)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tenants/{tenantId}/credits", wrapper.GetTenantCredits)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tenants/{tenantId}/credits", wrapper.GrantCredits)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/companies/merge", wrapper.MergeCompanies)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/jobs/stats", wrapper.GetJobStats)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/dead-letters", wrapper.ListDeadLetters)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/dead-letters/{id}/requeue", wrapper.RequeueDeadLetter)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/dead-letters/{id}/discard", wrapper.DiscardDeadLetter)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/events/replay", wrapper.ReplayEvents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/integrations/providers", wrapper.ListProviders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/integrations/providers/{id}/status", wrapper.SetProviderStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/integrations/providers/{id}/credentials", wrapper.SetProviderCredential)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/integrations/webhook-endpoints", wrapper.CreateWebhookEndpoint)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/routes", wrapper.ListAiRoutes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/routes/{id}", wrapper.UpdateAiRoute)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/prompts", wrapper.ListAiPrompts)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/prompts/{id}/versions", wrapper.CreateAiPromptVersion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/prompt-versions/{id}/activate", wrapper.ActivateAiPromptVersion)
+	})
 
 	return r
 }
@@ -1584,49 +2367,69 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"7FzbbuM40n6VgP/c/UrbSR+A9V1vJhg0uhsbdGbmJsgajFS2OZFIDUml4w387guSOpAWdbAiu51sX0Wy",
-	"SsWq+qqKRbKUJxSyJGUUqBRo9oRSzHECEri+u8i4YFxdEYpm6O8M+BoFiOIE0AyF5mmARLiCBCsyuU7V",
-	"EyE5oUu02QToU1S+nmK5qt4mEQoQh78zwiFCM8kzsDktGE+wRDOUZZqyzvkLSYhski3WD22GESxwFks0",
-	"O38foAQ/kiRL0OxsOg1QQmh+V45DqIQlcLRRI3EQKaMCtE2uOLuLIVGXIaMSqJYBp2lMQiwJo5PUUPz/",
-	"X4JR9ayS4RcOCzRD/zepjD4xT8Wk4KtHjECEnKSKHZqhS84Z1zrnxIrXxyghmn3KWQpcEiNeREQa4/Xc",
-	"2KGGSIAgwST2PiFRD8MHiLPYDEUkJMLLKf8Bc47X6l5ILDPhd5DKBW6MTxgBA1eTkkcx/m05Crv7C0Kp",
-	"htEmuVCgPMq6ZXBhsDYUjFU3AQoFX8wluwfq1TBZ4PkDcLIgEFkEd4zFgGlNMTO2w3WLR6M+X4jwKBNh",
-	"iR0Meinl4rIlo2bZLAZb+tyt9KYEP34BupQrFWDvPG6TYiG+Mx7ViD8EHV5ROETJoV3IbyB0nG+LqswN",
-	"lLM47gWZQ9444jcI2YPKPLXhKHyft+msxM3vz859YQY4zx/Wm+/zdFXcv+2ynSNFydSrThYRefmQ57Ot",
-	"0AlNJvIEAg4l43N/6qBZHOO7GIrs3vCy+Xl4QmJhmHEO0RxLhz7CEk4lScD7UiZD1pAiOQiW8RCGqlW+",
-	"36iZBIqpHMbflzMtQwYFWttyVDq7Jmt3hjHST8nMNzdQeJTzsCw0dlO+MWddcMASes6RVoCdnbsBdha0",
-	"zKAlcEWGelYS7EwItXkXqCpabpDIUuDzYo5JYyyVZHORpSnjEgXojsQxocuSRFc3XFcr9dcwxfFa2H5h",
-	"TXuEfjKjn3XMJg2zuJ2LGudxA95VjD3YFaqkwAmLbCskjMpVvFYBQGmG1eBhJiRLvJrcg8nZWErgFM3Q",
-	"v2/w6X+mp/+Y3z6dBx/ebX7xZY0eHuODLuUsykKpZnuhbN4zsUlOcDyP8FrkY5oq9e2H91bNOvXUrC4U",
-	"ntGN/rk+wbZRnZFbAOIkBM9kkbCMynlCKOOOmoTKD+9Qu+gKM86BhustM7/dbd4ruQSuPG3aaCt5soVd",
-	"i7thO51OR3Ote0K33DnKYg1ORiN9ITIi1V8cRc4cboWnfmd+D+uOAr0ljgc6+Zb9jXtpnUovsw3pytqJ",
-	"yp/GdT1F3Qgabxd+vQS7zu4ct3DFGujEOgv3TA/bQZ6/aAWQT/hLKomMIfGWebBYQCjJA8wzKkncWEx1",
-	"FkB5BNR+r9aB7gIX61GDE0KLqxRoROgyOBGZUNcQBSfwmCptTxg/4fDA7qHbKsYN82E77HGxwnQJe7TK",
-	"OBV9SwlvKfMryLxI2VKmIinmA2+OruflPB+1w7pboduuaPVqUCXDchfAp0iHTUYoZS1uw9fTXxf4gkUe",
-	"TwvzX+2Mce54R+daWbPwDlrC1zq7DV2DNUV84zbUTltCTrHiTiMtsW1UHgH13HaDAb/Ki96mDGMytpzv",
-	"sEUSPHN/wVsuSXurwOHv1apnfX4wl0o5CUH0RtWUr54V6cBqvS0LOoV8R7muuT+vZrfyZG6UJgBHiA7F",
-	"5hmxMXAR0b5wGOpzDzgm0XzBWdJ/J8m8I9nQwsAHf9PyxZHQb87ydMI/t9TEj8pKofYIOGfcDaieTBcE",
-	"4qg7uRuyoHnW2g7Nqjb3Dps/bolENTqIoiDpjmHLv/TM33Lc0aWsflqwsSJUK+9I1gBsr+Xp2Nl2vGXp",
-	"jmdGu1cOAbIq2jp+O6bzgnxAodK27C1hdzJ7foNqw1bGa3GKMZK44TQ8j38rFzeuFHtf9HQsxPVifbej",
-	"gdaJpKyU9LQ7BxoNXxD29MT+ewI57ZDQecZCzZBYq7VqL6ISx0541eRmwdOF7QhObrMb7um/a03HcbWe",
-	"qDYDGmfLXZEud1TaJB1QsxQwK5FstNshNtYcAdwcloOdMJnx/hDAR23CUKciuyKaCeCDIrd4sbHpQkvT",
-	"usiuzDAahtqmw8OTyfRSn9v7NzmZTHEmV/OM+wEQEHKQ3fN9Thc4DOsCGY4ZJ3J9rbQ0QggQapa/YOye",
-	"QNnDFJrbIt5N18g8p63AxCn5DGvTKEToQi888uIUfb2+OvmNs+9ydXJJl4TCiT4DPfl49ckqM2bo7M30",
-	"zVSpy1KgOCVoht6+mb55q4/o5EoLOdHj68ulsYiyoz41VF1dSAH+0ZBs9UidT6ct/VG79UVVTTCezqh/",
-	"fTZLmLy1y8+pFM3qsQrQ4ykOQxCisDPSP6mr0/yk1T1YvVWzKxMeO9hnzWUd/08WrUezgT3CxnVElcM2",
-	"NfOfjWv+H276TVB44+SJRJsJN203Orq9mOR9OQUodlvjjV/UimTyKUKb2/0g6TYN9cLyXf285FdG4dDW",
-	"zyIiT+GhaBRtzghlt4fY2fCmpXMTdBLmjakGpX0lHrcH5seGgKeto8BFriZx2ZznDQargW+PXm0G6OXS",
-	"0z2MnLf9jQtTMXWj2c2tA1qa3cUkRA4ELJPdGCiiowvxUZuGHk+TBT6FR0hSmTtAaaVkgSchowvCkw5T",
-	"XRgqVc3tyWmLY7gXkYQPipBpe+0AyNTYJT57iu+tav7okvD+QNCd4esOEP7URF8X+GeMHBCe4lh0ElYH",
-	"ui2ZTBNd2U3Y4wO1dcT8v4aXxiaBxsL0N5DOxyH7rkiKcV5/vrLOdhqXBF9zmj1a3er1eDU21/ZVO+jt",
-	"1r3SFHu0bdkn8AIs67Fi+7aNUm6vuzZ6gANv2lRj/kC0XGgsbzZbOFW3Tis8iuqYNnBssQ6NajXoscFq",
-	"To9P8/3lAmG1RharZoivDMFWj/dgsPeV/oqj8eM1fMcEURDt30ivd5rInWC/ScVytEOmleP3b5NQivTS",
-	"PWmMk1D2DHQh30+8S7yF1aHR4+Dx2iHfY3qrNaK8zBxXM7GJK/3RDZZtGxk5hW2HY4qrvPvswIcPjjWO",
-	"MZxMU1Z7IP2e07zoszqri+jlRmaO1uTJXHyKNm37WUblOmyef7VT8HvWP9zZP3yvCrqJ9YFanwC8tMlf",
-	"BajbX969WnQnT2YT9DOsN5Mn8983Ni01qt6it6xzOLgDL+tS+lbe/XhZ/3ukiVHxJUFZdZQtqShA5htf",
-	"/b76whfdNvjs+CVE/UvgA1cT9a93j7iksGOBQ3cB+a2k+SHz1mupOI9iomx0hNrqrW2R3r6UeGHe4FHp",
-	"wKv6l7IWcf3FpP1GT7k2BD9TxqtNGZkA3qc8/kPTvaLFTvnFxDH2lbqdj7XPFW5ulYEE8IcCB/0xBZrg",
-	"lEwezkynNtrcbv47AA==",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

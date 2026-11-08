@@ -47,6 +47,15 @@ func TestLoadRejectsMalformedKeys(t *testing.T) {
 	}
 }
 
+func TestAllowAllScannerIsLocalOnly(t *testing.T) {
+	if err := (Config{Env: "local", FileScanner: "allow-all"}).RequireScanner(); err != nil {
+		t.Error(err)
+	}
+	if err := (Config{Env: "testing", FileScanner: "allow-all"}).RequireScanner(); err == nil {
+		t.Error("files could be marked clean without a scan on a shared server")
+	}
+}
+
 func TestCookieEnvironment(t *testing.T) {
 	if (Config{Env: "testing"}).IsLocal() {
 		t.Error("a testing server must use secure cookies")

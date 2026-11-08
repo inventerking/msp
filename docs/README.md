@@ -29,7 +29,7 @@ Documents still marked "pending approval" follow the approved decisions in [open
 
 **Security:** [security-architecture](security/security-architecture.md) · [authentication-and-authorization](security/authentication-and-authorization.md) · [tenant-isolation](security/tenant-isolation.md) · [privacy-and-compliance](security/privacy-and-compliance.md) · [threat-model](security/threat-model.md)
 
-**Implementation:** [open-decisions](implementation/open-decisions.md) · [phase-1-status](implementation/phase-1-status.md) · [tooling-decisions](implementation/tooling-decisions.md) · [implementation-roadmap](implementation/implementation-roadmap.md) · [dependency-matrix](implementation/dependency-matrix.md) · [testing-strategy](implementation/testing-strategy.md) · [acceptance-criteria](implementation/acceptance-criteria.md) · [risk-register](implementation/risk-register.md)
+**Implementation:** [open-decisions](implementation/open-decisions.md) · [phase-1-status](implementation/phase-1-status.md) · [phase-2-status](implementation/phase-2-status.md) · [tooling-decisions](implementation/tooling-decisions.md) · [implementation-roadmap](implementation/implementation-roadmap.md) · [dependency-matrix](implementation/dependency-matrix.md) · [testing-strategy](implementation/testing-strategy.md) · [acceptance-criteria](implementation/acceptance-criteria.md) · [risk-register](implementation/risk-register.md)
 
 ## Conventions
 

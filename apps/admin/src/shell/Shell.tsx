@@ -1,6 +1,6 @@
 import { unwrap } from "@msp/api-client";
 import { Button, cn, ErrorState, SkeletonRows } from "@msp/ui";
-import { Boxes, Building2, CreditCard, KeyRound, LayoutDashboard, LogOut, ScrollText, UserCog, type LucideIcon } from "lucide-react";
+import { Activity, Boxes, Bot, Building2, CreditCard, KeyRound, LayoutDashboard, Plug, LogOut, ScrollText, UserCog, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router";
 import { api, hasRole, queryClient, useAdmin } from "../app/api";
@@ -43,6 +43,9 @@ export function Shell() {
             {hasRole(me, "super_admin", "platform_support", "billing_admin", "platform_analyst") ? <Item to="/tenants" icon={Building2} label={t("nav.tenants")} /> : null}
             <Item to="/catalog" icon={Boxes} label={t("nav.catalog")} />
             {hasRole(me, "super_admin", "platform_support", "billing_admin", "platform_analyst") ? <Item to="/subscriptions" icon={CreditCard} label={t("nav.subscriptions")} /> : null}
+            {hasRole(me, "super_admin", "integration_admin", "platform_support") ? <Item to="/integrations" icon={Plug} label={t("nav.integrations")} /> : null}
+            {hasRole(me, "super_admin", "integration_admin", "platform_support") ? <Item to="/ai" icon={Bot} label={t("nav.ai")} /> : null}
+            {hasRole(me, "super_admin", "platform_support") ? <Item to="/operations" icon={Activity} label={t("nav.operations")} /> : null}
             {hasRole(me, "super_admin", "platform_support") ? <Item to="/audit" icon={ScrollText} label={t("nav.audit")} /> : null}
             {hasRole(me, "super_admin") ? <Item to="/admins" icon={UserCog} label={t("nav.admins")} /> : null}
             <Item to="/account" icon={KeyRound} label={t("nav.account")} />

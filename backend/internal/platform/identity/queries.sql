@@ -314,3 +314,9 @@ JOIN identity.users u ON u.id = m.user_id
 JOIN identity.roles r ON r.id = m.role_id
 WHERE m.tenant_id = @tenant_id AND m.status <> 'removed'
 ORDER BY u.display_name;
+
+-- name: MembersWithPermission :many
+SELECT m.user_id FROM identity.memberships m
+JOIN identity.role_permissions rp ON rp.role_id = m.role_id
+JOIN identity.permissions p ON p.id = rp.permission_id
+WHERE m.tenant_id = @tenant_id AND m.status = 'active' AND p.key = @permission;

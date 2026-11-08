@@ -285,6 +285,169 @@ paths:
       responses:
         "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AuditEventList"}}}}
         default: {$ref: "#/components/responses/Problem"}
+  /tenants/{tenantId}/credits:
+    get:
+      operationId: getTenantCredits
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support, billing_admin, platform_analyst]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CreditDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: grantCredits
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters:
+        - {name: tenantId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/GrantCredits"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /companies/merge:
+    post:
+      operationId: mergeCompanies
+      x-access: admin
+      x-admin-roles: [super_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MergeCompanies"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /jobs/stats:
+    get:
+      operationId: getJobStats
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/JobStats"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /dead-letters:
+    get:
+      operationId: listDeadLetters
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/DeadLetterList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /dead-letters/{id}/requeue:
+    post:
+      operationId: requeueDeadLetter
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Reason"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /dead-letters/{id}/discard:
+    post:
+      operationId: discardDeadLetter
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Reason"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /events/replay:
+    post:
+      operationId: replayEvents
+      x-access: admin
+      x-admin-roles: [super_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ReplayEvents"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ReplayResult"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /integrations/providers:
+    get:
+      operationId: listProviders
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin, platform_support]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProviderList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /integrations/providers/{id}/status:
+    put:
+      operationId: setProviderStatus
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ProviderStatus"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /integrations/providers/{id}/credentials:
+    put:
+      operationId: setProviderCredential
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ProviderCredential"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /integrations/webhook-endpoints:
+    post:
+      operationId: createWebhookEndpoint
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateWebhookEndpoint"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/WebhookEndpoint"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /ai/routes:
+    get:
+      operationId: listAiRoutes
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin, platform_support]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AiRouteList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /ai/routes/{id}:
+    put:
+      operationId: updateAiRoute
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/UpdateAiRoute"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /ai/prompts:
+    get:
+      operationId: listAiPrompts
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin, platform_support]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AiPromptList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /ai/prompts/{id}/versions:
+    post:
+      operationId: createAiPromptVersion
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateAiPromptVersion"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CreatedId"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /ai/prompt-versions/{id}/activate:
+    post:
+      operationId: activateAiPromptVersion
+      x-access: admin
+      x-admin-roles: [super_admin, integration_admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
 components:
   securitySchemes:
     sessionCookie: {type: apiKey, in: cookie, name: admin_session}
@@ -578,3 +741,179 @@ components:
         module: {type: string}
         status: {type: string}
         entitlement_version: {type: integer, format: int64}
+    CreditBalance:
+      type: object
+      required: [meter_key, name, balance, reserved]
+      properties:
+        meter_key: {type: string}
+        name: {type: string}
+        balance: {type: integer, format: int64}
+        reserved: {type: integer, format: int64}
+    LedgerEntry:
+      type: object
+      required: [id, entry_type, amount, actor_type, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        entry_type: {type: string}
+        amount: {type: integer, format: int64}
+        source_module: {type: string, nullable: true}
+        actor_type: {type: string}
+        created_at: {type: string, format: date-time}
+    CreditDetail:
+      type: object
+      required: [balances, ledger]
+      properties:
+        balances: {type: array, items: {$ref: "#/components/schemas/CreditBalance"}}
+        ledger: {type: array, items: {$ref: "#/components/schemas/LedgerEntry"}}
+    GrantCredits:
+      type: object
+      required: [meter_key, amount, reason, idempotency_key]
+      properties:
+        meter_key: {type: string}
+        amount: {type: integer, format: int64, minimum: 1, maximum: 100000000}
+        reason: {type: string, minLength: 3, maxLength: 500}
+        idempotency_key: {type: string, minLength: 8, maxLength: 80}
+    MergeCompanies:
+      type: object
+      required: [source_id, target_id, reason]
+      properties:
+        source_id: {type: string, format: uuid}
+        target_id: {type: string, format: uuid}
+        reason: {type: string, minLength: 3, maxLength: 500}
+    QueueStat:
+      type: object
+      required: [queue, status, jobs, oldest_seconds]
+      properties:
+        queue: {type: string}
+        status: {type: string}
+        jobs: {type: integer, format: int64}
+        oldest_seconds: {type: integer, format: int64}
+    JobStats:
+      type: object
+      required: [queues, oldest_unpublished_seconds, pending_deliveries, dead_deliveries]
+      properties:
+        queues: {type: array, items: {$ref: "#/components/schemas/QueueStat"}}
+        oldest_unpublished_seconds: {type: integer, format: int64}
+        pending_deliveries: {type: integer, format: int64}
+        dead_deliveries: {type: integer, format: int64}
+    DeadLetter:
+      type: object
+      required: [id, origin, kind, error, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid, nullable: true}
+        origin: {type: string}
+        kind: {type: string}
+        error: {type: string}
+        resolution: {type: string, nullable: true}
+        created_at: {type: string, format: date-time}
+    DeadLetterList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/DeadLetter"}}
+    ReplayEvents:
+      type: object
+      required: [consumer, event_type, since, reason]
+      properties:
+        consumer: {type: string, maxLength: 120}
+        event_type: {type: string, maxLength: 120}
+        since: {type: string, format: date-time}
+        reason: {type: string, minLength: 3, maxLength: 500}
+    ReplayResult:
+      type: object
+      required: [replayed]
+      properties:
+        replayed: {type: integer, format: int64}
+    IntegrationProvider:
+      type: object
+      required: [id, key, kind, name, status, has_credential, circuit_open, calls_24h]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        kind: {type: string}
+        name: {type: string}
+        status: {type: string}
+        has_credential: {type: boolean}
+        circuit_open: {type: boolean}
+        calls_24h: {type: object, additionalProperties: {type: integer, format: int64}}
+    ProviderList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/IntegrationProvider"}}
+    ProviderStatus:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [enabled, disabled]}
+    ProviderCredential:
+      type: object
+      required: [label, secret]
+      properties:
+        label: {type: string, minLength: 1, maxLength: 80}
+        secret: {type: string, minLength: 1, maxLength: 4096}
+    CreateWebhookEndpoint:
+      type: object
+      required: [provider_key]
+      properties:
+        provider_key: {type: string, maxLength: 80}
+        tenant_id: {type: string, format: uuid, nullable: true}
+    WebhookEndpoint:
+      type: object
+      required: [id, path_token, secret]
+      properties:
+        id: {type: string, format: uuid}
+        path_token: {type: string}
+        secret: {type: string, description: "Shown once."}
+    AiRoute:
+      type: object
+      required: [id, task_key, provider_key, model, max_input_tokens, max_output_tokens, status]
+      properties:
+        id: {type: string, format: uuid}
+        task_key: {type: string}
+        provider_key: {type: string}
+        model: {type: string}
+        max_input_tokens: {type: integer}
+        max_output_tokens: {type: integer}
+        status: {type: string}
+    AiRouteList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/AiRoute"}}
+    UpdateAiRoute:
+      type: object
+      required: [model, max_input_tokens, max_output_tokens, status]
+      properties:
+        model: {type: string, minLength: 1, maxLength: 120}
+        max_input_tokens: {type: integer, minimum: 1, maximum: 2000000}
+        max_output_tokens: {type: integer, minimum: 1, maximum: 200000}
+        status: {type: string, enum: [active, disabled]}
+    AiPrompt:
+      type: object
+      required: [id, key, task_key, action_class, status, active_version, versions]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        task_key: {type: string}
+        action_class: {type: string}
+        status: {type: string}
+        active_version: {type: integer}
+        versions: {type: integer}
+    AiPromptList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/AiPrompt"}}
+    CreateAiPromptVersion:
+      type: object
+      required: [system_text, user_text]
+      properties:
+        system_text: {type: string, minLength: 1, maxLength: 20000}
+        user_text: {type: string, minLength: 1, maxLength: 20000}
+    CreatedId:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string, format: uuid}

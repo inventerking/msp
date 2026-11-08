@@ -24,9 +24,30 @@ services:
       timeout: 3s
       retries: 30
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.33
     ports:
       - "127.0.0.1:51025:1025"
       - "127.0.0.1:58025:8025"
+  # S3-compatible file storage. The bucket stays private: files pass through the API.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.52
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json", "-master.volumeSizeLimitMB=64", "-ip.bind=0.0.0.0"]
+    ports: ["127.0.0.1:58333:8333"]
+    volumes:
+      - seaweed:/data
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+  # PDF rendering. It may load only its own temporary files and inline images, with JavaScript off,
+  # so content in a document cannot make it fetch other services.
+  gotenberg:
+    image: gotenberg/gotenberg:9.2
+    command: ["gotenberg", "--chromium-deny-list=^(?!(file:///tmp/|data:)).*", "--chromium-disable-javascript=true", "--api-port=3000"]
+    ports: ["127.0.0.1:58300:3000"]
+  # Malware scanning. It needs a lot of memory and downloads signatures at start, so it is opt-in
+  # locally: docker compose --profile scan up -d. Without it, set FILE_SCANNER=allow-all for local work.
+  clamav:
+    image: clamav/clamav:1.5
+    profiles: ["scan"]
+    ports: ["127.0.0.1:53310:3310"]
 volumes:
   pgdata:
+  seaweed:

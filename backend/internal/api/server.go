@@ -26,10 +26,17 @@ import (
 	"mspengine/internal/kernel/authctx"
 	"mspengine/internal/kernel/config"
 	"mspengine/internal/kernel/crypto"
+	"mspengine/internal/kernel/db"
+	"mspengine/internal/kernel/jobs"
 	"mspengine/internal/kernel/ratelimit"
 	"mspengine/internal/kernel/realtime"
 	"mspengine/internal/platform/commercial"
+	"mspengine/internal/platform/files"
 	"mspengine/internal/platform/identity"
+	"mspengine/internal/platform/integration"
+	"mspengine/internal/platform/integration/aigateway"
+	"mspengine/internal/platform/notification"
+	"mspengine/internal/platform/shared"
 )
 
 // Deps are the services the HTTP layer needs.
@@ -42,6 +49,13 @@ type Deps struct {
 	Hub        *realtime.Hub
 	DB         *pgxpool.Pool
 	Redis      *redis.Client
+	Shared     *shared.Service
+	Files      *files.Service
+	Notify     *notification.Service
+	Integrate  *integration.Service
+	AI         *aigateway.Gateway
+	Pools      *db.Pools
+	Ops        *jobs.Ops
 }
 
 // Server holds handler dependencies.
@@ -99,8 +113,20 @@ func New(d Deps) (http.Handler, error) {
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, apperr.New(http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed"))
 	})
+	// Generated code binds parameters before middleware runs. When binding fails, the caller is still
+	// authenticated and authorized first, so an anonymous request never learns about validation.
 	bindErr := func(w http.ResponseWriter, r *http.Request, _ error) {
-		writeError(w, r, apperr.Validation(apperr.FieldError{Field: "path", Code: "invalid"}))
+		if pol := s.policyFor(r); pol != nil {
+			authorize := s.authorizeTenant
+			if strings.HasPrefix(r.URL.Path, adminBase+"/") {
+				authorize = s.authorizeAdmin
+			}
+			if _, err := authorize(r, pol); err != nil {
+				writeError(w, r, err)
+				return
+			}
+		}
+		writeError(w, r, apperr.Validation(apperr.FieldError{Field: "parameters", Code: "invalid"}))
 	}
 	tenantapi.HandlerWithOptions(tenantHandlers{s}, tenantapi.ChiServerOptions{BaseURL: tenantBase, BaseRouter: r, Middlewares: []tenantapi.MiddlewareFunc{s.guard}, ErrorHandlerFunc: bindErr})
 	adminapi.HandlerWithOptions(adminHandlers{s}, adminapi.ChiServerOptions{BaseURL: adminBase, BaseRouter: r, Middlewares: []adminapi.MiddlewareFunc{s.adminGuard}, ErrorHandlerFunc: bindErr})

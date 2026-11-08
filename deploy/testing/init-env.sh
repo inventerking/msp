@@ -25,5 +25,12 @@ DB_PLATFORM_PASSWORD=$(openssl rand -hex 24)
 DB_SYSTEM_PASSWORD=$(openssl rand -hex 24)
 ENCRYPTION_KEY=$(openssl rand -base64 32)
 HMAC_KEY=$(openssl rand -base64 32)
+S3_ACCESS_KEY=$(openssl rand -hex 12)
+S3_SECRET_KEY=$(openssl rand -hex 24)
 ENV
+mkdir -p seaweedfs
+. ./.env
+cat > seaweedfs/s3.json <<JSON
+{"identities": [{"name": "msp-engine", "credentials": [{"accessKey": "$S3_ACCESS_KEY", "secretKey": "$S3_SECRET_KEY"}], "actions": ["Admin", "Read", "Write", "List", "Tagging"]}]}
+JSON
 echo "Created $(pwd)/.env for $APP_HOST and $ADMIN_HOST"

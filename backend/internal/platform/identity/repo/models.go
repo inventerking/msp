@@ -87,6 +87,59 @@ type AuditSupportAccessGrant struct {
 	RevokedAt *time.Time
 }
 
+type FilesAccessGrant struct {
+	ID            uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	TenantID      *uuid.UUID
+	ObjectID      uuid.UUID
+	PolicyID      uuid.UUID
+	TokenHash     []byte
+	ExpiresAt     time.Time
+	MaxDownloads  *int32
+	DownloadCount int32
+}
+
+type FilesAccessPolicy struct {
+	ID                 uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Key                string
+	RequiresSession    bool
+	AllowedPermissions []string
+	MaxLinkTtlSeconds  int32
+}
+
+type FilesObject struct {
+	ID             uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	TenantID       *uuid.UUID
+	Bucket         string
+	ObjectKey      string
+	Sha256         []byte
+	SizeBytes      *int64
+	ContentType    string
+	OriginalName   *string
+	Status         string
+	Classification string
+	OwnerModule    string
+	RetentionUntil *time.Time
+	UploadedBy     *uuid.UUID
+	DeletedAt      *time.Time
+}
+
+type FilesObjectReference struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ObjectID    uuid.UUID
+	TenantID    *uuid.UUID
+	OwnerModule string
+	OwnerType   string
+	OwnerID     uuid.UUID
+}
+
 type IdentityInvitation struct {
 	ID         uuid.UUID
 	TenantID   uuid.UUID
@@ -313,6 +366,308 @@ type IdentityVerificationToken struct {
 	TokenHash  []byte
 	ExpiresAt  time.Time
 	ConsumedAt *time.Time
+}
+
+type IntegrationAiModelRoute struct {
+	ID              uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	TaskKey         string
+	ProviderID      uuid.UUID
+	Model           string
+	FallbackRouteID *uuid.UUID
+	MaxInputTokens  int32
+	MaxOutputTokens int32
+	Status          string
+}
+
+type IntegrationAiRequest struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	ModuleKey         string
+	TaskKey           string
+	PromptVersionID   *uuid.UUID
+	ProviderID        *uuid.UUID
+	Model             *string
+	InputTokens       *int32
+	OutputTokens      *int32
+	CostEstimateMinor *int64
+	CreditsCharged    *int64
+	Outcome           string
+	ValidationPassed  *bool
+	InputHash         []byte
+	LatencyMs         *int32
+	CorrelationID     *uuid.UUID
+	IdempotencyKey    *string
+}
+
+type IntegrationConnection struct {
+	ID               uuid.UUID
+	TenantID         uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ProviderID       uuid.UUID
+	DisplayName      string
+	AccountRef       *string
+	Scopes           []string
+	SecretCiphertext []byte
+	KeyID            *string
+	TokenExpiresAt   *time.Time
+	Status           string
+	LastHealthAt     *time.Time
+	LastErrorCode    *string
+	CreatedBy        *uuid.UUID
+}
+
+type IntegrationPlatformCredential struct {
+	ID               uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ProviderID       uuid.UUID
+	Label            string
+	SecretCiphertext []byte
+	KeyID            string
+	RotatedAt        *time.Time
+	ExpiresAt        *time.Time
+}
+
+type IntegrationPromptTemplate struct {
+	ID           uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Key          string
+	TaskKey      string
+	ActionClass  string
+	OutputSchema []byte
+	Status       string
+}
+
+type IntegrationPromptVersion struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	TemplateID uuid.UUID
+	Version    int32
+	SystemText string
+	UserText   string
+	Status     string
+}
+
+type IntegrationProvider struct {
+	ID                uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	Key               string
+	Kind              string
+	Name              string
+	Capabilities      []byte
+	TenantConnectable bool
+	Status            string
+}
+
+type IntegrationProviderCallLog struct {
+	ID            uuid.UUID
+	TenantID      *uuid.UUID
+	ProviderID    uuid.UUID
+	Operation     string
+	Outcome       string
+	StatusCode    *int32
+	LatencyMs     int32
+	CorrelationID *uuid.UUID
+	CreatedAt     time.Time
+}
+
+type IntegrationWebhookDelivery struct {
+	ID                uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	TenantID          *uuid.UUID
+	EndpointID        uuid.UUID
+	ProviderEventID   *string
+	SignatureVerified bool
+	PayloadHash       []byte
+	Payload           []byte
+	Status            string
+	Attempts          int32
+	LastError         *string
+	ReceivedAt        time.Time
+}
+
+type IntegrationWebhookEndpoint struct {
+	ID               uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	TenantID         *uuid.UUID
+	ProviderID       uuid.UUID
+	ConnectionID     *uuid.UUID
+	PathToken        string
+	SecretCiphertext []byte
+	KeyID            string
+	Status           string
+}
+
+type JobsDeadLetter struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	TenantID   *uuid.UUID
+	Origin     string
+	OriginID   uuid.UUID
+	Kind       string
+	Payload    []byte
+	Error      string
+	Resolution *string
+	ResolvedBy *uuid.UUID
+	ResolvedAt *time.Time
+}
+
+type JobsEventDelivery struct {
+	ID            uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	TenantID      *uuid.UUID
+	EventID       uuid.UUID
+	Consumer      string
+	Status        string
+	Attempts      int32
+	NextAttemptAt *time.Time
+	LastError     *string
+	ProcessedAt   *time.Time
+}
+
+type JobsJob struct {
+	ID                uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	TenantID          *uuid.UUID
+	Queue             string
+	Kind              string
+	Payload           []byte
+	PayloadVersion    int32
+	Status            string
+	Priority          int32
+	RunAt             time.Time
+	Attempt           int32
+	MaxAttempts       int32
+	IdempotencyKey    *string
+	LockedBy          *string
+	LockExpiresAt     *time.Time
+	Progress          []byte
+	CancelRequestedAt *time.Time
+	CorrelationID     *uuid.UUID
+	LastError         *string
+	FinishedAt        *time.Time
+}
+
+type JobsJobAttempt struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	JobID      uuid.UUID
+	Attempt    int32
+	WorkerID   string
+	StartedAt  time.Time
+	FinishedAt *time.Time
+	Outcome    *string
+	Error      *string
+}
+
+type JobsJobSchedule struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	TenantID  *uuid.UUID
+	Key       string
+	Cron      string
+	Timezone  string
+	Kind      string
+	Payload   []byte
+	NextRunAt time.Time
+	LastRunAt *time.Time
+	Enabled   bool
+}
+
+type JobsOutboxEvent struct {
+	EventID       uuid.UUID
+	EventType     string
+	SchemaVersion int32
+	TenantID      *uuid.UUID
+	SourceModule  string
+	AggregateType string
+	AggregateID   uuid.UUID
+	OccurredAt    time.Time
+	CorrelationID uuid.UUID
+	CausationID   *uuid.UUID
+	Payload       []byte
+	PublishedAt   *time.Time
+	Sequence      *int64
+}
+
+type JobsOutboxEventsDefault struct {
+	EventID       uuid.UUID
+	EventType     string
+	SchemaVersion int32
+	TenantID      *uuid.UUID
+	SourceModule  string
+	AggregateType string
+	AggregateID   uuid.UUID
+	OccurredAt    time.Time
+	CorrelationID uuid.UUID
+	CausationID   *uuid.UUID
+	Payload       []byte
+	PublishedAt   *time.Time
+	Sequence      *int64
+}
+
+type NotificationDeliveryAttempt struct {
+	ID             uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	NotificationID uuid.UUID
+	Channel        string
+	ProviderKey    *string
+	Status         string
+	Attempt        int32
+	ErrorCode      *string
+}
+
+type NotificationNotification struct {
+	ID              uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	TenantID        *uuid.UUID
+	RecipientType   string
+	RecipientID     uuid.UUID
+	NotificationKey string
+	Title           string
+	Body            *string
+	Link            *string
+	ReadAt          *time.Time
+	IdempotencyKey  string
+}
+
+type NotificationPreference struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	UserID          uuid.UUID
+	NotificationKey string
+	Channel         string
+	Enabled         bool
+}
+
+type NotificationTemplate struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Key       string
+	Channel   string
+	Locale    string
+	Subject   *string
+	Body      string
+	Version   int32
 }
 
 type PlatformCreditAccount struct {
@@ -596,4 +951,148 @@ type PlatformUsageRollup struct {
 	PeriodStart       pgtype.Date
 	Quantity          int64
 	CostEstimateMinor *int64
+}
+
+type SharedCompany struct {
+	ID            uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	PrimaryDomain *string
+	DisplayName   string
+	LegalName     *string
+	CountryCode   *string
+	IndustryID    *uuid.UUID
+	EmployeeBand  *string
+	Status        string
+	MergedIntoID  *uuid.UUID
+}
+
+type SharedCompanyIdentifier struct {
+	ID              uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	CompanyID       uuid.UUID
+	Kind            string
+	ValueNormalized string
+	ProviderKey     *string
+	VerifiedAt      *time.Time
+}
+
+type SharedCompanyMerge struct {
+	ID              uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	SourceCompanyID uuid.UUID
+	TargetCompanyID uuid.UUID
+	Reason          string
+	DecidedBy       string
+}
+
+type SharedCompanySourceFact struct {
+	ID           uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CompanyID    uuid.UUID
+	Attribute    string
+	Value        []byte
+	SourceKey    string
+	SourceUrl    *string
+	LicenceClass string
+	Confidence   pgtype.Numeric
+	ObservedAt   time.Time
+	ExpiresAt    *time.Time
+}
+
+type SharedContact struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CompanyID   *uuid.UUID
+	FullName    *string
+	FirstName   *string
+	LastName    *string
+	JobTitle    *string
+	Email       *string
+	EmailHash   []byte
+	Phone       *string
+	SocialUrl   *string
+	CountryCode *string
+	Status      string
+	ErasedAt    *time.Time
+	CreatedBy   *uuid.UUID
+}
+
+type SharedContactConsent struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	ContactID    uuid.UUID
+	Purpose      string
+	Status       string
+	Basis        *string
+	Jurisdiction *string
+	Evidence     []byte
+	CapturedAt   time.Time
+	WithdrawnAt  *time.Time
+}
+
+type SharedContactSource struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	ContactID    uuid.UUID
+	SourceKey    string
+	SourceRef    *string
+	LicenceClass string
+	AcquiredAt   time.Time
+}
+
+type SharedCountry struct {
+	Code   string
+	Name   string
+	Region string
+}
+
+type SharedFxRate struct {
+	ID            uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	BaseCurrency  string
+	QuoteCurrency string
+	Rate          pgtype.Numeric
+	RateDate      pgtype.Date
+	SourceKey     string
+}
+
+type SharedIndustry struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Code      string
+	Name      string
+	ParentID  *uuid.UUID
+}
+
+type SharedServiceCategory struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Key       string
+	Name      string
+	ParentID  *uuid.UUID
+}
+
+type SharedTenantService struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CategoryID  *uuid.UUID
+	Name        string
+	Description *string
+	Status      string
+	DeletedAt   *time.Time
 }

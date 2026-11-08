@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { api, queryClient, resetSession, useMe } from "../app/api";
 import { navState } from "../app/moduleStatus";
+import { NotificationBell } from "./NotificationBell";
 import { modules } from "../modules";
 import type { ModuleGroup } from "../modules/types";
 
@@ -36,6 +37,7 @@ function useEntitlementSignal(tenantId: string | undefined) {
     const refresh = () => void queryClient.invalidateQueries({ queryKey: ["me"] });
     source.addEventListener("tenant.entitlements_changed", refresh);
     source.addEventListener("tenant.status_changed", refresh);
+    source.addEventListener("notification.created", () => void queryClient.invalidateQueries({ queryKey: [tenantId, "notifications"] }));
     return () => source.close();
   }, [tenantId]);
 }
@@ -101,6 +103,7 @@ export function Shell() {
             <span className="truncate text-sm font-medium text-ink">{me.tenant.name}</span>
           )}
           <div className="ml-auto flex items-center gap-1">
+            <NotificationBell />
             <Button asChild variant="ghost" size="sm"><NavLink to="/profile"><User />{me.user.display_name}</NavLink></Button>
             <Button variant="ghost" size="icon" aria-label={t("common.signOut")} title={t("common.signOut")} onClick={() => void signOut()}><LogOut /></Button>
           </div>

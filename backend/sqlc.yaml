@@ -21,3 +21,23 @@ sql:
     schema: db/migrations
     queries: internal/platform/audit/queries.sql
     gen: {go: {package: repo, out: internal/platform/audit/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/kernel/jobs/queries.sql
+    gen: {go: {package: repo, out: internal/kernel/jobs/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/platform/shared/queries.sql
+    gen: {go: {package: repo, out: internal/platform/shared/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/platform/integration/queries.sql
+    gen: {go: {package: repo, out: internal/platform/integration/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/platform/notification/queries.sql
+    gen: {go: {package: repo, out: internal/platform/notification/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/platform/files/queries.sql
+    gen: {go: {package: repo, out: internal/platform/files/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}

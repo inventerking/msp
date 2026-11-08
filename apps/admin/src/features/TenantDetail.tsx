@@ -1,5 +1,5 @@
 import { unwrap } from "@msp/api-client";
-import { Badge, Button, Card, ConfirmDialog, EmptyState, ErrorState, Field, PageHeader, Select, SkeletonRows, Table, type Tone } from "@msp/ui";
+import { Badge, Button, Card, ConfirmDialog, EmptyState, ErrorState, Field, Input, PageHeader, Select, SkeletonRows, Table, type Tone } from "@msp/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,6 +27,24 @@ export function TenantDetail() {
   const [pendingAction, setPendingAction] = useState<{ module: string; action: Action }>();
   const [tenantAction, setTenantAction] = useState<"suspend" | "reactivate">();
   const [plan, setPlan] = useState("");
+  const credits = useQuery({ queryKey: ["tenant", id, "credits"], queryFn: () => unwrap(api.GET("/tenants/{tenantId}/credits", path)) });
+  const [grantAmount, setGrantAmount] = useState("");
+  const [grantReason, setGrantReason] = useState("");
+  const [grantKey, setGrantKey] = useState(() => crypto.randomUUID());
+  const [grantError, setGrantError] = useState<string>();
+  const grant = async () => {
+    setGrantError(undefined);
+    try {
+      // The key stays the same until success, so a retried click grants once.
+      await unwrap(api.POST("/tenants/{tenantId}/credits", { ...path, body: { meter_key: "ai_credits", amount: Number(grantAmount), reason: grantReason, idempotency_key: grantKey } }));
+      setGrantAmount("");
+      setGrantReason("");
+      setGrantKey(crypto.randomUUID());
+      await qc.invalidateQueries({ queryKey: ["tenant", id, "credits"] });
+    } catch (e) {
+      setGrantError(errorText(t, e));
+    }
+  };
   const [subError, setSubError] = useState<string>();
   const refresh = () => qc.invalidateQueries({ queryKey: ["tenant", id] });
 
@@ -119,6 +137,27 @@ export function TenantDetail() {
           </Card>
         </section>
       ) : null}
+      <section className="mb-6">
+        <h2 className="mb-2 text-sm font-medium text-ink-soft">{t("tenant.credits")}</h2>
+        <Card>
+          {credits.isPending ? <SkeletonRows rows={2} label={t("common.loading")} /> : null}
+          {credits.data?.balances.length === 0 ? <EmptyState title={t("tenant.noCredits")} /> : null}
+          {credits.data?.balances.length ? (
+            <Table>
+              <thead><tr><th>{t("tenant.meter")}</th><th>{t("tenant.amount")}</th><th /></tr></thead>
+              <tbody>{credits.data.balances.map((b) => <tr key={b.meter_key}><td>{b.name}</td><td className="tabular-nums">{b.balance}</td><td className="text-xs text-ink-faint tabular-nums">{b.reserved > 0 ? `${b.reserved} reserved` : ""}</td></tr>)}</tbody>
+            </Table>
+          ) : null}
+          {canManage ? (
+            <div className="flex flex-wrap items-end gap-3 border-t border-line p-4">
+              <div className="w-36"><Field label={t("tenant.amount")}>{(ids) => <Input {...ids} type="number" min={1} value={grantAmount} onChange={(e) => setGrantAmount(e.target.value)} />}</Field></div>
+              <div className="min-w-64 flex-1"><Field label={t("tenant.reason")}>{(ids) => <Input {...ids} value={grantReason} onChange={(e) => setGrantReason(e.target.value)} />}</Field></div>
+              <Button disabled={!(Number(grantAmount) > 0) || grantReason.trim().length < 3} onClick={() => void grant()}>{t("tenant.grant")}</Button>
+              {grantError ? <div className="w-full"><ErrorState title={grantError} /></div> : null}
+            </div>
+          ) : null}
+        </Card>
+      </section>
       {canSeeUsers ? (
         <section>
           <h2 className="mb-2 text-sm font-medium text-ink-soft">{t("tenant.users")}</h2>

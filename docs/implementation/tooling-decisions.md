@@ -53,15 +53,17 @@ Versions and licences were looked up on 2026-11-06 from the Go module proxy, npm
 | Lint and boundaries | ESLint, dependency-cruiser | 10.14.0, 18.7.2 | MIT | Blocks imports between feature modules |
 | OpenAPI lint | Spectral | 6.17.1 | Apache-2.0 | Enforces the API rules |
 
-## Decided later, when first needed
+## Decided in Phase 2
 
-| Need | Phase | Current thinking |
-|---|---|---|
-| Job queue | 2 | Compare River (0.51.1, MPL-2.0) with a small custom queue. River is active but not yet 1.0, and fair sharing between tenants would probably need custom work either way. Adopting it would change the `jobs.jobs` design |
-| S3-compatible storage for local and testing use | 2 | SeaweedFS (Apache-2.0). **MinIO is ruled out:** its repository is archived and no longer maintained. RustFS (Apache-2.0) is the fallback |
-| Malware scanner | 2 | ClamAV 1.5 |
-| PDF renderer | 2 | Gotenberg, running with no network access |
-| Event schema format | 2 | JSON Schema |
+| Need | Choice | Version | Licence |
+|---|---|---|---|
+| Job queue | Custom queue on PostgreSQL. River was not adopted: it is pre-1.0, and tenant fair sharing needed custom work anyway | n/a | n/a |
+| S3-compatible storage | SeaweedFS. MinIO's repository is archived | 4.52 | Apache-2.0 |
+| S3 client | AWS SDK for Go v2 | 1.x | Apache-2.0 |
+| Malware scanner | ClamAV, using clamd's INSTREAM protocol | 1.5 | GPL-2.0, run as a separate service and not linked |
+| PDF renderer | Gotenberg, with URL fetching and JavaScript disabled | 9.2 | MIT |
+| Event schema format | Go types in each module's contract package, with tests. JSON Schema can be generated later if external consumers appear | n/a | n/a |
+| Local email sink | Mailpit, now pinned | v1.33 | MIT |
 
 ## Flags
 

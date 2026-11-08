@@ -160,3 +160,50 @@ SELECT status FROM platform.tenant_module_entitlements WHERE tenant_id = @tenant
 -- name: InsertHistory :exec
 INSERT INTO platform.entitlement_status_history (tenant_id, module_id, grant_id, from_status, to_status, actor_type, actor_id, reason)
 VALUES (@tenant_id, @module_id, sqlc.narg(grant_id), sqlc.narg(from_status), @to_status, @actor_type, sqlc.narg(actor_id), sqlc.narg(reason));
+
+-- name: GetMeterByKey :one
+SELECT id, key FROM platform.usage_meters WHERE key = @key AND status = 'active';
+
+-- name: EnsureCreditAccount :one
+INSERT INTO platform.credit_accounts (tenant_id, meter_id) VALUES (@tenant_id, @meter_id)
+ON CONFLICT (tenant_id, meter_id) DO UPDATE SET meter_id = EXCLUDED.meter_id RETURNING id;
+
+-- name: AddBalance :one
+UPDATE platform.credit_accounts SET balance = balance + @amount WHERE id = @id AND balance + @amount >= reserved RETURNING balance;
+
+-- name: ReserveCredits :execrows
+-- Atomic, so concurrent reservations can never overspend.
+UPDATE platform.credit_accounts SET reserved = reserved + @amount WHERE id = @id AND balance - reserved >= @amount;
+
+-- name: SettleReservation :one
+UPDATE platform.credit_accounts SET reserved = reserved - @reserved_amount, balance = balance - @spent WHERE id = @id RETURNING balance;
+
+-- name: InsertLedger :one
+INSERT INTO platform.credit_ledger (tenant_id, account_id, entry_type, amount, source_module, reference_type, reference_id, idempotency_key, expires_at, actor_type, actor_id)
+VALUES (@tenant_id, @account_id, @entry_type, @amount, sqlc.narg(source_module), sqlc.narg(reference_type), sqlc.narg(reference_id), @idempotency_key, sqlc.narg(expires_at), @actor_type, sqlc.narg(actor_id))
+ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id;
+
+-- name: GetReservation :one
+SELECT account_id, amount, source_module FROM platform.credit_ledger
+WHERE tenant_id = @tenant_id AND idempotency_key = @idempotency_key AND entry_type = 'reservation';
+
+-- name: ListExpiredReservations :many
+SELECT l.tenant_id, l.reference_id FROM platform.credit_ledger l
+WHERE l.entry_type = 'reservation' AND l.expires_at < now()
+  AND NOT EXISTS (SELECT 1 FROM platform.credit_ledger s WHERE s.tenant_id = l.tenant_id AND s.reference_id = l.reference_id AND s.entry_type IN ('commit', 'release'))
+LIMIT 200;
+
+-- name: ListCreditAccounts :many
+SELECT m.key AS meter_key, m.name, a.balance, a.reserved FROM platform.credit_accounts a
+JOIN platform.usage_meters m ON m.id = a.meter_id WHERE a.tenant_id = @tenant_id ORDER BY m.key;
+
+-- name: ListLedger :many
+SELECT id, entry_type, amount, source_module, actor_type, created_at FROM platform.credit_ledger
+WHERE tenant_id = @tenant_id ORDER BY id DESC LIMIT 100;
+
+-- name: LedgerTotals :one
+SELECT COALESCE(SUM(CASE entry_type WHEN 'grant' THEN amount WHEN 'adjustment' THEN amount WHEN 'refund' THEN amount WHEN 'commit' THEN -amount WHEN 'expiry' THEN -amount ELSE 0 END), 0)::bigint AS net
+FROM platform.credit_ledger WHERE account_id = @account_id;
+
+-- name: GetModuleKey :one
+SELECT key FROM platform.modules WHERE id = @id;

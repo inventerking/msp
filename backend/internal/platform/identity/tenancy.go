@@ -18,6 +18,7 @@ import (
 	"mspengine/internal/kernel/authctx"
 	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
+	"mspengine/internal/kernel/events"
 	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/platform/audit"
 	"mspengine/internal/platform/identity/repo"
@@ -80,7 +81,10 @@ func (s *Service) CreateTenant(ctx context.Context, p authctx.Principal, name st
 		if err := q.SetSessionTenant(ctx, repo.SetSessionTenantParams{ID: p.SessionID, TenantID: &id}); err != nil {
 			return err
 		}
-		return audit.Record(ctx, tx, audit.Event{TenantID: &id, ActorType: "user", ActorID: &p.UserID, Action: "tenant.created", ResourceType: "tenant", ResourceID: &id})
+		if err := audit.Record(ctx, tx, audit.Event{TenantID: &id, ActorType: "user", ActorID: &p.UserID, Action: "tenant.created", ResourceType: "tenant", ResourceID: &id}); err != nil {
+			return err
+		}
+		return events.Append(ctx, tx, events.Event{Type: "identity.tenant.created", TenantID: &id, SourceModule: "identity", AggregateType: "tenant", AggregateID: id}, map[string]any{"tenant_id": id})
 	})
 	return out, err
 }
@@ -438,4 +442,16 @@ func (s *Service) ListAudit(ctx context.Context, p authctx.Principal, before *uu
 		return nil
 	})
 	return out, err
+}
+
+// MembersWithPermission lists active members of the current tenant who hold a permission. It runs in
+// the caller's transaction, under that tenant's context.
+func MembersWithPermission(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, permission string) ([]uuid.UUID, error) {
+	return repo.New(tx).MembersWithPermission(ctx, repo.MembersWithPermissionParams{TenantID: tenantID, Permission: permission})
+}
+
+// UserEmail returns a user's address, for delivering a notification.
+func UserEmail(ctx context.Context, tx pgx.Tx, userID uuid.UUID) (string, error) {
+	u, err := repo.New(tx).GetUserByID(ctx, userID)
+	return u.Email, err
 }

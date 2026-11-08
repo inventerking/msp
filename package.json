@@ -13,7 +13,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "lint": "eslint . && depcruise apps packages --config .dependency-cruiser.cjs && spectral lint api/openapi/*.yaml --ruleset .spectral.yaml --fail-severity error",
-    "e2e": "pnpm --filter @msp/e2e test"
+    "e2e": "pnpm --filter @msp/e2e e2e"
   },
   "devDependencies": {
     "@stoplight/spectral-cli": "6.17.1",

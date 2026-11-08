@@ -10,7 +10,7 @@ setup: ## Create a local .env with fresh keys and install dependencies
 	@test -f .env || (cp .env.example .env && sed -i "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=$$(openssl rand -base64 32)|; s|^HMAC_KEY=.*|HMAC_KEY=$$(openssl rand -base64 32)|" .env && echo "created .env")
 	pnpm install
 
-up: ## Start PostgreSQL, Redis and Mailpit
+up: ## Start PostgreSQL, Redis, Mailpit, SeaweedFS and Gotenberg. Add ClamAV with: docker compose -f deploy/local/compose.yaml --profile scan up -d
 	$(COMPOSE) up -d --wait
 
 down:
@@ -45,7 +45,7 @@ gen: ## Regenerate code from the contracts and SQL
 test: test-go test-web
 
 test-go: ## Needs Docker: the suite runs against a real PostgreSQL
-	cd backend && go test -race -count=1 ./...
+	cd backend && go test -race -count=1 -p 2 ./...
 
 test-web:
 	pnpm test
@@ -54,6 +54,9 @@ lint:
 	cd backend && $(GO_TOOL) golangci-lint run ./...
 	pnpm lint
 	pnpm typecheck
+
+test-live: ## Real SeaweedFS and Gotenberg adapters. Needs `make up`
+	cd backend && MSP_LIVE_INFRA=1 go test -count=1 -run 'SeaweedFS|Gotenberg|ClamAV' ./internal/platform/files ./internal/platform/pdf
 
 e2e: ## Full browser flow. Needs `make up migrate` first
 	pnpm e2e

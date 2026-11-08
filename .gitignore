@@ -19,6 +19,7 @@ test-results/
 *.key
 
 # Local Docker data
+deploy/testing/seaweedfs/
 .data/
 
 # Editors and OS

@@ -289,6 +289,157 @@ paths:
       responses:
         "200": {description: Done}
         default: {$ref: "#/components/responses/Problem"}
+  /usage:
+    get:
+      operationId: getUsage
+      x-access: tenant
+      x-permission: billing.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/UsageSummary"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /companies/search:
+    get:
+      operationId: searchCompanies
+      x-access: tenant
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string, minLength: 2, maxLength: 120}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CompanyList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /privacy/contacts/{id}/erase:
+    post:
+      operationId: eraseContact
+      x-access: tenant
+      x-permission: privacy.manage
+      x-recent-auth: true
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "202": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/JobRef"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /privacy/contacts/{id}/export:
+    get:
+      operationId: exportContact
+      x-access: tenant
+      x-permission: privacy.manage
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ContactExport"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      x-access: tenant
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Job"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /jobs/{id}/cancel:
+    post:
+      operationId: cancelJob
+      x-access: tenant
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Job"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /files/uploads:
+    post:
+      operationId: createUpload
+      x-access: tenant
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateUpload"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Upload"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /files/uploads/{id}/content:
+    put:
+      operationId: uploadContent
+      x-access: tenant
+      x-raw-body: true
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /files/{id}:
+    get:
+      operationId: getFile
+      x-access: tenant
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/FileInfo"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /files/{id}/download:
+    get:
+      operationId: downloadFile
+      x-access: tenant
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": {description: File, content: {application/octet-stream: {schema: {type: string, format: binary}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/files/{token}:
+    get:
+      operationId: downloadSharedFile
+      x-access: public
+      security: []
+      parameters:
+        - {name: token, in: path, required: true, schema: {type: string, maxLength: 512}}
+      responses:
+        "200": {description: File, content: {application/octet-stream: {schema: {type: string, format: binary}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /notifications:
+    get:
+      operationId: listNotifications
+      x-access: tenant
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/NotificationList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      x-access: tenant
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      x-access: tenant
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /notifications/preferences:
+    get:
+      operationId: listNotificationPreferences
+      x-access: tenant
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/NotificationPreferenceList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    put:
+      operationId: setNotificationPreference
+      x-access: tenant
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/NotificationPreference"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /webhooks/{providerKind}/{pathToken}:
+    post:
+      operationId: receiveWebhook
+      x-access: public
+      x-raw-body: true
+      security: []
+      parameters:
+        - {name: providerKind, in: path, required: true, schema: {type: string, maxLength: 40}}
+        - {name: pathToken, in: path, required: true, schema: {type: string, maxLength: 200}}
+      responses:
+        "200": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
 components:
   securitySchemes:
     sessionCookie: {type: apiKey, in: cookie, name: session}
@@ -605,3 +756,109 @@ components:
       properties:
         email: {type: string, format: email, maxLength: 254}
         role: {type: string}
+    UsageMeter:
+      type: object
+      required: [meter_key, name, balance, reserved]
+      properties:
+        meter_key: {type: string}
+        name: {type: string}
+        balance: {type: integer, format: int64}
+        reserved: {type: integer, format: int64}
+    AIUsage:
+      type: object
+      required: [module_key, requests, credits, tokens]
+      properties:
+        module_key: {type: string}
+        requests: {type: integer, format: int64}
+        credits: {type: integer, format: int64}
+        tokens: {type: integer, format: int64}
+    UsageSummary:
+      type: object
+      required: [meters, ai]
+      properties:
+        meters: {type: array, items: {$ref: "#/components/schemas/UsageMeter"}}
+        ai: {type: array, items: {$ref: "#/components/schemas/AIUsage"}}
+    Company:
+      type: object
+      required: [id, display_name]
+      properties:
+        id: {type: string, format: uuid}
+        display_name: {type: string}
+        primary_domain: {type: string, nullable: true}
+        country_code: {type: string, nullable: true}
+        employee_band: {type: string, nullable: true}
+    CompanyList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Company"}}
+    JobRef:
+      type: object
+      required: [job_id]
+      properties:
+        job_id: {type: string, format: uuid}
+    ContactExport:
+      type: object
+      additionalProperties: true
+    Job:
+      type: object
+      required: [id, kind, status, attempt, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string}
+        status: {type: string}
+        attempt: {type: integer}
+        progress: {type: object, nullable: true, additionalProperties: true}
+        created_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time, nullable: true}
+    CreateUpload:
+      type: object
+      required: [purpose, file_name, size_bytes]
+      properties:
+        purpose: {type: string, maxLength: 40}
+        file_name: {type: string, minLength: 1, maxLength: 255}
+        size_bytes: {type: integer, format: int64, minimum: 1}
+    Upload:
+      type: object
+      required: [id, upload_url]
+      properties:
+        id: {type: string, format: uuid}
+        upload_url: {type: string}
+    FileInfo:
+      type: object
+      required: [id, name, status, content_type, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        status: {type: string}
+        content_type: {type: string}
+        size_bytes: {type: integer, format: int64, nullable: true}
+        created_at: {type: string, format: date-time}
+    Notification:
+      type: object
+      required: [id, key, title, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        title: {type: string}
+        link: {type: string, nullable: true}
+        read_at: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+    NotificationList:
+      type: object
+      required: [data, unread]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Notification"}}
+        unread: {type: integer}
+    NotificationPreference:
+      type: object
+      required: [key, channel, enabled]
+      properties:
+        key: {type: string, maxLength: 80}
+        channel: {type: string, enum: [in_app, email]}
+        enabled: {type: boolean}
+    NotificationPreferenceList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/NotificationPreference"}}

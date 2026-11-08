@@ -164,6 +164,9 @@ func unsafeMethod(m string) bool {
 
 // validateRequest checks the request against the contract, so handlers receive only valid shapes.
 func validateRequest(r *http.Request, pol *policy) error {
+	if pol.RawBody {
+		return nil // File and webhook bodies are bytes. Their handlers apply their own limits.
+	}
 	r.Body = http.MaxBytesReader(nil, r.Body, maxBodyBytes)
 	params := map[string]string{}
 	rc := chi.RouteContext(r.Context())

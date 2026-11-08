@@ -19,6 +19,20 @@ x-backend-env: &backend-env
   MAIL_FROM: no-reply@${APP_HOST}
   APP_BASE_URL: https://${APP_HOST}${PUBLIC_PORT_SUFFIX:-}
   ALLOWED_ORIGINS: https://${APP_HOST}${PUBLIC_PORT_SUFFIX:-},https://${ADMIN_HOST}${PUBLIC_PORT_SUFFIX:-}
+  S3_ENDPOINT: http://seaweedfs:8333
+  S3_BUCKET: msp-files
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+  S3_SECRET_KEY: ${S3_SECRET_KEY}
+  GOTENBERG_URL: http://gotenberg:3000
+  FILE_SCANNER: clamav
+  CLAMAV_ADDR: clamav:3310
+
+x-runtime-secrets: &runtime-secrets
+  DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+  DB_PLATFORM_PASSWORD: ${DB_PLATFORM_PASSWORD}
+  DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+  HMAC_KEY: ${HMAC_KEY}
 
 services:
   traefik:
@@ -54,7 +68,10 @@ services:
     build: {context: ../.., dockerfile: deploy/docker/backend.Dockerfile}
     command: [migrate]
     environment:
-      <<: *backend-env
+      APP_ENV: testing
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: msp_engine
       DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
     networks: [internal]
     depends_on:
@@ -69,18 +86,14 @@ services:
     image: msp-engine-backend:testing
     command: [api]
     environment:
-      <<: *backend-env
+      <<: [*backend-env, *runtime-secrets]
       HTTP_ADDR: 0.0.0.0:8088
       TRUST_FORWARDED: "true"
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
-      DB_PLATFORM_PASSWORD: ${DB_PLATFORM_PASSWORD}
-      DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      HMAC_KEY: ${HMAC_KEY}
     networks: [edge, internal]
     depends_on:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_healthy}
+      seaweedfs: {condition: service_started}
     healthcheck:
       test: ["CMD", "/engine", "healthcheck"]
       interval: 5s
@@ -92,11 +105,11 @@ services:
     image: msp-engine-backend:testing
     command: [worker]
     environment:
-      <<: *backend-env
-      DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
+      <<: [*backend-env, *runtime-secrets]
     networks: [internal]
     depends_on:
       migrate: {condition: service_completed_successfully}
+      seaweedfs: {condition: service_started}
 
   client:
     <<: *hardening
@@ -142,9 +155,32 @@ services:
       timeout: 3s
       retries: 30
 
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.52
+    restart: unless-stopped
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json", "-master.volumeSizeLimitMB=256", "-ip.bind=0.0.0.0"]
+    volumes:
+      - seaweed:/data
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    networks: [internal]
+
+  # No route out, and it refuses every URL except its own temporary files and inline images.
+  gotenberg:
+    image: gotenberg/gotenberg:9.2
+    restart: unless-stopped
+    command: ["gotenberg", "--chromium-deny-list=^(?!(file:///tmp/|data:)).*", "--chromium-disable-javascript=true", "--api-port=3000"]
+    networks: [internal]
+
+  # Needs internet access to update signatures, so it has its own network with a route out.
+  # It is required here: without it, uploads stay blocked rather than being passed unscanned.
+  clamav:
+    image: clamav/clamav:1.5
+    restart: unless-stopped
+    networks: [internal, clamav_updates]
+
   # The email sink. Its web page is published to the server's loopback only: reach it by SSH tunnel.
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.33
     restart: unless-stopped
     ports: ["127.0.0.1:${MAILPIT_PORT:-58025}:8025"]
     networks: [internal, mail_ui]
@@ -154,6 +190,8 @@ networks:
   # No route to the internet, so the database and backend cannot reach or be reached from outside.
   internal: {internal: true}
   mail_ui:
+  clamav_updates:
 
 volumes:
   pgdata:
+  seaweed:

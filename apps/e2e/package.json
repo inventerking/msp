@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": { "test": "playwright test", "typecheck": "tsc --noEmit" },
+  "scripts": { "e2e": "playwright test", "typecheck": "tsc --noEmit" },
   "devDependencies": { "@msp/config": "workspace:*", "@playwright/test": "1.65.0", "@types/node": "^24", "otpauth": "^9", "typescript": "6.0.3" }
 }

@@ -13,6 +13,7 @@ export function Subscription() {
   const allowed = Boolean(me?.permissions.includes("billing.read"));
   const products = useQuery({ queryKey: tenantKey(me, "products"), queryFn: () => unwrap(api.GET("/catalog/products")), enabled: allowed });
   const subs = useQuery({ queryKey: tenantKey(me, "subscriptions"), queryFn: () => unwrap(api.GET("/subscriptions")), enabled: allowed });
+  const usage = useQuery({ queryKey: tenantKey(me, "usage"), queryFn: () => unwrap(api.GET("/usage")), enabled: allowed });
   if (!allowed) return <NoPermission />;
   return (
     <>
@@ -25,6 +26,28 @@ export function Subscription() {
               {me?.modules.map((m) => <tr key={m.key}><td>{t(`modules.${m.key}.name`)}</td><td className="text-right"><Badge tone={statusTone(m.status)}>{t(`status.${m.status}`)}</Badge></td></tr>)}
             </tbody>
           </Table>
+        </Card>
+      </section>
+      <section className="mb-6">
+        <h2 className="mb-2 text-sm font-medium text-ink-soft">{t("subscription.usage")}</h2>
+        <Card>
+          {usage.isPending ? <SkeletonRows rows={2} label={t("common.loading")} /> : null}
+          {usage.data && usage.data.meters.length === 0 ? <EmptyState title={t("subscription.noUsage")} /> : null}
+          {usage.data?.meters.length ? (
+            <Table>
+              <thead><tr><th>{t("subscription.meter")}</th><th>{t("subscription.balance")}</th><th>{t("subscription.reserved")}</th></tr></thead>
+              <tbody>{usage.data.meters.map((m) => <tr key={m.meter_key}><td>{m.name}</td><td className="tabular-nums">{m.balance - m.reserved}</td><td className="tabular-nums text-ink-soft">{m.reserved}</td></tr>)}</tbody>
+            </Table>
+          ) : null}
+          {usage.data?.ai.length ? (
+            <div className="border-t border-line">
+              <p className="px-4 pt-3 text-xs text-ink-faint">{t("subscription.aiUsage")}</p>
+              <Table>
+                <thead><tr><th>{t("subscription.module")}</th><th>{t("subscription.requests")}</th><th>{t("subscription.creditsUsed")}</th></tr></thead>
+                <tbody>{usage.data.ai.map((a) => <tr key={a.module_key}><td>{t(`modules.${a.module_key}.name`, { defaultValue: a.module_key })}</td><td className="tabular-nums">{a.requests}</td><td className="tabular-nums">{a.credits}</td></tr>)}</tbody>
+              </Table>
+            </div>
+          ) : null}
         </Card>
       </section>
       <section className="mb-6">

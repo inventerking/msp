@@ -25,13 +25,13 @@ import (
 
 	"mspengine/db/migrations"
 	"mspengine/internal/api"
+	"mspengine/internal/app"
 	"mspengine/internal/kernel/config"
 	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
 	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/kernel/ratelimit"
-	"mspengine/internal/kernel/realtime"
-	"mspengine/internal/platform/commercial"
+	"mspengine/internal/platform/files"
 	"mspengine/internal/platform/identity"
 )
 
@@ -77,7 +77,10 @@ type Env struct {
 	DSN   func(role, password string) string
 }
 
-var env *Env
+var (
+	env   *Env
+	graph *app.Graph
+)
 
 func TestMain(m *testing.M) {
 	code, err := run(m)
@@ -130,7 +133,7 @@ func run(m *testing.M) (int, error) {
 		return 1, fmt.Errorf("migrate: %w", err)
 	}
 
-	app, err := db.Open(ctx, dsn("msp_app", "dev_app"), 20)
+	appPool, err := db.Open(ctx, dsn("msp_app", "dev_app"), 20)
 	if err != nil {
 		return 1, err
 	}
@@ -146,22 +149,24 @@ func run(m *testing.M) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	pools := &db.Pools{App: app, Platform: platform, System: system}
+	pools := &db.Pools{App: appPool, Platform: platform, System: system}
 	defer pools.Close()
 	defer owner.Close()
 
 	keys := crypto.Keys{HMAC: bytes.Repeat([]byte{7}, 32), Encryption: bytes.Repeat([]byte{9}, 32)}
 	mail := &fakeMailer{}
-	ids, err := identity.New(pools, keys, mail, "http://app.test")
+	g, err := app.Build(pools, keys, app.Options{Mailer: mail, Store: &files.MemoryStore{}, Scanner: files.AllowAllScanner{}, Bucket: "test", BaseURL: "http://app.test"})
 	if err != nil {
 		return 1, err
 	}
-	hub := realtime.New(nil)
+	ids := g.Identity
 	cfg := config.Config{Env: "test", AllowedOrigins: []string{"http://app.test"}, AuthRatePerMinute: 1_000_000}
-	h, err := api.New(api.Deps{Config: cfg, Identity: ids, Commercial: commercial.New(pools, hub), Keys: keys, Limiter: ratelimit.New(nil), Hub: hub, DB: app})
+	h, err := api.New(api.Deps{Config: cfg, Identity: ids, Commercial: g.Commercial, Keys: keys, Limiter: ratelimit.New(nil), Hub: g.Hub, DB: pools.App,
+		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops})
 	if err != nil {
 		return 1, err
 	}
+	graph = g
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 	env = &Env{URL: srv.URL, Mail: mail, IDs: ids, Owner: owner, DSN: dsn}
@@ -283,4 +288,9 @@ func newTenant(t *testing.T, name string) (*Client, string, string) {
 	c, email := signUp(t, strings.ToLower(strings.ReplaceAll(name, " ", "")))
 	out := c.must(201, http.MethodPost, "/api/v1/tenants", map[string]any{"name": name})
 	return c, email, out["id"].(string)
+}
+
+func asJSON(v any) string {
+	b, _ := json.Marshal(v)
+	return string(b)
 }

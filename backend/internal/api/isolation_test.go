@@ -71,10 +71,26 @@ func schemaFaults(ctx context.Context, q interface {
 
 // mixedTables hold platform-level rows with a null tenant, and have their own policies or none
 // for tenant users. They are checked separately.
-var mixedTables = []string{"identity.roles", "audit.events", "audit.security_events"}
+var mixedTables = []string{"identity.roles", "audit.events", "audit.security_events",
+	"jobs.jobs", "jobs.job_schedules", "jobs.dead_letters", "jobs.outbox_events", "jobs.event_deliveries",
+	"integration.webhook_endpoints", "integration.webhook_deliveries", "integration.provider_call_logs",
+	"notification.notifications", "files.objects", "files.object_references", "files.access_grants"}
+
+// Mixed tables must still have row-level security, even though a null tenant is allowed.
+func TestMixedTablesHaveRLS(t *testing.T) {
+	for _, name := range mixedTables {
+		var rls, force bool
+		if err := env.Owner.QueryRow(context.Background(), `SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid = $1::regclass`, name).Scan(&rls, &force); err != nil {
+			t.Fatal(err)
+		}
+		if !rls || !force {
+			t.Errorf("%s: rls=%v forced=%v", name, rls, force)
+		}
+	}
+}
 
 func TestSchemaProtectsEveryTenantTable(t *testing.T) {
-	faults, err := schemaFaults(context.Background(), env.Owner, []string{"identity", "platform", "audit"}, nil)
+	faults, err := schemaFaults(context.Background(), env.Owner, []string{"identity", "platform", "audit", "shared", "jobs", "files", "integration", "notification"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +314,7 @@ func allTenantOps(t *testing.T) []op {
 
 func TestEveryRouteDeclaresAccess(t *testing.T) {
 	ops := append(allTenantOps(t), operations(t, adminapi.GetSwagger, "/api/v1/admin")...)
-	if len(ops) < 50 {
+	if len(ops) < 90 {
 		t.Fatalf("only %d operations found", len(ops))
 	}
 	for _, o := range ops {
@@ -316,6 +332,8 @@ func TestEveryProtectedRouteRejectsAnonymous(t *testing.T) {
 			continue
 		}
 		t.Run(o.id, func(t *testing.T) {
+			// No query parameters are sent, so routes that require them also prove that
+			// authentication is checked before validation.
 			status, body := anon.Do(o.method, o.path, map[string]any{})
 			if status != http.StatusUnauthorized || body["code"] != "authentication_required" {
 				t.Fatalf("%s %s: got %d %v", o.method, o.path, status, body["code"])

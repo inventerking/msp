@@ -17,6 +17,7 @@ import (
 	"mspengine/internal/kernel/apperr"
 	"mspengine/internal/kernel/authctx"
 	"mspengine/internal/kernel/db"
+	"mspengine/internal/kernel/events"
 	"mspengine/internal/kernel/realtime"
 	"mspengine/internal/platform/audit"
 	"mspengine/internal/platform/commercial/repo"
@@ -414,7 +415,15 @@ func (s *Service) ActivateSubscription(ctx context.Context, id uuid.UUID, reason
 			if err := q.SetGrantStatus(ctx, repo.SetGrantStatusParams{ID: g.ID, Status: "active", Reason: &reason, ActivatedBy: &admin.AdminID, StartsAt: &now}); err != nil {
 				return err
 			}
-			if _, err := s.recompute(ctx, q, out.TenantID, g.ModuleID, &g.ID, reason); err != nil {
+			res, err := s.recompute(ctx, q, out.TenantID, g.ModuleID, &g.ID, reason)
+			if err != nil {
+				return err
+			}
+			key, err := q.GetModuleKey(ctx, g.ModuleID)
+			if err != nil {
+				return err
+			}
+			if err := entitlementEvent(ctx, tx, out.TenantID, g.ModuleID, key, res); err != nil {
 				return err
 			}
 		}
@@ -531,12 +540,25 @@ func (s *Service) ChangeEntitlement(ctx context.Context, tenantID uuid.UUID, mod
 		if err != nil {
 			return err
 		}
-		return audit.Record(ctx, tx, adminEvent(ctx, &tenantID, "entitlement."+action, "module", &mod.ID, nil, map[string]any{"module": moduleKey, "reason": reason, "status": res.Status}))
+		if err := audit.Record(ctx, tx, adminEvent(ctx, &tenantID, "entitlement."+action, "module", &mod.ID, nil, map[string]any{"module": moduleKey, "reason": reason, "status": res.Status})); err != nil {
+			return err
+		}
+		return entitlementEvent(ctx, tx, tenantID, mod.ID, moduleKey, res)
 	})
 	if err == nil {
 		s.hub.Publish(ctx, tenantID, EntitlementsChanged)
 	}
 	return res, err
+}
+
+// entitlementEvent tells modules and notifications that a tenant's access changed.
+func entitlementEvent(ctx context.Context, tx pgx.Tx, tenantID, moduleID uuid.UUID, moduleKey string, res ChangeResult) error {
+	kind := map[string]string{"active": "activated", "suspended": "suspended", "expired": "expired", "revoked": "revoked"}[res.Status]
+	if kind == "" {
+		return nil
+	}
+	return events.Append(ctx, tx, events.Event{Type: "platform.entitlement." + kind, TenantID: &tenantID, SourceModule: "platform", AggregateType: "entitlement", AggregateID: moduleID},
+		map[string]any{"module_key": moduleKey, "entitlement_version": res.Version})
 }
 
 // recompute projects grants into the effective entitlement and records the change.

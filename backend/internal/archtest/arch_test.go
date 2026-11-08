@@ -158,6 +158,9 @@ var schemaRef = regexp.MustCompile(`(?i)\b(?:FROM|JOIN|INTO|UPDATE)\s+([a-z_]+)\
 func wrongSchemas(sql string, owned ...string) []string {
 	var bad []string
 	for _, m := range schemaRef.FindAllStringSubmatch(sql, -1) {
+		if strings.EqualFold(m[1], "sqlc") {
+			continue // sqlc.arg(...) is a query parameter, not a schema.
+		}
 		ok := false
 		for _, o := range owned {
 			ok = ok || strings.EqualFold(m[1], o)
@@ -172,9 +175,14 @@ func wrongSchemas(sql string, owned ...string) []string {
 // A repository's SQL may touch only the schema its owner owns.
 func TestSQLStaysInOwnSchema(t *testing.T) {
 	owners := map[string]string{
-		"../platform/identity/queries.sql":   "identity",
-		"../platform/commercial/queries.sql": "platform",
-		"../platform/audit/queries.sql":      "audit",
+		"../platform/identity/queries.sql":     "identity",
+		"../platform/commercial/queries.sql":   "platform",
+		"../platform/audit/queries.sql":        "audit",
+		"../kernel/jobs/queries.sql":           "jobs",
+		"../platform/shared/queries.sql":       "shared",
+		"../platform/integration/queries.sql":  "integration",
+		"../platform/notification/queries.sql": "notification",
+		"../platform/files/queries.sql":        "files",
 	}
 	for path, schema := range owners {
 		b, err := os.ReadFile(path)

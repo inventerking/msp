@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -22,13 +21,12 @@ import (
 
 	"mspengine/db/migrations"
 	"mspengine/internal/api"
+	"mspengine/internal/app"
 	"mspengine/internal/kernel/config"
 	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
 	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/kernel/ratelimit"
-	"mspengine/internal/kernel/realtime"
-	"mspengine/internal/platform/commercial"
 	"mspengine/internal/platform/identity"
 )
 
@@ -51,7 +49,7 @@ func main() {
 			err = runAPI(ctx, cfg)
 		}
 	case "worker":
-		if err = cfg.RequireDB("system"); err == nil {
+		if err = needRuntime(); err == nil {
 			err = runWorker(ctx, cfg)
 		}
 	case "ingest":
@@ -123,15 +121,17 @@ func runAPI(ctx context.Context, c config.Config) error {
 		return err
 	}
 	defer pools.Close()
+	if err := migrations.CheckCurrent(ctx, pools.App); err != nil {
+		return err
+	}
 	rdb := redis.NewClient(&redis.Options{Addr: c.RedisAddr})
 	defer func() { _ = rdb.Close() }()
-	keys := crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}
-	hub := realtime.New(rdb)
-	ids, err := identity.New(pools, keys, mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, c.AppBaseURL)
+	g, err := app.BuildFromConfig(ctx, c, pools, rdb)
 	if err != nil {
 		return err
 	}
-	handler, err := api.New(api.Deps{Config: c, Identity: ids, Commercial: commercial.New(pools, hub), Keys: keys, Limiter: ratelimit.New(rdb), Hub: hub, DB: pools.App, Redis: rdb})
+	handler, err := api.New(api.Deps{Config: c, Identity: g.Identity, Commercial: g.Commercial, Keys: g.Keys, Limiter: ratelimit.New(rdb), Hub: g.Hub, DB: pools.App, Redis: rdb,
+		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops})
 	if err != nil {
 		return err
 	}
@@ -149,39 +149,35 @@ func runAPI(ctx context.Context, c config.Config) error {
 	return srv.Shutdown(shut)
 }
 
-// runWorker runs Phase 1 housekeeping. The full job system arrives in Phase 2.
+// runWorker runs background jobs, event dispatch and schedules until told to stop.
 func runWorker(ctx context.Context, c config.Config) error {
-	pool, err := db.Open(ctx, db.DSN(c.DBHost, c.DBPort, c.DBName, "msp_system", c.DBSystemPassword), 2)
+	pools, err := openPools(ctx, c)
 	if err != nil {
 		return err
 	}
-	defer pool.Close()
-	tick := func() {
-		statements := []string{
-			`SELECT audit.ensure_partitions(3)`,
-			`DELETE FROM identity.sessions WHERE expires_at < now() - interval '30 days'`,
-			`DELETE FROM identity.platform_admin_sessions WHERE expires_at < now() - interval '30 days'`,
-			`DELETE FROM identity.verification_tokens WHERE expires_at < now() - interval '7 days'`,
-			`DELETE FROM identity.login_attempts WHERE created_at < now() - interval '90 days'`,
-		}
-		for _, s := range statements {
-			if _, err := pool.Exec(ctx, s); err != nil && ctx.Err() == nil {
-				slog.Error("housekeeping failed", "statement", strings.Fields(s)[0], "error", err)
-			}
-		}
+	defer pools.Close()
+	if err := migrations.CheckCurrent(ctx, pools.App); err != nil {
+		return err
 	}
-	tick()
-	t := time.NewTicker(time.Hour)
-	defer t.Stop()
+	rdb := redis.NewClient(&redis.Options{Addr: c.RedisAddr})
+	defer func() { _ = rdb.Close() }()
+	g, err := app.BuildFromConfig(ctx, c, pools, rdb)
+	if err != nil {
+		return err
+	}
+	if err := g.EnsureSchedules(ctx); err != nil {
+		return err
+	}
+	runner, bus := g.Worker(app.WorkerID())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		bus.Run(ctx)
+	}()
 	slog.Info("worker running")
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-t.C:
-			tick()
-		}
-	}
+	runner.Run(ctx)
+	<-done
+	return nil
 }
 
 // runHealthcheck lets a minimal container image, with no shell or curl, check its own API.

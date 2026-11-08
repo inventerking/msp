@@ -21,6 +21,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for NotificationPreferenceChannel.
+const (
+	Email NotificationPreferenceChannel = "email"
+	InApp NotificationPreferenceChannel = "in_app"
+)
+
+// Valid indicates whether the value is a known member of the NotificationPreferenceChannel enum.
+func (e NotificationPreferenceChannel) Valid() bool {
+	switch e {
+	case Email:
+		return true
+	case InApp:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProductKind.
 const (
 	ProductKindAddon  ProductKind = "addon"
@@ -43,6 +61,14 @@ func (e ProductKind) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AIUsage defines model for AIUsage.
+type AIUsage struct {
+	Credits   int64  `json:"credits"`
+	ModuleKey string `json:"module_key"`
+	Requests  int64  `json:"requests"`
+	Tokens    int64  `json:"tokens"`
 }
 
 // Accepted defines model for Accepted.
@@ -74,6 +100,23 @@ type AuditEventList struct {
 	NextCursor *string      `json:"next_cursor,omitempty"`
 }
 
+// Company defines model for Company.
+type Company struct {
+	CountryCode   *string            `json:"country_code,omitempty"`
+	DisplayName   string             `json:"display_name"`
+	EmployeeBand  *string            `json:"employee_band,omitempty"`
+	Id            openapi_types.UUID `json:"id"`
+	PrimaryDomain *string            `json:"primary_domain,omitempty"`
+}
+
+// CompanyList defines model for CompanyList.
+type CompanyList struct {
+	Data []Company `json:"data"`
+}
+
+// ContactExport defines model for ContactExport.
+type ContactExport map[string]interface{}
+
 // CreateInvitation defines model for CreateInvitation.
 type CreateInvitation struct {
 	Email openapi_types.Email `json:"email"`
@@ -83,6 +126,13 @@ type CreateInvitation struct {
 // CreateTenant defines model for CreateTenant.
 type CreateTenant struct {
 	Name string `json:"name"`
+}
+
+// CreateUpload defines model for CreateUpload.
+type CreateUpload struct {
+	FileName  string `json:"file_name"`
+	Purpose   string `json:"purpose"`
+	SizeBytes int64  `json:"size_bytes"`
 }
 
 // EmailRequest defines model for EmailRequest.
@@ -104,6 +154,16 @@ type EntitlementList struct {
 	Data []Entitlement `json:"data"`
 }
 
+// FileInfo defines model for FileInfo.
+type FileInfo struct {
+	ContentType string             `json:"content_type"`
+	CreatedAt   time.Time          `json:"created_at"`
+	Id          openapi_types.UUID `json:"id"`
+	Name        string             `json:"name"`
+	SizeBytes   *int64             `json:"size_bytes,omitempty"`
+	Status      string             `json:"status"`
+}
+
 // Invitation defines model for Invitation.
 type Invitation struct {
 	Email     string             `json:"email"`
@@ -115,6 +175,22 @@ type Invitation struct {
 // InvitationList defines model for InvitationList.
 type InvitationList struct {
 	Data []Invitation `json:"data"`
+}
+
+// Job defines model for Job.
+type Job struct {
+	Attempt    int                     `json:"attempt"`
+	CreatedAt  time.Time               `json:"created_at"`
+	FinishedAt *time.Time              `json:"finished_at,omitempty"`
+	Id         openapi_types.UUID      `json:"id"`
+	Kind       string                  `json:"kind"`
+	Progress   *map[string]interface{} `json:"progress,omitempty"`
+	Status     string                  `json:"status"`
+}
+
+// JobRef defines model for JobRef.
+type JobRef struct {
+	JobId openapi_types.UUID `json:"job_id"`
 }
 
 // Login defines model for Login.
@@ -181,6 +257,37 @@ type Module struct {
 // ModuleList defines model for ModuleList.
 type ModuleList struct {
 	Data []Module `json:"data"`
+}
+
+// Notification defines model for Notification.
+type Notification struct {
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+	Key       string             `json:"key"`
+	Link      *string            `json:"link,omitempty"`
+	ReadAt    *time.Time         `json:"read_at,omitempty"`
+	Title     string             `json:"title"`
+}
+
+// NotificationList defines model for NotificationList.
+type NotificationList struct {
+	Data   []Notification `json:"data"`
+	Unread int            `json:"unread"`
+}
+
+// NotificationPreference defines model for NotificationPreference.
+type NotificationPreference struct {
+	Channel NotificationPreferenceChannel `json:"channel"`
+	Enabled bool                          `json:"enabled"`
+	Key     string                        `json:"key"`
+}
+
+// NotificationPreferenceChannel defines model for NotificationPreference.Channel.
+type NotificationPreferenceChannel string
+
+// NotificationPreferenceList defines model for NotificationPreferenceList.
+type NotificationPreferenceList struct {
+	Data []NotificationPreference `json:"data"`
 }
 
 // PasswordChange defines model for PasswordChange.
@@ -343,6 +450,26 @@ type UpdateTenant struct {
 	WebsiteDomain     *string `json:"website_domain,omitempty"`
 }
 
+// Upload defines model for Upload.
+type Upload struct {
+	Id        openapi_types.UUID `json:"id"`
+	UploadUrl string             `json:"upload_url"`
+}
+
+// UsageMeter defines model for UsageMeter.
+type UsageMeter struct {
+	Balance  int64  `json:"balance"`
+	MeterKey string `json:"meter_key"`
+	Name     string `json:"name"`
+	Reserved int64  `json:"reserved"`
+}
+
+// UsageSummary defines model for UsageSummary.
+type UsageSummary struct {
+	Ai     []AIUsage    `json:"ai"`
+	Meters []UsageMeter `json:"meters"`
+}
+
 // UserSummary defines model for UserSummary.
 type UserSummary struct {
 	DisplayName string             `json:"display_name"`
@@ -359,6 +486,11 @@ type Id = openapi_types.UUID
 
 // Limit defines model for Limit.
 type Limit = int
+
+// SearchCompaniesParams defines parameters for SearchCompanies.
+type SearchCompaniesParams struct {
+	Q string `form:"q" json:"q"`
+}
 
 // ListTenantAuditEventsParams defines parameters for ListTenantAuditEvents.
 type ListTenantAuditEventsParams struct {
@@ -396,11 +528,17 @@ type VerifyEmailJSONRequestBody = TokenRequest
 // ResendVerificationJSONRequestBody defines body for ResendVerification for application/json ContentType.
 type ResendVerificationJSONRequestBody = EmailRequest
 
+// CreateUploadJSONRequestBody defines body for CreateUpload for application/json ContentType.
+type CreateUploadJSONRequestBody = CreateUpload
+
 // AcceptInvitationJSONRequestBody defines body for AcceptInvitation for application/json ContentType.
 type AcceptInvitationJSONRequestBody = TokenRequest
 
 // SetActiveTenantJSONRequestBody defines body for SetActiveTenant for application/json ContentType.
 type SetActiveTenantJSONRequestBody = ActiveTenant
+
+// SetNotificationPreferenceJSONRequestBody defines body for SetNotificationPreference for application/json ContentType.
+type SetNotificationPreferenceJSONRequestBody = NotificationPreference
 
 // UpdateTenantJSONRequestBody defines body for UpdateTenant for application/json ContentType.
 type UpdateTenantJSONRequestBody = UpdateTenant
@@ -468,20 +606,65 @@ type ServerInterface interface {
 	// (GET /catalog/products)
 	ListCatalogProducts(w http.ResponseWriter, r *http.Request)
 
+	// (GET /companies/search)
+	SearchCompanies(w http.ResponseWriter, r *http.Request, params SearchCompaniesParams)
+
 	// (GET /entitlements)
 	ListEntitlements(w http.ResponseWriter, r *http.Request)
 
 	// (GET /events/stream)
 	StreamEvents(w http.ResponseWriter, r *http.Request)
 
+	// (POST /files/uploads)
+	CreateUpload(w http.ResponseWriter, r *http.Request)
+
+	// (PUT /files/uploads/{id}/content)
+	UploadContent(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (GET /files/{id})
+	GetFile(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (GET /files/{id}/download)
+	DownloadFile(w http.ResponseWriter, r *http.Request, id Id)
+
 	// (POST /invitations/accept)
 	AcceptInvitation(w http.ResponseWriter, r *http.Request)
+
+	// (GET /jobs/{id})
+	GetJob(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /jobs/{id}/cancel)
+	CancelJob(w http.ResponseWriter, r *http.Request, id Id)
 
 	// (POST /me/active-tenant)
 	SetActiveTenant(w http.ResponseWriter, r *http.Request)
 
 	// (GET /me/context)
 	GetMeContext(w http.ResponseWriter, r *http.Request)
+
+	// (GET /notifications)
+	ListNotifications(w http.ResponseWriter, r *http.Request)
+
+	// (GET /notifications/preferences)
+	ListNotificationPreferences(w http.ResponseWriter, r *http.Request)
+
+	// (PUT /notifications/preferences)
+	SetNotificationPreference(w http.ResponseWriter, r *http.Request)
+
+	// (POST /notifications/read-all)
+	MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request)
+
+	// (POST /notifications/{id}/read)
+	MarkNotificationRead(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /privacy/contacts/{id}/erase)
+	EraseContact(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (GET /privacy/contacts/{id}/export)
+	ExportContact(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (GET /public/files/{token})
+	DownloadSharedFile(w http.ResponseWriter, r *http.Request, token string)
 
 	// (GET /subscriptions)
 	ListSubscriptions(w http.ResponseWriter, r *http.Request)
@@ -518,6 +701,12 @@ type ServerInterface interface {
 
 	// (POST /tenants)
 	CreateTenant(w http.ResponseWriter, r *http.Request)
+
+	// (GET /usage)
+	GetUsage(w http.ResponseWriter, r *http.Request)
+
+	// (POST /webhooks/{providerKind}/{pathToken})
+	ReceiveWebhook(w http.ResponseWriter, r *http.Request, providerKind string, pathToken string)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -609,6 +798,11 @@ func (_ Unimplemented) ListCatalogProducts(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// (GET /companies/search)
+func (_ Unimplemented) SearchCompanies(w http.ResponseWriter, r *http.Request, params SearchCompaniesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // (GET /entitlements)
 func (_ Unimplemented) ListEntitlements(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -619,8 +813,38 @@ func (_ Unimplemented) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// (POST /files/uploads)
+func (_ Unimplemented) CreateUpload(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /files/uploads/{id}/content)
+func (_ Unimplemented) UploadContent(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /files/{id})
+func (_ Unimplemented) GetFile(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /files/{id}/download)
+func (_ Unimplemented) DownloadFile(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // (POST /invitations/accept)
 func (_ Unimplemented) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /jobs/{id})
+func (_ Unimplemented) GetJob(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /jobs/{id}/cancel)
+func (_ Unimplemented) CancelJob(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -631,6 +855,46 @@ func (_ Unimplemented) SetActiveTenant(w http.ResponseWriter, r *http.Request) {
 
 // (GET /me/context)
 func (_ Unimplemented) GetMeContext(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /notifications)
+func (_ Unimplemented) ListNotifications(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /notifications/preferences)
+func (_ Unimplemented) ListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /notifications/preferences)
+func (_ Unimplemented) SetNotificationPreference(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /notifications/read-all)
+func (_ Unimplemented) MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /notifications/{id}/read)
+func (_ Unimplemented) MarkNotificationRead(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /privacy/contacts/{id}/erase)
+func (_ Unimplemented) EraseContact(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /privacy/contacts/{id}/export)
+func (_ Unimplemented) ExportContact(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /public/files/{token})
+func (_ Unimplemented) DownloadSharedFile(w http.ResponseWriter, r *http.Request, token string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -691,6 +955,16 @@ func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request) {
 
 // (POST /tenants)
 func (_ Unimplemented) CreateTenant(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /usage)
+func (_ Unimplemented) GetUsage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /webhooks/{providerKind}/{pathToken})
+func (_ Unimplemented) ReceiveWebhook(w http.ResponseWriter, r *http.Request, providerKind string, pathToken string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -953,6 +1227,39 @@ func (siw *ServerInterfaceWrapper) ListCatalogProducts(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// SearchCompanies operation middleware
+func (siw *ServerInterfaceWrapper) SearchCompanies(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchCompaniesParams
+
+	// ------------- Required query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchCompanies(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListEntitlements operation middleware
 func (siw *ServerInterfaceWrapper) ListEntitlements(w http.ResponseWriter, r *http.Request) {
 
@@ -981,11 +1288,155 @@ func (siw *ServerInterfaceWrapper) StreamEvents(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// CreateUpload operation middleware
+func (siw *ServerInterfaceWrapper) CreateUpload(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateUpload(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadContent operation middleware
+func (siw *ServerInterfaceWrapper) UploadContent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadContent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFile operation middleware
+func (siw *ServerInterfaceWrapper) GetFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFile(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadFile operation middleware
+func (siw *ServerInterfaceWrapper) DownloadFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadFile(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AcceptInvitation operation middleware
 func (siw *ServerInterfaceWrapper) AcceptInvitation(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AcceptInvitation(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetJob operation middleware
+func (siw *ServerInterfaceWrapper) GetJob(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetJob(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelJob operation middleware
+func (siw *ServerInterfaceWrapper) CancelJob(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelJob(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1014,6 +1465,166 @@ func (siw *ServerInterfaceWrapper) GetMeContext(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMeContext(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotifications operation middleware
+func (siw *ServerInterfaceWrapper) ListNotifications(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotifications(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListNotificationPreferences operation middleware
+func (siw *ServerInterfaceWrapper) ListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNotificationPreferences(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetNotificationPreference operation middleware
+func (siw *ServerInterfaceWrapper) SetNotificationPreference(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetNotificationPreference(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkAllNotificationsRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkAllNotificationsRead(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkAllNotificationsRead(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkNotificationRead operation middleware
+func (siw *ServerInterfaceWrapper) MarkNotificationRead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkNotificationRead(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EraseContact operation middleware
+func (siw *ServerInterfaceWrapper) EraseContact(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EraseContact(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportContact operation middleware
+func (siw *ServerInterfaceWrapper) ExportContact(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportContact(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadSharedFile operation middleware
+func (siw *ServerInterfaceWrapper) DownloadSharedFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadSharedFile(w, r, token)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1259,6 +1870,55 @@ func (siw *ServerInterfaceWrapper) CreateTenant(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetUsage operation middleware
+func (siw *ServerInterfaceWrapper) GetUsage(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUsage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveWebhook operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveWebhook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "providerKind" -------------
+	var providerKind string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "providerKind", chi.URLParam(r, "providerKind"), &providerKind, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "providerKind", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "pathToken" -------------
+	var pathToken string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "pathToken", chi.URLParam(r, "pathToken"), &pathToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pathToken", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveWebhook(w, r, providerKind, pathToken)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1474,6 +2134,57 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/events/stream", wrapper.StreamEvents)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/usage", wrapper.GetUsage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/search", wrapper.SearchCompanies)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/privacy/contacts/{id}/erase", wrapper.EraseContact)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/contacts/{id}/export", wrapper.ExportContact)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/jobs/{id}", wrapper.GetJob)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/jobs/{id}/cancel", wrapper.CancelJob)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files/uploads", wrapper.CreateUpload)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/files/uploads/{id}/content", wrapper.UploadContent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/files/{id}", wrapper.GetFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/files/{id}/download", wrapper.DownloadFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/files/{token}", wrapper.DownloadSharedFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/notifications", wrapper.ListNotifications)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/notifications/read-all", wrapper.MarkAllNotificationsRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/notifications/{id}/read", wrapper.MarkNotificationRead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/notifications/preferences", wrapper.ListNotificationPreferences)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/notifications/preferences", wrapper.SetNotificationPreference)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/webhooks/{providerKind}/{pathToken}", wrapper.ReceiveWebhook)
+	})
 
 	return r
 }
@@ -1483,51 +2194,67 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"aEEA3xREos9NoylOyXRzjXZPu38PAA==",
+	"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",
+	"QzBGGR6vzoOXh5d/DQA=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

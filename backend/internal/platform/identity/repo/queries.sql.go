@@ -1322,6 +1322,38 @@ func (q *Queries) MarkFactorVerified(ctx context.Context, arg MarkFactorVerified
 	return err
 }
 
+const membersWithPermission = `-- name: MembersWithPermission :many
+SELECT m.user_id FROM identity.memberships m
+JOIN identity.role_permissions rp ON rp.role_id = m.role_id
+JOIN identity.permissions p ON p.id = rp.permission_id
+WHERE m.tenant_id = $1 AND m.status = 'active' AND p.key = $2
+`
+
+type MembersWithPermissionParams struct {
+	TenantID   uuid.UUID
+	Permission string
+}
+
+func (q *Queries) MembersWithPermission(ctx context.Context, arg MembersWithPermissionParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, membersWithPermission, arg.TenantID, arg.Permission)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var user_id uuid.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recordLoginAttempt = `-- name: RecordLoginAttempt :exec
 INSERT INTO identity.login_attempts (email_hash, ip_hash, domain, succeeded, failure_reason)
 VALUES ($1, $2, $3, $4, $5)

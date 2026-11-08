@@ -4,7 +4,10 @@ import { Admins } from "../features/Admins";
 import { Audit } from "../features/Audit";
 import { Catalog } from "../features/Catalog";
 import { Dashboard } from "../features/Dashboard";
+import { Ai } from "../features/Ai";
+import { Integrations } from "../features/Integrations";
 import { Login } from "../features/Login";
+import { Operations } from "../features/Operations";
 import { Subscriptions } from "../features/Subscriptions";
 import { TenantDetail } from "../features/TenantDetail";
 import { Tenants } from "../features/Tenants";
@@ -26,6 +29,9 @@ export const router = createBrowserRouter([
           { path: "/audit", Component: Audit },
           { path: "/admins", Component: Admins },
           { path: "/account", Component: Account },
+          { path: "/integrations", Component: Integrations },
+          { path: "/operations", Component: Operations },
+          { path: "/ai", Component: Ai },
         ],
       },
     ],

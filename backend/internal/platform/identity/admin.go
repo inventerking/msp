@@ -16,6 +16,7 @@ import (
 	"mspengine/internal/kernel/authctx"
 	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
+	"mspengine/internal/kernel/events"
 	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/platform/audit"
 	auditrepo "mspengine/internal/platform/audit/repo"
@@ -436,6 +437,13 @@ func (s *Service) AdminSetTenantState(ctx context.Context, a authctx.AdminPrinci
 			return apperr.New(http.StatusConflict, "invalid_transition", "The tenant is not in a state that allows this")
 		}
 		if err := audit.Record(ctx, tx, adminEvent(a, &id, action, "tenant", &id, map[string]any{"reason": reason})); err != nil {
+			return err
+		}
+		eventType := "identity.tenant.reactivated"
+		if suspend {
+			eventType = "identity.tenant.suspended"
+		}
+		if err := events.Append(ctx, tx, events.Event{Type: eventType, TenantID: &id, SourceModule: "identity", AggregateType: "tenant", AggregateID: id}, map[string]any{"tenant_id": id}); err != nil {
 			return err
 		}
 		out, err = q.AdminGetTenant(ctx, id)

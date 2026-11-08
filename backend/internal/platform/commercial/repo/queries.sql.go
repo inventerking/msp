@@ -12,6 +12,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const addBalance = `-- name: AddBalance :one
+UPDATE platform.credit_accounts SET balance = balance + $1 WHERE id = $2 AND balance + $1 >= reserved RETURNING balance
+`
+
+type AddBalanceParams struct {
+	Amount int64
+	ID     uuid.UUID
+}
+
+func (q *Queries) AddBalance(ctx context.Context, arg AddBalanceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, addBalance, arg.Amount, arg.ID)
+	var balance int64
+	err := row.Scan(&balance)
+	return balance, err
+}
+
 const addVersionModule = `-- name: AddVersionModule :exec
 INSERT INTO platform.product_version_modules (product_version_id, module_id)
 SELECT $1, id FROM platform.modules WHERE key = $2
@@ -244,6 +260,23 @@ func (q *Queries) EndCurrentPrice(ctx context.Context, arg EndCurrentPriceParams
 	return err
 }
 
+const ensureCreditAccount = `-- name: EnsureCreditAccount :one
+INSERT INTO platform.credit_accounts (tenant_id, meter_id) VALUES ($1, $2)
+ON CONFLICT (tenant_id, meter_id) DO UPDATE SET meter_id = EXCLUDED.meter_id RETURNING id
+`
+
+type EnsureCreditAccountParams struct {
+	TenantID uuid.UUID
+	MeterID  uuid.UUID
+}
+
+func (q *Queries) EnsureCreditAccount(ctx context.Context, arg EnsureCreditAccountParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, ensureCreditAccount, arg.TenantID, arg.MeterID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getEffectiveEntitlement = `-- name: GetEffectiveEntitlement :one
 SELECT e.status, e.effective_until
 FROM platform.tenant_module_entitlements e
@@ -284,6 +317,22 @@ func (q *Queries) GetEffectiveStatus(ctx context.Context, arg GetEffectiveStatus
 	return status, err
 }
 
+const getMeterByKey = `-- name: GetMeterByKey :one
+SELECT id, key FROM platform.usage_meters WHERE key = $1 AND status = 'active'
+`
+
+type GetMeterByKeyRow struct {
+	ID  uuid.UUID
+	Key string
+}
+
+func (q *Queries) GetMeterByKey(ctx context.Context, key string) (GetMeterByKeyRow, error) {
+	row := q.db.QueryRow(ctx, getMeterByKey, key)
+	var i GetMeterByKeyRow
+	err := row.Scan(&i.ID, &i.Key)
+	return i, err
+}
+
 const getModuleByKey = `-- name: GetModuleByKey :one
 SELECT id, key, name, description, status FROM platform.modules WHERE key = $1
 `
@@ -307,6 +356,17 @@ func (q *Queries) GetModuleByKey(ctx context.Context, key string) (GetModuleByKe
 		&i.Status,
 	)
 	return i, err
+}
+
+const getModuleKey = `-- name: GetModuleKey :one
+SELECT key FROM platform.modules WHERE id = $1
+`
+
+func (q *Queries) GetModuleKey(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getModuleKey, id)
+	var key string
+	err := row.Scan(&key)
+	return key, err
 }
 
 const getPlan = `-- name: GetPlan :one
@@ -382,6 +442,29 @@ func (q *Queries) GetProductByVersion(ctx context.Context, versionID uuid.UUID) 
 	return i, err
 }
 
+const getReservation = `-- name: GetReservation :one
+SELECT account_id, amount, source_module FROM platform.credit_ledger
+WHERE tenant_id = $1 AND idempotency_key = $2 AND entry_type = 'reservation'
+`
+
+type GetReservationParams struct {
+	TenantID       uuid.UUID
+	IdempotencyKey string
+}
+
+type GetReservationRow struct {
+	AccountID    uuid.UUID
+	Amount       int64
+	SourceModule *string
+}
+
+func (q *Queries) GetReservation(ctx context.Context, arg GetReservationParams) (GetReservationRow, error) {
+	row := q.db.QueryRow(ctx, getReservation, arg.TenantID, arg.IdempotencyKey)
+	var i GetReservationRow
+	err := row.Scan(&i.AccountID, &i.Amount, &i.SourceModule)
+	return i, err
+}
+
 const getSubscription = `-- name: GetSubscription :one
 SELECT s.id, s.tenant_id, s.plan_id, pl.name AS plan_name, s.status, s.currency, s.current_period_end, s.created_at
 FROM platform.subscriptions s JOIN platform.plans pl ON pl.id = s.plan_id
@@ -445,6 +528,57 @@ func (q *Queries) InsertHistory(ctx context.Context, arg InsertHistoryParams) er
 	return err
 }
 
+const insertLedger = `-- name: InsertLedger :one
+INSERT INTO platform.credit_ledger (tenant_id, account_id, entry_type, amount, source_module, reference_type, reference_id, idempotency_key, expires_at, actor_type, actor_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+ON CONFLICT (tenant_id, idempotency_key) DO NOTHING RETURNING id
+`
+
+type InsertLedgerParams struct {
+	TenantID       uuid.UUID
+	AccountID      uuid.UUID
+	EntryType      string
+	Amount         int64
+	SourceModule   *string
+	ReferenceType  *string
+	ReferenceID    *uuid.UUID
+	IdempotencyKey string
+	ExpiresAt      *time.Time
+	ActorType      string
+	ActorID        *uuid.UUID
+}
+
+func (q *Queries) InsertLedger(ctx context.Context, arg InsertLedgerParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertLedger,
+		arg.TenantID,
+		arg.AccountID,
+		arg.EntryType,
+		arg.Amount,
+		arg.SourceModule,
+		arg.ReferenceType,
+		arg.ReferenceID,
+		arg.IdempotencyKey,
+		arg.ExpiresAt,
+		arg.ActorType,
+		arg.ActorID,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const ledgerTotals = `-- name: LedgerTotals :one
+SELECT COALESCE(SUM(CASE entry_type WHEN 'grant' THEN amount WHEN 'adjustment' THEN amount WHEN 'refund' THEN amount WHEN 'commit' THEN -amount WHEN 'expiry' THEN -amount ELSE 0 END), 0)::bigint AS net
+FROM platform.credit_ledger WHERE account_id = $1
+`
+
+func (q *Queries) LedgerTotals(ctx context.Context, accountID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, ledgerTotals, accountID)
+	var net int64
+	err := row.Scan(&net)
+	return net, err
+}
+
 const listAllSubscriptions = `-- name: ListAllSubscriptions :many
 SELECT s.id, s.tenant_id, s.plan_id, pl.name AS plan_name, s.status, s.currency, s.current_period_end, s.created_at
 FROM platform.subscriptions s JOIN platform.plans pl ON pl.id = s.plan_id
@@ -480,6 +614,43 @@ func (q *Queries) ListAllSubscriptions(ctx context.Context) ([]ListAllSubscripti
 			&i.Currency,
 			&i.CurrentPeriodEnd,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCreditAccounts = `-- name: ListCreditAccounts :many
+SELECT m.key AS meter_key, m.name, a.balance, a.reserved FROM platform.credit_accounts a
+JOIN platform.usage_meters m ON m.id = a.meter_id WHERE a.tenant_id = $1 ORDER BY m.key
+`
+
+type ListCreditAccountsRow struct {
+	MeterKey string
+	Name     string
+	Balance  int64
+	Reserved int64
+}
+
+func (q *Queries) ListCreditAccounts(ctx context.Context, tenantID uuid.UUID) ([]ListCreditAccountsRow, error) {
+	rows, err := q.db.Query(ctx, listCreditAccounts, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCreditAccountsRow
+	for rows.Next() {
+		var i ListCreditAccountsRow
+		if err := rows.Scan(
+			&i.MeterKey,
+			&i.Name,
+			&i.Balance,
+			&i.Reserved,
 		); err != nil {
 			return nil, err
 		}
@@ -535,6 +706,38 @@ func (q *Queries) ListEntitlements(ctx context.Context, tenantID uuid.UUID) ([]L
 	return items, nil
 }
 
+const listExpiredReservations = `-- name: ListExpiredReservations :many
+SELECT l.tenant_id, l.reference_id FROM platform.credit_ledger l
+WHERE l.entry_type = 'reservation' AND l.expires_at < now()
+  AND NOT EXISTS (SELECT 1 FROM platform.credit_ledger s WHERE s.tenant_id = l.tenant_id AND s.reference_id = l.reference_id AND s.entry_type IN ('commit', 'release'))
+LIMIT 200
+`
+
+type ListExpiredReservationsRow struct {
+	TenantID    uuid.UUID
+	ReferenceID *uuid.UUID
+}
+
+func (q *Queries) ListExpiredReservations(ctx context.Context) ([]ListExpiredReservationsRow, error) {
+	rows, err := q.db.Query(ctx, listExpiredReservations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListExpiredReservationsRow
+	for rows.Next() {
+		var i ListExpiredReservationsRow
+		if err := rows.Scan(&i.TenantID, &i.ReferenceID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGrantsForModule = `-- name: ListGrantsForModule :many
 SELECT id, source, status, starts_at, ends_at, subscription_id
 FROM platform.entitlement_grants
@@ -573,6 +776,47 @@ func (q *Queries) ListGrantsForModule(ctx context.Context, arg ListGrantsForModu
 			&i.StartsAt,
 			&i.EndsAt,
 			&i.SubscriptionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLedger = `-- name: ListLedger :many
+SELECT id, entry_type, amount, source_module, actor_type, created_at FROM platform.credit_ledger
+WHERE tenant_id = $1 ORDER BY id DESC LIMIT 100
+`
+
+type ListLedgerRow struct {
+	ID           uuid.UUID
+	EntryType    string
+	Amount       int64
+	SourceModule *string
+	ActorType    string
+	CreatedAt    time.Time
+}
+
+func (q *Queries) ListLedger(ctx context.Context, tenantID uuid.UUID) ([]ListLedgerRow, error) {
+	rows, err := q.db.Query(ctx, listLedger, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLedgerRow
+	for rows.Next() {
+		var i ListLedgerRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EntryType,
+			&i.Amount,
+			&i.SourceModule,
+			&i.ActorType,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -899,6 +1143,24 @@ func (q *Queries) PublishVersion(ctx context.Context, versionID uuid.UUID) (int6
 	return result.RowsAffected(), nil
 }
 
+const reserveCredits = `-- name: ReserveCredits :execrows
+UPDATE platform.credit_accounts SET reserved = reserved + $1 WHERE id = $2 AND balance - reserved >= $1
+`
+
+type ReserveCreditsParams struct {
+	Amount int64
+	ID     uuid.UUID
+}
+
+// Atomic, so concurrent reservations can never overspend.
+func (q *Queries) ReserveCredits(ctx context.Context, arg ReserveCreditsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reserveCredits, arg.Amount, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setGrantStatus = `-- name: SetGrantStatus :exec
 UPDATE platform.entitlement_grants
 SET status = $1, status_reason = $2, activated_by = COALESCE($3, activated_by),
@@ -943,6 +1205,23 @@ func (q *Queries) SetSubscriptionStatus(ctx context.Context, arg SetSubscription
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const settleReservation = `-- name: SettleReservation :one
+UPDATE platform.credit_accounts SET reserved = reserved - $1, balance = balance - $2 WHERE id = $3 RETURNING balance
+`
+
+type SettleReservationParams struct {
+	ReservedAmount int64
+	Spent          int64
+	ID             uuid.UUID
+}
+
+func (q *Queries) SettleReservation(ctx context.Context, arg SettleReservationParams) (int64, error) {
+	row := q.db.QueryRow(ctx, settleReservation, arg.ReservedAmount, arg.Spent, arg.ID)
+	var balance int64
+	err := row.Scan(&balance)
+	return balance, err
 }
 
 const upsertEffective = `-- name: UpsertEffective :one

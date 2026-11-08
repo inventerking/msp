@@ -189,7 +189,16 @@
     "plan": "Plan",
     "status": "Status",
     "started": "Started",
-    "noBilling": "Ask your workspace admin about subscriptions."
+    "noBilling": "Ask your workspace admin about subscriptions.",
+    "usage": "Credits and usage",
+    "meter": "Credits",
+    "balance": "Available",
+    "reserved": "In use",
+    "aiUsage": "AI use in the last 30 days",
+    "module": "Module",
+    "requests": "Requests",
+    "creditsUsed": "Credits",
+    "noUsage": "No credits yet"
   },
   "profile": {
     "title": "Your account",
@@ -305,6 +314,14 @@
     "validation_failed": "Some fields need attention.",
     "no_active_tenant": "Choose a workspace to continue.",
     "tenant_suspended": "This workspace is suspended.",
-    "malformed_request": "Please check what you entered and try again."
+    "malformed_request": "Please check what you entered and try again.",
+    "file_not_ready": "This file is not available yet.",
+    "credits_exhausted": "Your workspace has run out of credits."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "open": "Notifications, {{n}} unread",
+    "none": "You're all caught up",
+    "markAll": "Mark all as read"
   }
 }
