@@ -320,3 +320,16 @@ SELECT m.user_id FROM identity.memberships m
 JOIN identity.role_permissions rp ON rp.role_id = m.role_id
 JOIN identity.permissions p ON p.id = rp.permission_id
 WHERE m.tenant_id = @tenant_id AND m.status = 'active' AND p.key = @permission;
+
+-- name: GetDefaultICP :one
+SELECT id, name, industries, countries, min_employees, max_employees, technologies, version FROM identity.tenant_icps
+WHERE tenant_id = @tenant_id AND is_default AND deleted_at IS NULL;
+
+-- name: UpsertDefaultICP :one
+INSERT INTO identity.tenant_icps (tenant_id, name, is_default, industries, countries, min_employees, max_employees, technologies, version, created_by)
+VALUES (@tenant_id, @name, true, @industries, @countries, sqlc.narg(min_employees), sqlc.narg(max_employees), @technologies, 1, sqlc.narg(created_by))
+ON CONFLICT (tenant_id) WHERE is_default AND deleted_at IS NULL
+DO UPDATE SET name = EXCLUDED.name, industries = EXCLUDED.industries, countries = EXCLUDED.countries, min_employees = EXCLUDED.min_employees,
+  max_employees = EXCLUDED.max_employees, technologies = EXCLUDED.technologies, version = identity.tenant_icps.version + 1
+RETURNING id, version;
+

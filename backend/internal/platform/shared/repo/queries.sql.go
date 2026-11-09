@@ -23,6 +23,28 @@ func (q *Queries) CompanyActive(ctx context.Context, id uuid.UUID) (int32, error
 	return column_1, err
 }
 
+const countUnknownCountries = `-- name: CountUnknownCountries :one
+SELECT count(*)::int FROM unnest($1::text[]) AS c(code) WHERE NOT EXISTS (SELECT 1 FROM shared.countries s WHERE s.code = c.code)
+`
+
+func (q *Queries) CountUnknownCountries(ctx context.Context, codes []string) (int32, error) {
+	row := q.db.QueryRow(ctx, countUnknownCountries, codes)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countUnknownIndustries = `-- name: CountUnknownIndustries :one
+SELECT count(*)::int FROM unnest($1::text[]) AS c(code) WHERE NOT EXISTS (SELECT 1 FROM shared.industries s WHERE s.code = c.code)
+`
+
+func (q *Queries) CountUnknownIndustries(ctx context.Context, codes []string) (int32, error) {
+	row := q.db.QueryRow(ctx, countUnknownIndustries, codes)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const deleteContactSources = `-- name: DeleteContactSources :exec
 DELETE FROM shared.contact_sources WHERE tenant_id = $1 AND contact_id = $2
 `
@@ -435,6 +457,65 @@ func (q *Queries) ListContactSources(ctx context.Context, arg ListContactSources
 			&i.LicenceClass,
 			&i.AcquiredAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCountries = `-- name: ListCountries :many
+SELECT code, name FROM shared.countries ORDER BY name
+`
+
+type ListCountriesRow struct {
+	Code string
+	Name string
+}
+
+func (q *Queries) ListCountries(ctx context.Context) ([]ListCountriesRow, error) {
+	rows, err := q.db.Query(ctx, listCountries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCountriesRow
+	for rows.Next() {
+		var i ListCountriesRow
+		if err := rows.Scan(&i.Code, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listIndustries = `-- name: ListIndustries :many
+SELECT id, code, name FROM shared.industries ORDER BY name
+`
+
+type ListIndustriesRow struct {
+	ID   uuid.UUID
+	Code string
+	Name string
+}
+
+func (q *Queries) ListIndustries(ctx context.Context) ([]ListIndustriesRow, error) {
+	rows, err := q.db.Query(ctx, listIndustries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListIndustriesRow
+	for rows.Next() {
+		var i ListIndustriesRow
+		if err := rows.Scan(&i.ID, &i.Code, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

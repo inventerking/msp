@@ -280,7 +280,7 @@ func TestProviderErrorsMapToJobBehaviour(t *testing.T) {
 		status  string
 		attempt int32
 	}{
-		"rate limit waits without using an attempt": {&integration.ProviderError{Class: integration.RateLimited, RetryAfter: time.Hour, Err: errors.New("slow down")}, "retry_scheduled", 0},
+		"rate limit waits without using an attempt":   {&integration.ProviderError{Class: integration.RateLimited, RetryAfter: time.Hour, Err: errors.New("slow down")}, "retry_scheduled", 0},
 		"open circuit waits without using an attempt": {integration.ErrCircuitOpen, "retry_scheduled", 0},
 		"temporary failure retries":                   {&integration.ProviderError{Class: integration.Retryable, Err: errors.New("timeout")}, "retry_scheduled", 1},
 		"permanent failure stops":                     {&integration.ProviderError{Class: integration.Permanent, Err: errors.New("bad request")}, "failed", 1},

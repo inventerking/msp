@@ -1,19 +1,29 @@
-import { Card, EmptyState, ErrorState, PageHeader, SkeletonRows } from "@msp/ui";
-import { Binoculars } from "lucide-react";
+import { PageHeader } from "@msp/ui";
 import { useTranslation } from "react-i18next";
-import { useStatus } from "../api/status";
+import { ciPath } from "../paths";
+import { Route, Routes } from "react-router";
+import { NotFound } from "../../../shell/StatusPages";
+import { Tabs } from "../components/Tabs";
+import { CompetitorDetail } from "./CompetitorDetail";
+import { Competitors } from "./Competitors";
+import { Opportunities } from "./Opportunities";
+import { ReportView, Reports } from "./Reports";
 
+/** Competitor Intelligence: competitors, their observed facts and changes, opportunities and reports. */
 export function Overview() {
   const { t } = useTranslation();
-  const status = useStatus();
   return (
     <>
       <PageHeader title={t("modules.competitor_intelligence.name")} description={t("modules.competitor_intelligence.description")} />
-      <Card>
-        {status.isPending ? <SkeletonRows label={t("common.loading")} /> : null}
-        {status.isError ? <div className="p-4"><ErrorState title={t("errors.internal_error")} onRetry={() => void status.refetch()} retryLabel={t("common.retry")} /></div> : null}
-        {status.isSuccess ? <EmptyState icon={Binoculars} title={t("modules.placeholderTitle")} description={t("modules.placeholderPhase", { phase: 3 })} /> : null}
-      </Card>
+      <Tabs items={[{ to: ciPath(), label: t("competitors.tabs.competitors"), end: true }, { to: ciPath("opportunities"), label: t("competitors.tabs.opportunities") }, { to: ciPath("reports"), label: t("competitors.tabs.reports") }]} />
+      <Routes>
+        <Route index element={<Competitors />} />
+        <Route path="competitors/:id" element={<CompetitorDetail />} />
+        <Route path="opportunities" element={<Opportunities />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="reports/:id" element={<ReportView />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </>
   );
 }

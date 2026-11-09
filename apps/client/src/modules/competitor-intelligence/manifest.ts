@@ -1,9 +1,10 @@
 import { Binoculars } from "lucide-react";
+import { basePath } from "./paths";
 import type { ModuleManifest } from "../types";
 
 export const manifest: ModuleManifest = {
   key: "competitor_intelligence",
-  path: "competitors",
+  path: basePath,
   group: "prospect",
   icon: Binoculars,
   permission: "competitor.read",

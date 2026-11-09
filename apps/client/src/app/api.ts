@@ -16,7 +16,7 @@ export const queryClient = new QueryClient({
 
 const csrf = new CsrfStore();
 
-export const { client: api, modules: moduleApi } = createTenantApi(csrf, {
+export const { client: api, modules: moduleApi, leads: leadApi, competitors: competitorApi } = createTenantApi(csrf, {
   onUnauthorized: () => void queryClient.invalidateQueries({ queryKey: ["me"] }),
   onNotEntitled: () => void queryClient.invalidateQueries({ queryKey: ["me"] }),
 });

@@ -12,26 +12,28 @@ import (
 
 // Config holds all process settings. Required values are checked at startup.
 type Config struct {
-	Env               string
-	HTTPAddr          string
-	DBHost            string
-	DBPort            string
-	DBName            string
-	DBOwnerPassword   string
-	DBAppPassword     string
-	DBPlatformPass    string
-	DBSystemPassword  string
-	RedisAddr         string
-	SMTPAddr          string
-	MailFrom          string
-	AppBaseURL        string
-	AllowedOrigins    []string
-	EncryptionKey     []byte
-	HMACKey           []byte
-	AuthRatePerMinute int
+	Env                                            string
+	HTTPAddr                                       string
+	DBHost                                         string
+	DBPort                                         string
+	DBName                                         string
+	DBOwnerPassword                                string
+	DBAppPassword                                  string
+	DBPlatformPass                                 string
+	DBSystemPassword                               string
+	RedisAddr                                      string
+	SMTPAddr                                       string
+	MailFrom                                       string
+	AppBaseURL                                     string
+	AllowedOrigins                                 []string
+	EncryptionKey                                  []byte
+	HMACKey                                        []byte
+	AuthRatePerMinute                              int
 	S3Endpoint, S3Bucket, S3AccessKey, S3SecretKey string
 	GotenbergURL                                   string
 	ClamAVAddr                                     string
+	// ResearchFetcher is "fake" (canned pages) or "live" (real public websites, through the Egress Guard).
+	ResearchFetcher string
 	// FileScanner is clamav, or allow-all, which is refused outside local development.
 	FileScanner string
 	// TrustForwarded uses X-Forwarded-For. Enable only behind a trusted proxy such as Traefik.
@@ -65,6 +67,7 @@ func Load() (Config, error) {
 		S3SecretKey:       os.Getenv("S3_SECRET_KEY"),
 		GotenbergURL:      os.Getenv("GOTENBERG_URL"),
 		ClamAVAddr:        os.Getenv("CLAMAV_ADDR"),
+		ResearchFetcher:   get("RESEARCH_FETCHER", "fake"),
 		FileScanner:       get("FILE_SCANNER", "clamav"),
 	}
 	for _, o := range strings.Split(get("ALLOWED_ORIGINS", "http://localhost:5180,http://localhost:5181"), ",") {

@@ -26,7 +26,16 @@ type CompanyRecord struct {
 	Country    string
 	Industry   string
 	Employees  int
+	Technology []string
 	Licence    string
+}
+
+// ContactRecord is a person found at a company. Licence says how it may be used.
+type ContactRecord struct {
+	FullName, JobTitle, Email string
+	DecisionMaker             bool
+	Confidence                float64
+	Licence                   string
 }
 
 // CompanyData finds and enriches companies. No results is not an error: a caller must be able to
@@ -35,6 +44,7 @@ type CompanyData interface {
 	Key() string
 	SearchCompanies(ctx context.Context, q CompanyQuery) ([]CompanyRecord, error)
 	EnrichCompany(ctx context.Context, domain string) (*CompanyRecord, error)
+	FindContacts(ctx context.Context, domain string) ([]ContactRecord, error)
 }
 
 // OutboundEmail is one message to send.

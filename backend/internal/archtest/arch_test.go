@@ -175,14 +175,16 @@ func wrongSchemas(sql string, owned ...string) []string {
 // A repository's SQL may touch only the schema its owner owns.
 func TestSQLStaysInOwnSchema(t *testing.T) {
 	owners := map[string]string{
-		"../platform/identity/queries.sql":     "identity",
-		"../platform/commercial/queries.sql":   "platform",
-		"../platform/audit/queries.sql":        "audit",
-		"../kernel/jobs/queries.sql":           "jobs",
-		"../platform/shared/queries.sql":       "shared",
-		"../platform/integration/queries.sql":  "integration",
-		"../platform/notification/queries.sql": "notification",
-		"../platform/files/queries.sql":        "files",
+		"../platform/identity/queries.sql":       "identity",
+		"../platform/commercial/queries.sql":     "platform",
+		"../platform/audit/queries.sql":          "audit",
+		"../kernel/jobs/queries.sql":             "jobs",
+		"../platform/shared/queries.sql":         "shared",
+		"../platform/integration/queries.sql":    "integration",
+		"../platform/notification/queries.sql":   "notification",
+		"../platform/files/queries.sql":          "files",
+		"../modules/leadgeneration/queries.sql":  "lead_generation",
+		"../modules/competitorintel/queries.sql": "competitor_intelligence",
 	}
 	for path, schema := range owners {
 		b, err := os.ReadFile(path)

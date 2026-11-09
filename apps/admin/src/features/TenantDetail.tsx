@@ -28,6 +28,7 @@ export function TenantDetail() {
   const [tenantAction, setTenantAction] = useState<"suspend" | "reactivate">();
   const [plan, setPlan] = useState("");
   const credits = useQuery({ queryKey: ["tenant", id, "credits"], queryFn: () => unwrap(api.GET("/tenants/{tenantId}/credits", path)) });
+  const [grantMeter, setGrantMeter] = useState<"ai_credits" | "lead_credits">("ai_credits");
   const [grantAmount, setGrantAmount] = useState("");
   const [grantReason, setGrantReason] = useState("");
   const [grantKey, setGrantKey] = useState(() => crypto.randomUUID());
@@ -36,7 +37,7 @@ export function TenantDetail() {
     setGrantError(undefined);
     try {
       // The key stays the same until success, so a retried click grants once.
-      await unwrap(api.POST("/tenants/{tenantId}/credits", { ...path, body: { meter_key: "ai_credits", amount: Number(grantAmount), reason: grantReason, idempotency_key: grantKey } }));
+      await unwrap(api.POST("/tenants/{tenantId}/credits", { ...path, body: { meter_key: grantMeter, amount: Number(grantAmount), reason: grantReason, idempotency_key: grantKey } }));
       setGrantAmount("");
       setGrantReason("");
       setGrantKey(crypto.randomUUID());
@@ -150,6 +151,7 @@ export function TenantDetail() {
           ) : null}
           {canManage ? (
             <div className="flex flex-wrap items-end gap-3 border-t border-line p-4">
+              <div className="w-44"><Field label={t("tenant.meter")}>{(ids) => <Select {...ids} value={grantMeter} onChange={(e) => setGrantMeter(e.target.value as "ai_credits" | "lead_credits")}><option value="ai_credits">{t("tenant.meters.ai_credits")}</option><option value="lead_credits">{t("tenant.meters.lead_credits")}</option></Select>}</Field></div>
               <div className="w-36"><Field label={t("tenant.amount")}>{(ids) => <Input {...ids} type="number" min={1} value={grantAmount} onChange={(e) => setGrantAmount(e.target.value)} />}</Field></div>
               <div className="min-w-64 flex-1"><Field label={t("tenant.reason")}>{(ids) => <Input {...ids} value={grantReason} onChange={(e) => setGrantReason(e.target.value)} />}</Field></div>
               <Button disabled={!(Number(grantAmount) > 0) || grantReason.trim().length < 3} onClick={() => void grant()}>{t("tenant.grant")}</Button>

@@ -286,16 +286,25 @@ func TestAIAdminRoles(t *testing.T) {
 		t.Fatal("no routes")
 	}
 	prompts := admin.must(200, http.MethodGet, "/api/v1/admin/ai/prompts", nil)["data"].([]any)
-	prompt := prompts[0].(map[string]any)
+	// The platform task is edited, so module tasks running in other tests keep their prompts.
+	var prompt map[string]any
+	for _, x := range prompts {
+		if x.(map[string]any)["key"] == "platform.summarize" {
+			prompt = x.(map[string]any)
+		}
+	}
+	if prompt == nil {
+		t.Fatalf("no platform.summarize prompt in %v", prompts)
+	}
 	if prompt["active_version"] != float64(1) || prompt["action_class"] != "informational" {
 		t.Fatalf("prompt %v", prompt)
 	}
 	v := admin.must(201, http.MethodPost, "/api/v1/admin/ai/prompts/"+prompt["id"].(string)+"/versions", map[string]any{"system_text": "New system text for testing.", "user_text": "{{content}}"})["id"].(string)
-	if got := admin.must(200, http.MethodGet, "/api/v1/admin/ai/prompts", nil)["data"].([]any)[0].(map[string]any); got["active_version"] != float64(1) {
+	if got := promptByKey(t, admin, "platform.summarize"); got["active_version"] != float64(1) {
 		t.Fatalf("a draft went live: %v", got)
 	}
 	admin.must(204, http.MethodPost, "/api/v1/admin/ai/prompt-versions/"+v+"/activate", nil)
-	if got := admin.must(200, http.MethodGet, "/api/v1/admin/ai/prompts", nil)["data"].([]any)[0].(map[string]any); got["active_version"] != float64(2) {
+	if got := promptByKey(t, admin, "platform.summarize"); got["active_version"] != float64(2) {
 		t.Fatalf("activation failed: %v", got)
 	}
 }
@@ -342,4 +351,15 @@ func TestEntitlementChangeNotifiesWorkspace(t *testing.T) {
 	if got := owner.must(200, http.MethodGet, "/api/v1/notifications", nil); got["unread"] != float64(0) {
 		t.Fatalf("still unread: %v", got)
 	}
+}
+
+func promptByKey(t *testing.T, admin *Client, key string) map[string]any {
+	t.Helper()
+	for _, x := range admin.must(200, http.MethodGet, "/api/v1/admin/ai/prompts", nil)["data"].([]any) {
+		if x.(map[string]any)["key"] == key {
+			return x.(map[string]any)
+		}
+	}
+	t.Fatalf("no prompt %s", key)
+	return nil
 }

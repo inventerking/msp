@@ -15,13 +15,20 @@ import (
 	"mspengine/internal/kernel/events"
 	"mspengine/internal/kernel/jobs"
 	"mspengine/internal/kernel/mailer"
+	"mspengine/internal/kernel/modulekit"
 	"mspengine/internal/kernel/realtime"
+	"mspengine/internal/modules/competitorintel"
+	ciapp "mspengine/internal/modules/competitorintel/app"
+	"mspengine/internal/modules/leadgeneration"
+	leadapp "mspengine/internal/modules/leadgeneration/app"
 	"mspengine/internal/platform/commercial"
 	"mspengine/internal/platform/files"
 	"mspengine/internal/platform/identity"
 	"mspengine/internal/platform/integration"
 	"mspengine/internal/platform/integration/aigateway"
+	"mspengine/internal/platform/integration/fakes"
 	"mspengine/internal/platform/notification"
+	"mspengine/internal/platform/pdf"
 	"mspengine/internal/platform/shared"
 
 	"github.com/google/uuid"
@@ -41,6 +48,10 @@ type Graph struct {
 	Integration *integration.Service
 	AI          *aigateway.Gateway
 	Ops         *jobs.Ops
+	Leads       *leadapp.Service
+	Competitors *ciapp.Service
+	// Modules are the built business modules. The others are served as skeletons.
+	Modules []modulekit.Module
 }
 
 // Options are what differ between environments and tests.
@@ -51,6 +62,12 @@ type Options struct {
 	Bucket  string
 	BaseURL string
 	Redis   *redis.Client
+	// FakeProviders registers the fake company data provider. It is never set in production.
+	FakeProviders bool
+	// PDF renders documents. Without it, reports have no PDF.
+	PDF pdf.Renderer
+	// Fetcher reads competitor pages. Nil means the fake fetcher, which reaches no real website.
+	Fetcher ciapp.Fetcher
 }
 
 // Build assembles the services. Only fake providers exist until D-05 selects real ones, so no
@@ -66,11 +83,19 @@ func Build(pools *db.Pools, keys crypto.Keys, o Options) (*Graph, error) {
 	gw := aigateway.New(pools, com, ints)
 	gw.RegisterProvider(&aigateway.FakeProvider{})
 	gw.RegisterTask(aigateway.Task{Key: "platform.summarize"})
-	return &Graph{
+	if o.FakeProviders {
+		ints.RegisterCompanyData(fakes.SampleCompanies())
+	}
+	g := &Graph{
 		Pools: pools, Keys: keys, Hub: hub, Identity: ids, Commercial: com, Integration: ints, AI: gw,
 		Shared: shared.New(pools, keys), Files: files.New(pools, o.Store, o.Scanner, o.Bucket),
 		Notify: notification.New(pools, o.Mailer, hub), Ops: jobs.NewOps(pools.Platform),
-	}, nil
+	}
+	comps, compSvc := competitorintel.New(ciapp.Deps{Pools: pools, Identity: ids, Commercial: com, Shared: g.Shared, Integration: ints, Files: g.Files, AI: gw, PDF: o.PDF, Fetcher: o.Fetcher})
+	leads, leadSvc := leadgeneration.New(leadapp.Deps{Pools: pools, Identity: ids, Commercial: com, Shared: g.Shared, Integration: ints, Files: g.Files, AI: gw, Competitors: compSvc})
+	g.Leads, g.Competitors = leadSvc, compSvc
+	g.Modules = []modulekit.Module{leads, comps}
+	return g, nil
 }
 
 // Job kinds for housekeeping.
@@ -94,6 +119,14 @@ func (g *Graph) Worker(workerID string) (*jobs.Runner, *events.Bus) {
 		return status == "active", err
 	})
 	bus.Subscribe(g.Notify.Consumer())
+	for _, m := range g.Modules {
+		for kind, h := range m.Jobs {
+			r.Register(kind, h)
+		}
+		for _, c := range m.Consumers {
+			bus.Subscribe(c)
+		}
+	}
 	return r, bus
 }
 
@@ -106,6 +139,13 @@ func (g *Graph) EnsureSchedules(ctx context.Context) error {
 	} {
 		if err := jobs.EnsureSchedule(ctx, g.Pools.System, key, s[0], s[1]); err != nil {
 			return err
+		}
+	}
+	for _, m := range g.Modules {
+		for _, s := range m.Schedules {
+			if err := jobs.EnsureSchedule(ctx, g.Pools.System, s.Key, s.Every, s.Kind); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -159,8 +199,26 @@ func BuildFromConfig(ctx context.Context, c config.Config, pools *db.Pools, rdb 
 		}
 		store = s3
 	}
+	// Until legal review and D-05, only fake data exists outside production, on reserved domains.
+	// An allowlist, so a misspelt production environment never gets fake data.
+	fakes := c.IsLocal() || c.Env == "testing"
+	shared.AllowReservedTLDs = fakes
+	var renderer pdf.Renderer
+	if c.GotenbergURL != "" {
+		renderer = pdf.NewGotenberg(c.GotenbergURL)
+	}
+	var fetcher ciapp.Fetcher // Nil is the fake fetcher.
+	switch c.ResearchFetcher {
+	case "fake", "":
+	case "live":
+		slog.Warn("competitor research fetches real public websites; check this is allowed before enabling it")
+		fetcher = ciapp.NewLiveFetcher()
+	default:
+		return nil, fmt.Errorf("RESEARCH_FETCHER must be fake or live, not %q", c.ResearchFetcher)
+	}
 	return Build(pools, crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}, Options{
-		Mailer: mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, Store: store, Scanner: scanner, Bucket: c.S3Bucket, BaseURL: c.AppBaseURL, Redis: rdb,
+		Mailer: mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, Store: store, Scanner: scanner, Bucket: c.S3Bucket, BaseURL: c.AppBaseURL, Redis: rdb, FakeProviders: fakes,
+		PDF: renderer, Fetcher: fetcher,
 	})
 }
 

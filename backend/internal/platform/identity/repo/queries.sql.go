@@ -722,6 +722,38 @@ func (q *Queries) GetCredential(ctx context.Context, userID uuid.UUID) (string, 
 	return password_hash, err
 }
 
+const getDefaultICP = `-- name: GetDefaultICP :one
+SELECT id, name, industries, countries, min_employees, max_employees, technologies, version FROM identity.tenant_icps
+WHERE tenant_id = $1 AND is_default AND deleted_at IS NULL
+`
+
+type GetDefaultICPRow struct {
+	ID           uuid.UUID
+	Name         string
+	Industries   []string
+	Countries    []string
+	MinEmployees *int32
+	MaxEmployees *int32
+	Technologies []string
+	Version      int32
+}
+
+func (q *Queries) GetDefaultICP(ctx context.Context, tenantID uuid.UUID) (GetDefaultICPRow, error) {
+	row := q.db.QueryRow(ctx, getDefaultICP, tenantID)
+	var i GetDefaultICPRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Industries,
+		&i.Countries,
+		&i.MinEmployees,
+		&i.MaxEmployees,
+		&i.Technologies,
+		&i.Version,
+	)
+	return i, err
+}
+
 const getInvitationByHash = `-- name: GetInvitationByHash :one
 SELECT id, tenant_id, email, role_id FROM identity.invitations
 WHERE tenant_id = $1 AND token_hash = $2 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()
@@ -1653,6 +1685,47 @@ type UpsertCredentialParams struct {
 func (q *Queries) UpsertCredential(ctx context.Context, arg UpsertCredentialParams) error {
 	_, err := q.db.Exec(ctx, upsertCredential, arg.UserID, arg.PasswordHash)
 	return err
+}
+
+const upsertDefaultICP = `-- name: UpsertDefaultICP :one
+INSERT INTO identity.tenant_icps (tenant_id, name, is_default, industries, countries, min_employees, max_employees, technologies, version, created_by)
+VALUES ($1, $2, true, $3, $4, $5, $6, $7, 1, $8)
+ON CONFLICT (tenant_id) WHERE is_default AND deleted_at IS NULL
+DO UPDATE SET name = EXCLUDED.name, industries = EXCLUDED.industries, countries = EXCLUDED.countries, min_employees = EXCLUDED.min_employees,
+  max_employees = EXCLUDED.max_employees, technologies = EXCLUDED.technologies, version = identity.tenant_icps.version + 1
+RETURNING id, version
+`
+
+type UpsertDefaultICPParams struct {
+	TenantID     uuid.UUID
+	Name         string
+	Industries   []string
+	Countries    []string
+	MinEmployees *int32
+	MaxEmployees *int32
+	Technologies []string
+	CreatedBy    *uuid.UUID
+}
+
+type UpsertDefaultICPRow struct {
+	ID      uuid.UUID
+	Version int32
+}
+
+func (q *Queries) UpsertDefaultICP(ctx context.Context, arg UpsertDefaultICPParams) (UpsertDefaultICPRow, error) {
+	row := q.db.QueryRow(ctx, upsertDefaultICP,
+		arg.TenantID,
+		arg.Name,
+		arg.Industries,
+		arg.Countries,
+		arg.MinEmployees,
+		arg.MaxEmployees,
+		arg.Technologies,
+		arg.CreatedBy,
+	)
+	var i UpsertDefaultICPRow
+	err := row.Scan(&i.ID, &i.Version)
+	return i, err
 }
 
 const useRecoveryCode = `-- name: UseRecoveryCode :execrows

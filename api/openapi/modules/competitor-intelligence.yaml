@@ -1,0 +1,586 @@
+openapi: 3.0.3
+info: {title: MSP Growth Engine Competitor Intelligence API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /competitor-intelligence/discover:
+    post:
+      operationId: discoverCompetitors
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.research
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Discover"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CandidateList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/competitors:
+    get:
+      operationId: listCompetitors
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CompetitorList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addCompetitor
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AddCompetitor"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Competitor"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/competitors/{id}:
+    get:
+      operationId: getCompetitor
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Competitor"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateCompetitor
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CompetitorPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Competitor"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteCompetitor
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/competitors/{id}/sources:
+    get:
+      operationId: listSources
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SourceList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addSource
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AddSource"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Source"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/sources/{id}:
+    delete:
+      operationId: deleteSource
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/competitors/{id}/research-config:
+    get:
+      operationId: getResearchConfig
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ResearchConfig"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    put:
+      operationId: putResearchConfig
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ResearchConfigInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ResearchConfig"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/competitors/{id}/research-runs:
+    get:
+      operationId: listResearchRuns
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ResearchRunList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: startResearchRun
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.research
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "202": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ResearchRun"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/research-runs/{id}:
+    get:
+      operationId: getResearchRun
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ResearchRun"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/research-runs/{id}/cancel:
+    post:
+      operationId: cancelResearchRun
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.research
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ResearchRun"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/competitors/{id}/observations:
+    get:
+      operationId: listObservations
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/History"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ObservationList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/competitors/{id}/changes:
+    get:
+      operationId: listChanges
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ChangeList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/changes/{id}/acknowledge:
+    post:
+      operationId: acknowledgeChange
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/opportunities:
+    get:
+      operationId: listOpportunities
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/OpportunityList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addOpportunity
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AddOpportunity"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Opportunity"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/opportunities/{id}:
+    patch:
+      operationId: updateOpportunity
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/OpportunityPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Opportunity"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/comparisons:
+    get:
+      operationId: listComparisons
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ComparisonList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createComparison
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateComparison"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Comparison"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/comparisons/{id}:
+    get:
+      operationId: getComparison
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Comparison"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/reports:
+    get:
+      operationId: listReports
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ReportList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createReport
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.research
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateReport"}}}}
+      responses:
+        "202": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Report"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/reports/{id}:
+    get:
+      operationId: getReport
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Report"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /competitor-intelligence/reports/{id}/pdf:
+    get:
+      operationId: downloadReportPdf
+      x-access: tenant
+      x-module: competitor_intelligence
+      x-permission: competitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: PDF, content: {application/pdf: {schema: {type: string, format: binary}}}}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    History: {name: history, in: query, schema: {type: boolean, default: false}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    EvidenceClass: {type: string, enum: [verified_public, observed, inferred, ai_estimate]}
+    Discover:
+      type: object
+      additionalProperties: false
+      properties:
+        countries: {type: array, maxItems: 20, items: {type: string, pattern: "^[A-Za-z]{2}$"}}
+    Candidate:
+      type: object
+      required: [display_name, domain, licence_class]
+      properties:
+        display_name: {type: string}
+        domain: {type: string}
+        country: {type: string}
+        employees: {type: integer}
+        licence_class: {type: string}
+    CandidateList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Candidate"}}
+    CompetitorStatus: {type: string, enum: [candidate, tracked, archived]}
+    Competitor:
+      type: object
+      required: [id, company_id, display_name, status, monitoring_enabled, open_changes, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        company_id: {type: string, format: uuid}
+        display_name: {type: string}
+        domain: {type: string}
+        status: {$ref: "#/components/schemas/CompetitorStatus"}
+        tier: {type: string}
+        notes: {type: string}
+        monitoring_enabled: {type: boolean}
+        open_changes: {type: integer}
+        last_researched_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CompetitorList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Competitor"}}
+    AddCompetitor:
+      type: object
+      additionalProperties: false
+      required: [domain]
+      properties:
+        domain: {type: string, minLength: 3, maxLength: 253}
+        display_name: {type: string, minLength: 1, maxLength: 200}
+        tier: {type: string, maxLength: 40}
+        notes: {type: string, maxLength: 4000}
+        monitoring_enabled: {type: boolean, default: false}
+    CompetitorPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name: {type: string, minLength: 1, maxLength: 200}
+        status: {$ref: "#/components/schemas/CompetitorStatus"}
+        tier: {type: string, maxLength: 40}
+        notes: {type: string, maxLength: 4000}
+        monitoring_enabled: {type: boolean}
+    Source:
+      type: object
+      required: [id, url, kind, access_status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        url: {type: string}
+        kind: {type: string, enum: [website, pricing_page, service_page, public_directory, provider]}
+        access_status: {type: string, enum: [allowed, disallowed_by_robots, blocked, error, unchecked]}
+        last_fetched_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    SourceList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Source"}}
+    AddSource:
+      type: object
+      additionalProperties: false
+      required: [url, kind]
+      properties:
+        url: {type: string, minLength: 8, maxLength: 2000}
+        kind: {type: string, enum: [website, pricing_page, service_page, public_directory]}
+    ResearchConfig:
+      type: object
+      required: [competitor_id, cadence, enabled]
+      properties:
+        competitor_id: {type: string, format: uuid}
+        cadence: {type: string, enum: [manual, weekly, monthly]}
+        enabled: {type: boolean}
+        next_run_at: {type: string, format: date-time}
+    ResearchConfigInput:
+      type: object
+      additionalProperties: false
+      required: [cadence, enabled]
+      properties:
+        cadence: {type: string, enum: [manual, weekly, monthly]}
+        enabled: {type: boolean}
+    ResearchRun:
+      type: object
+      required: [id, competitor_id, status, pages_fetched, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        competitor_id: {type: string, format: uuid}
+        status: {type: string, enum: [queued, running, completed, partial, failed, cancelled]}
+        pages_fetched: {type: integer}
+        job_id: {type: string, format: uuid}
+        scheduled: {type: boolean}
+        created_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+    ResearchRunList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/ResearchRun"}}
+    Observation:
+      type: object
+      required: [id, attribute_type, value, evidence_class, observed_at]
+      properties:
+        id: {type: string, format: uuid}
+        attribute_type: {type: string}
+        value: {type: string}
+        quote: {type: string}
+        evidence_class: {$ref: "#/components/schemas/EvidenceClass"}
+        confidence: {type: number, format: double}
+        source_url: {type: string}
+        source_fetched_at: {type: string, format: date-time}
+        observed_at: {type: string, format: date-time}
+        superseded_by_id: {type: string, format: uuid}
+    ObservationList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Observation"}}
+    Change:
+      type: object
+      required: [id, attribute_type, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        attribute_type: {type: string}
+        summary: {type: string}
+        created_at: {type: string, format: date-time}
+        acknowledged_at: {type: string, format: date-time}
+    ChangeList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Change"}}
+    OpportunityStatus: {type: string, enum: [new, reviewing, pursuing, dismissed]}
+    Opportunity:
+      type: object
+      required: [id, title, rationale, evidence_class, status, evidence, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        rationale: {type: string}
+        geography: {type: string}
+        industry_id: {type: string, format: uuid}
+        score: {type: integer}
+        evidence_class: {$ref: "#/components/schemas/EvidenceClass"}
+        status: {$ref: "#/components/schemas/OpportunityStatus"}
+        evidence:
+          type: array
+          items:
+            type: object
+            properties:
+              observation_id: {type: string, format: uuid}
+              note: {type: string}
+        created_at: {type: string, format: date-time}
+    OpportunityList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Opportunity"}}
+    AddOpportunity:
+      type: object
+      additionalProperties: false
+      required: [title, rationale]
+      properties:
+        title: {type: string, minLength: 3, maxLength: 200}
+        rationale: {type: string, minLength: 3, maxLength: 4000}
+        geography: {type: string, maxLength: 80}
+        industry: {type: string, maxLength: 64}
+        observation_ids: {type: array, maxItems: 50, items: {type: string, format: uuid}}
+    OpportunityPatch:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: {$ref: "#/components/schemas/OpportunityStatus"}
+    CreateComparison:
+      type: object
+      additionalProperties: false
+      required: [name, competitor_ids]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        competitor_ids: {type: array, minItems: 2, maxItems: 10, items: {type: string, format: uuid}}
+        dimensions: {type: array, maxItems: 7, items: {type: string, enum: [service, pricing, positioning, geography, industry, technology, other]}}
+    ComparisonSummary:
+      type: object
+      required: [id, name, member_count, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        member_count: {type: integer}
+        created_at: {type: string, format: date-time}
+    ComparisonList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/ComparisonSummary"}}
+    Fact:
+      type: object
+      required: [value, evidence_class]
+      properties:
+        value: {type: string}
+        evidence_class: {$ref: "#/components/schemas/EvidenceClass"}
+    Comparison:
+      type: object
+      required: [id, name, dimensions, members]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        dimensions: {type: array, items: {type: string}}
+        members:
+          type: array
+          items:
+            type: object
+            required: [competitor_id, display_name, facts]
+            properties:
+              competitor_id: {type: string, format: uuid}
+              display_name: {type: string}
+              facts: {type: object, additionalProperties: {type: array, items: {$ref: "#/components/schemas/Fact"}}}
+    CreateReport:
+      type: object
+      additionalProperties: false
+      required: [kind, competitor_ids]
+      properties:
+        kind: {type: string, enum: [competitor, market, comparison]}
+        title: {type: string, minLength: 1, maxLength: 200}
+        competitor_ids: {type: array, minItems: 1, maxItems: 20, items: {type: string, format: uuid}}
+    ReportStatus: {type: string, enum: [queued, generating, ready, failed]}
+    ReportSummary:
+      type: object
+      required: [id, title, kind, status, has_pdf, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        kind: {type: string}
+        status: {$ref: "#/components/schemas/ReportStatus"}
+        has_pdf: {type: boolean}
+        created_at: {type: string, format: date-time}
+    ReportList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/ReportSummary"}}
+    Report:
+      allOf:
+        - {$ref: "#/components/schemas/ReportSummary"}
+        - type: object
+          properties:
+            summary: {type: string}
+            summary_label: {$ref: "#/components/schemas/EvidenceClass"}
+            notice: {type: string}
+            opportunities:
+              type: array
+              items:
+                type: object
+                required: [id, title, rationale, evidence_class]
+                properties:
+                  id: {type: string, format: uuid}
+                  title: {type: string}
+                  rationale: {type: string}
+                  evidence_class: {$ref: "#/components/schemas/EvidenceClass"}
+            facts:
+              type: array
+              items:
+                type: object
+                required: [competitor, attribute_type, value, evidence_class]
+                properties:
+                  competitor: {type: string}
+                  attribute_type: {type: string}
+                  value: {type: string}
+                  evidence_class: {$ref: "#/components/schemas/EvidenceClass"}

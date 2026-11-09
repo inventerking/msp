@@ -3,10 +3,15 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "gen": "openapi-typescript ../../api/openapi/tenant.yaml -o src/tenant.gen.ts && openapi-typescript ../../api/openapi/admin.yaml -o src/admin.gen.ts && openapi-typescript ../../api/openapi/modules.yaml -o src/modules.gen.ts",
+    "gen": "openapi-typescript ../../api/openapi/tenant.yaml -o src/tenant.gen.ts && openapi-typescript ../../api/openapi/admin.yaml -o src/admin.gen.ts && openapi-typescript ../../api/openapi/modules.yaml -o src/modules.gen.ts && openapi-typescript ../../api/openapi/modules/lead-generation.yaml -o src/leadgen.gen.ts && openapi-typescript ../../api/openapi/modules/competitor-intelligence.yaml -o src/competitors.gen.ts",
     "typecheck": "tsc --noEmit"
   },
-  "devDependencies": { "openapi-typescript": "7.13.0", "typescript": "6.0.3" }
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "6.0.3"
+  }
 }

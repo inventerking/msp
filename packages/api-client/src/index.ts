@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
-import type { AdminPaths, ModulePaths, TenantPaths } from "@msp/types";
+import type { AdminPaths, CompetitorPaths, LeadPaths, ModulePaths, TenantPaths } from "@msp/types";
 
 /** A failed API call. Code branches on `code`, which never changes once released. */
 export class ApiError extends Error {
@@ -64,11 +64,40 @@ export function createTenantApi(csrf: CsrfStore, hooks: ApiHooks = {}) {
   client.use(middleware(csrf, hooks));
   const modules = createClient<ModulePaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
   modules.use(middleware(csrf, hooks));
-  return { client, modules };
+  const leads = createClient<LeadPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
+  leads.use(middleware(csrf, hooks));
+  const competitors = createClient<CompetitorPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
+  competitors.use(middleware(csrf, hooks));
+  return { client, modules, leads, competitors };
 }
 
 export function createAdminApi(csrf: CsrfStore, hooks: ApiHooks = {}) {
   const client = createClient<AdminPaths>({ baseUrl: "/api/v1/admin", credentials: "same-origin" });
   client.use(middleware(csrf, hooks));
   return { client };
+}
+
+/** Fetches a file the API serves, such as an export, with the session's cookie. */
+export async function fetchFile(path: string): Promise<Blob> {
+  const res = await fetch(`/api/v1${path}`, { credentials: "same-origin" });
+  if (!res.ok) {
+    let body: unknown;
+    try {
+      body = await res.json();
+    } catch {
+      body = undefined;
+    }
+    throw toApiError(res.status, body);
+  }
+  return res.blob();
+}
+
+/** Saves a blob through the browser's download prompt. */
+export function saveBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
 }

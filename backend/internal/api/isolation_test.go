@@ -15,6 +15,7 @@ import (
 	"mspengine/internal/api/adminapi"
 	"mspengine/internal/api/modulesapi"
 	"mspengine/internal/api/tenantapi"
+	"mspengine/internal/kernel/modulekit"
 )
 
 // schemaFaults inspects the database catalog and reports any tenant-owned table missing a required
@@ -308,8 +309,19 @@ func operations(t *testing.T, get func() (*openapi3.T, error), base string) []op
 
 type op struct{ method, path, access, permission, module, id string }
 
+// moduleOps lists every module operation: the shared status routes and each built module's contract.
+func moduleOps(t *testing.T) []op {
+	out := operations(t, modulesapi.GetSwagger, "/api/v1")
+	for _, m := range graph.Modules {
+		if m.Contract != nil {
+			out = append(out, operations(t, m.Contract, "/api/v1")...)
+		}
+	}
+	return out
+}
+
 func allTenantOps(t *testing.T) []op {
-	return append(operations(t, tenantapi.GetSwagger, "/api/v1"), operations(t, modulesapi.GetSwagger, "/api/v1")...)
+	return append(operations(t, tenantapi.GetSwagger, "/api/v1"), moduleOps(t)...)
 }
 
 func TestEveryRouteDeclaresAccess(t *testing.T) {
@@ -360,26 +372,32 @@ func TestTenantSessionCannotReachAdminRoutes(t *testing.T) {
 // an owner who holds every permission. Hiding navigation is not what stops them.
 func TestEveryModuleRouteRequiresEntitlement(t *testing.T) {
 	c, _, _ := newTenant(t, "No Modules")
-	n := 0
-	for _, o := range operations(t, modulesapi.GetSwagger, "/api/v1") {
+	seen := map[string]bool{}
+	for _, o := range moduleOps(t) {
 		if o.module == "" {
 			t.Errorf("%s has no x-module", o.path)
 			continue
 		}
-		n++
-		status, body := c.Do(o.method, o.path, nil)
+		seen[o.module] = true
+		c.headers = map[string]string{"Idempotency-Key": "entitlement-check"}
+		status, body := c.Do(o.method, o.path, map[string]any{})
+		c.headers = nil
 		if status != http.StatusForbidden || body["code"] != "module_not_entitled" || body["module_key"] != o.module {
-			t.Errorf("%s: got %d %v", o.path, status, body)
+			t.Errorf("%s %s: got %d %v", o.method, o.path, status, body)
 		}
 	}
-	if n != 10 {
-		t.Fatalf("checked %d modules, want 10", n)
+	if len(seen) != 10 {
+		t.Fatalf("checked %d modules, want 10", len(seen))
 	}
 }
 
 // Generated: a Viewer is denied every route whose declared permission the role lacks.
 func TestPermissionsEnforcedForEveryDeclaredRoute(t *testing.T) {
-	owner, _, _ := newTenant(t, "Perm Tenant")
+	owner, _, permTenant := newTenant(t, "Perm Tenant")
+	super := adminClient(t, "super_admin")
+	for _, m := range graph.Modules {
+		super.must(200, http.MethodPost, "/api/v1/admin/tenants/"+permTenant+"/entitlements/"+m.Key+"/activate", map[string]any{"reason": "permission test"})
+	}
 	viewer, viewerEmail := signUp(t, "viewerperm")
 	inv := owner.must(201, http.MethodPost, "/api/v1/tenant/invitations", map[string]any{"email": viewerEmail, "role": "viewer"})
 	_ = inv
@@ -392,17 +410,22 @@ func TestPermissionsEnforcedForEveryDeclaredRoute(t *testing.T) {
 		viewerPerms = append(viewerPerms, p.(string))
 	}
 	checked := 0
-	for _, o := range operations(t, tenantapi.GetSwagger, "/api/v1") {
+	for _, o := range allTenantOps(t) {
 		if o.permission == "" || slices.Contains(viewerPerms, o.permission) {
 			continue
 		}
+		if o.module != "" && !slices.ContainsFunc(graph.Modules, func(m modulekit.Module) bool { return m.Key == o.module }) {
+			continue // Skeleton modules are not entitled here, so the entitlement check answers first.
+		}
 		checked++
+		viewer.headers = map[string]string{"Idempotency-Key": "permission-check"}
 		status, body := viewer.Do(o.method, o.path, map[string]any{})
+		viewer.headers = nil
 		if status != http.StatusForbidden || body["code"] != "insufficient_permission" {
 			t.Errorf("%s %s (%s): got %d %v", o.method, o.path, o.permission, status, body["code"])
 		}
 	}
-	if checked < 8 {
+	if checked < 20 {
 		t.Fatalf("only %d routes checked", checked)
 	}
 }

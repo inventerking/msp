@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // The SQL driver for migrations.
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib" // The SQL driver for migrations.
 	"github.com/pressly/goose/v3"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"

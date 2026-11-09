@@ -79,3 +79,15 @@ UPDATE shared.contact_consents SET evidence = '{"erased":true}'::jsonb WHERE ten
 
 -- name: GetRate :one
 SELECT rate::float8 AS rate FROM shared.fx_rates WHERE base_currency = @base AND quote_currency = @quote AND rate_date <= sqlc.arg(on_date)::timestamptz ORDER BY rate_date DESC LIMIT 1;
+
+-- name: CountUnknownCountries :one
+SELECT count(*)::int FROM unnest(@codes::text[]) AS c(code) WHERE NOT EXISTS (SELECT 1 FROM shared.countries s WHERE s.code = c.code);
+
+-- name: CountUnknownIndustries :one
+SELECT count(*)::int FROM unnest(@codes::text[]) AS c(code) WHERE NOT EXISTS (SELECT 1 FROM shared.industries s WHERE s.code = c.code);
+
+-- name: ListCountries :many
+SELECT code, name FROM shared.countries ORDER BY name;
+
+-- name: ListIndustries :many
+SELECT id, code, name FROM shared.industries ORDER BY name;

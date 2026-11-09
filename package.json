@@ -12,7 +12,7 @@
     "build": "pnpm -r --filter './apps/*' build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "lint": "eslint . && depcruise apps packages --config .dependency-cruiser.cjs && spectral lint api/openapi/*.yaml --ruleset .spectral.yaml --fail-severity error",
+    "lint": "eslint . && depcruise apps packages --config .dependency-cruiser.cjs && spectral lint api/openapi/*.yaml api/openapi/modules/*.yaml --ruleset .spectral.yaml --fail-severity error",
     "e2e": "pnpm --filter @msp/e2e e2e"
   },
   "devDependencies": {

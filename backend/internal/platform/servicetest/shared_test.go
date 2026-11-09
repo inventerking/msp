@@ -1,8 +1,8 @@
 package servicetest
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"

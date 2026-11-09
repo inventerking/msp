@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { modules } from "../modules";
+import { moduleChildren } from "./moduleRoutes";
 import { ModuleRoute } from "../shell/ModuleRoute";
 import { NotFound } from "../shell/StatusPages";
 import { RequireSession, RequireTenant } from "../shell/guards";
@@ -38,7 +39,7 @@ export const router = createBrowserRouter([
               ...modules.map((m) => ({
                 path: `/${m.path}`,
                 element: <ModuleRoute manifest={m} />,
-                children: [{ index: true, lazy: m.load }],
+                children: moduleChildren(m.load),
               })),
               { path: "*", Component: NotFound },
             ],

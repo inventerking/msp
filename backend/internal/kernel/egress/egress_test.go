@@ -191,7 +191,9 @@ func TestRedirectsAreCheckedAgain(t *testing.T) {
 }
 
 func TestRedirectLoopStops(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "http://start.example/", http.StatusFound) }))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://start.example/", http.StatusFound)
+	}))
 	defer srv.Close()
 	dns := &fakeDNS{answers: map[string][][]string{"start.example": {{"8.8.8.8"}}}, calls: map[string]int{}}
 	c, _, _ := client(t, srv, dns)

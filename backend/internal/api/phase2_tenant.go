@@ -17,6 +17,7 @@ import (
 	"mspengine/internal/kernel/db"
 	"mspengine/internal/kernel/jobs"
 	"mspengine/internal/platform/files"
+	"mspengine/internal/platform/identity"
 	"mspengine/internal/platform/integration"
 )
 
@@ -252,4 +253,83 @@ func (h tenantHandlers) ReceiveWebhook(w http.ResponseWriter, r *http.Request, _
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func icpOut(icp identity.ICP, configured bool) tenantapi.Icp {
+	out := tenantapi.Icp{Configured: configured, Name: icp.Name, Industries: nonNilStrings(icp.Industries), Countries: nonNilStrings(icp.Countries), Technologies: nonNilStrings(icp.Technologies), Version: int(icp.Version)}
+	if icp.MinEmployees != nil {
+		v := int(*icp.MinEmployees)
+		out.MinEmployees = &v
+	}
+	if icp.MaxEmployees != nil {
+		v := int(*icp.MaxEmployees)
+		out.MaxEmployees = &v
+	}
+	return out
+}
+
+func nonNilStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
+func (h tenantHandlers) GetIcp(w http.ResponseWriter, r *http.Request) {
+	icp, found, err := h.identity.DefaultICP(r.Context(), authctx.PrincipalFrom(r.Context()).TenantID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, icpOut(icp, found))
+}
+
+func (h tenantHandlers) PutIcp(w http.ResponseWriter, r *http.Request) {
+	var b tenantapi.IcpInput
+	if !decode(w, r, &b) {
+		return
+	}
+	in := identity.ICP{}
+	if b.Name != nil {
+		in.Name = *b.Name
+	}
+	if b.Industries != nil {
+		in.Industries = *b.Industries
+	}
+	if b.Countries != nil {
+		in.Countries = *b.Countries
+	}
+	if b.Technologies != nil {
+		in.Technologies = *b.Technologies
+	}
+	if b.MinEmployees != nil {
+		v := int32(*b.MinEmployees) //nolint:gosec // The contract bounds this.
+		in.MinEmployees = &v
+	}
+	if b.MaxEmployees != nil {
+		v := int32(*b.MaxEmployees) //nolint:gosec // The contract bounds this.
+		in.MaxEmployees = &v
+	}
+	out, err := h.identity.SaveDefaultICP(r.Context(), authctx.PrincipalFrom(r.Context()), in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, icpOut(out, true))
+}
+
+func (h tenantHandlers) GetReference(w http.ResponseWriter, r *http.Request) {
+	cs, is, err := h.Shared.Reference(r.Context())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	out := tenantapi.Reference{Countries: []tenantapi.CodeName{}, Industries: []tenantapi.CodeName{}}
+	for _, c := range cs {
+		out.Countries = append(out.Countries, tenantapi.CodeName{Code: c.Code, Name: c.Name})
+	}
+	for _, i := range is {
+		out.Industries = append(out.Industries, tenantapi.CodeName{Code: i.Code, Name: i.Name})
+	}
+	writeJSON(w, http.StatusOK, out)
 }

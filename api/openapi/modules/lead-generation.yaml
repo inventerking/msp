@@ -1,0 +1,707 @@
+openapi: 3.0.3
+info: {title: MSP Growth Engine Lead Generation API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /lead-generation/searches:
+    get:
+      operationId: listSearches
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      parameters: [{$ref: "#/components/parameters/Limit"}, {$ref: "#/components/parameters/Cursor"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SearchList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: startSearch
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.search
+      parameters: [{$ref: "#/components/parameters/IdempotencyKey"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/StartSearch"}}}}
+      responses:
+        "202": {description: Accepted, content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/searches/{id}:
+    get:
+      operationId: getSearch
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/searches/{id}/cancel:
+    post:
+      operationId: cancelSearch
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.search
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/searches/{id}/results:
+    get:
+      operationId: listSearchResults
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SearchResultList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/searches/{id}/results/promote:
+    post:
+      operationId: promoteResults
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Promote"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PromoteResult"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/saved-searches:
+    get:
+      operationId: listSavedSearches
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SavedSearchList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createSavedSearch
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SavedSearchInput"}}}}
+      responses:
+        "201": {description: Created, content: {application/json: {schema: {$ref: "#/components/schemas/SavedSearch"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/saved-searches/{id}:
+    patch:
+      operationId: updateSavedSearch
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SavedSearchPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SavedSearch"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteSavedSearch
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Deleted}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/prospects:
+    get:
+      operationId: listProspects
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      parameters:
+        - {$ref: "#/components/parameters/Limit"}
+        - {$ref: "#/components/parameters/Cursor"}
+        - {name: status, in: query, schema: {$ref: "#/components/schemas/ProspectStatus"}}
+        - {name: min_score, in: query, schema: {type: integer, minimum: 0, maximum: 100}}
+        - {name: list_id, in: query, schema: {type: string, format: uuid}}
+        - {name: q, in: query, schema: {type: string, minLength: 1, maxLength: 120}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProspectList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createProspect
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateProspect"}}}}
+      responses:
+        "201": {description: Created, content: {application/json: {schema: {$ref: "#/components/schemas/Prospect"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/prospects/{id}:
+    get:
+      operationId: getProspect
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProspectDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateProspect
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ProspectPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Prospect"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteProspect
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Deleted}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/prospects/{id}/enrich:
+    post:
+      operationId: enrichProspect
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.enrich
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Enrich"}}}}
+      responses:
+        "202": {description: Accepted, content: {application/json: {schema: {$ref: "#/components/schemas/EnrichAccepted"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/prospects/{id}/score:
+    get:
+      operationId: getProspectScore
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Score"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/prospects/{id}/rescore:
+    post:
+      operationId: rescoreProspect
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Score"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/prospects/{id}/explain:
+    post:
+      operationId: explainProspectScore
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "202": {description: Accepted, content: {application/json: {schema: {$ref: "#/components/schemas/JobRef"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/prospects/{id}/convert:
+    post:
+      operationId: convertProspect
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Prospect"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/scoring-models:
+    get:
+      operationId: listScoringModels
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.configure
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ScoringModelList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createScoringModel
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ScoringModelInput"}}}}
+      responses:
+        "201": {description: Created, content: {application/json: {schema: {$ref: "#/components/schemas/ScoringModel"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/scoring-models/{id}/publish:
+    post:
+      operationId: publishScoringModel
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ScoringModel"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/lists:
+    get:
+      operationId: listProspectLists
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProspectListList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createProspectList
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ListInput"}}}}
+      responses:
+        "201": {description: Created, content: {application/json: {schema: {$ref: "#/components/schemas/ProspectListItem"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/lists/{id}:
+    patch:
+      operationId: updateProspectList
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ListPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProspectListItem"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteProspectList
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Deleted}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/lists/{id}/members:
+    post:
+      operationId: addListMembers
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ListMembers"}}}}
+      responses:
+        "204": {description: Added}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: removeListMembers
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ListMembers"}}}}
+      responses:
+        "204": {description: Removed}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/imports:
+    post:
+      operationId: startImport
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.import
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/StartImport"}}}}
+      responses:
+        "202": {description: Accepted, content: {application/json: {schema: {$ref: "#/components/schemas/Import"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/imports/{id}:
+    get:
+      operationId: getImport
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.import
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Import"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/exports:
+    post:
+      operationId: startExport
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.export
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/StartExport"}}}}
+      responses:
+        "202": {description: Accepted, content: {application/json: {schema: {$ref: "#/components/schemas/Export"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/exports/{id}:
+    get:
+      operationId: getExport
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.export
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Export"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/imports/{id}/report:
+    get:
+      operationId: downloadImportReport
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.import
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: CSV, content: {text/csv: {schema: {type: string, format: binary}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /lead-generation/exports/{id}/download:
+    get:
+      operationId: downloadExport
+      x-access: tenant
+      x-module: lead_generation
+      x-permission: lead.export
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: CSV, content: {text/csv: {schema: {type: string, format: binary}}}}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+    Cursor: {name: cursor, in: query, schema: {type: string, maxLength: 64}}
+    IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 128}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    JobRef:
+      type: object
+      required: [job_id]
+      properties:
+        job_id: {type: string, format: uuid}
+    Criteria:
+      type: object
+      additionalProperties: false
+      properties:
+        countries: {type: array, maxItems: 50, items: {type: string, pattern: "^[A-Za-z]{2}$"}}
+        industries: {type: array, maxItems: 30, items: {type: string, maxLength: 64}}
+        employee_min: {type: integer, minimum: 1, maximum: 10000000}
+        employee_max: {type: integer, minimum: 1, maximum: 10000000}
+        technologies: {type: array, maxItems: 30, items: {type: string, maxLength: 64}}
+    StartSearch:
+      type: object
+      additionalProperties: false
+      required: [criteria]
+      properties:
+        criteria: {$ref: "#/components/schemas/Criteria"}
+        saved_search_id: {type: string, format: uuid}
+        max_results: {type: integer, minimum: 1, maximum: 200, default: 25}
+    SearchStatus: {type: string, enum: [queued, running, completed, failed, cancelled, partial]}
+    Search:
+      type: object
+      required: [id, criteria, status, progress_percent, result_count, credits_reserved, credits_used, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        criteria: {$ref: "#/components/schemas/Criteria"}
+        status: {$ref: "#/components/schemas/SearchStatus"}
+        progress_percent: {type: integer}
+        result_count: {type: integer}
+        credits_reserved: {type: integer, format: int64}
+        credits_used: {type: integer, format: int64}
+        job_id: {type: string, format: uuid}
+        saved_search_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+    SearchList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Search"}}
+        next_cursor: {type: string}
+    SearchResult:
+      type: object
+      required: [company_id, rank, source_key, display_name, licence_class]
+      properties:
+        company_id: {type: string, format: uuid}
+        rank: {type: integer}
+        source_key: {type: string}
+        display_name: {type: string}
+        domain: {type: string}
+        country: {type: string}
+        industry: {type: string}
+        employees: {type: integer}
+        licence_class: {type: string}
+        prospect_id: {type: string, format: uuid}
+    SearchResultList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/SearchResult"}}
+    Promote:
+      type: object
+      additionalProperties: false
+      properties:
+        company_ids: {type: array, maxItems: 200, items: {type: string, format: uuid}}
+        all: {type: boolean}
+    PromoteResult:
+      type: object
+      required: [created, existing, prospect_ids]
+      properties:
+        created: {type: integer}
+        existing: {type: integer}
+        prospect_ids: {type: array, items: {type: string, format: uuid}}
+    SavedSearchInput:
+      type: object
+      additionalProperties: false
+      required: [name, criteria]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        criteria: {$ref: "#/components/schemas/Criteria"}
+    SavedSearchPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        criteria: {$ref: "#/components/schemas/Criteria"}
+    SavedSearch:
+      type: object
+      required: [id, name, criteria, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        criteria: {$ref: "#/components/schemas/Criteria"}
+        updated_at: {type: string, format: date-time}
+    SavedSearchList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/SavedSearch"}}
+    ProspectStatus: {type: string, enum: [new, enriching, qualified, disqualified, converted]}
+    DataQuality: {type: string, enum: [unknown, low, medium, high]}
+    Prospect:
+      type: object
+      required: [id, company_id, display_name, status, source_key, data_quality, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        company_id: {type: string, format: uuid}
+        display_name: {type: string}
+        domain: {type: string}
+        status: {$ref: "#/components/schemas/ProspectStatus"}
+        source_key: {type: string}
+        data_quality: {$ref: "#/components/schemas/DataQuality"}
+        score: {type: integer}
+        coverage: {type: number, format: double}
+        crm_company_id: {type: string, format: uuid}
+        owner_user_id: {type: string, format: uuid}
+        updated_at: {type: string, format: date-time}
+    ProspectList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Prospect"}}
+        next_cursor: {type: string}
+    Attribute:
+      type: object
+      required: [attribute, value, source_key, licence_class, observed_at]
+      properties:
+        attribute: {type: string}
+        value: {}
+        source_key: {type: string}
+        licence_class: {type: string}
+        confidence: {type: number, format: double}
+        observed_at: {type: string, format: date-time}
+    ProspectContact:
+      type: object
+      required: [contact_id, source_key]
+      properties:
+        contact_id: {type: string, format: uuid}
+        role_title: {type: string}
+        is_decision_maker: {type: boolean}
+        confidence: {type: number, format: double}
+        source_key: {type: string}
+    EnrichmentRun:
+      type: object
+      required: [id, kind, provider_key, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string, enum: [company, contact]}
+        provider_key: {type: string}
+        status: {type: string, enum: [queued, running, succeeded, no_data, failed, cancelled]}
+        error_code: {type: string}
+        created_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+    ProspectDetail:
+      allOf:
+        - {$ref: "#/components/schemas/Prospect"}
+        - type: object
+          required: [attributes, contacts, enrichments, is_competitor]
+          properties:
+            is_competitor: {type: boolean, description: "The tenant tracks this company as a competitor."}
+            attributes: {type: array, items: {$ref: "#/components/schemas/Attribute"}}
+            contacts: {type: array, items: {$ref: "#/components/schemas/ProspectContact"}}
+            enrichments: {type: array, items: {$ref: "#/components/schemas/EnrichmentRun"}}
+    CreateProspect:
+      type: object
+      additionalProperties: false
+      required: [domain]
+      properties:
+        domain: {type: string, minLength: 3, maxLength: 253}
+        display_name: {type: string, minLength: 1, maxLength: 200}
+    ProspectPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        status: {type: string, enum: [new, qualified, disqualified]}
+        owner_user_id: {type: string, format: uuid, nullable: true}
+    Enrich:
+      type: object
+      additionalProperties: false
+      required: [kinds]
+      properties:
+        kinds: {type: array, minItems: 1, maxItems: 2, uniqueItems: true, items: {type: string, enum: [company, contact]}}
+    EnrichAccepted:
+      type: object
+      required: [runs]
+      properties:
+        runs: {type: array, items: {$ref: "#/components/schemas/EnrichmentRun"}}
+    Factor:
+      type: object
+      required: [key, state, weight, evidence]
+      properties:
+        key: {type: string}
+        state: {type: string, enum: [matched, partial, not_matched, unknown]}
+        weight: {type: number, format: double}
+        earned: {type: number, format: double}
+        evidence: {type: object, additionalProperties: true}
+    Score:
+      type: object
+      required: [value, coverage, model_version, model_name, factors, scored_at]
+      properties:
+        value: {type: integer}
+        coverage: {type: number, format: double}
+        model_name: {type: string}
+        model_version: {type: integer}
+        factors: {type: array, items: {$ref: "#/components/schemas/Factor"}}
+        explanation: {type: string}
+        explanation_is_ai: {type: boolean}
+        scored_at: {type: string, format: date-time}
+    Weights:
+      type: object
+      additionalProperties: false
+      required: [industry, geography, employees, technology]
+      properties:
+        industry: {type: number, format: double, minimum: 0, maximum: 100}
+        geography: {type: number, format: double, minimum: 0, maximum: 100}
+        employees: {type: number, format: double, minimum: 0, maximum: 100}
+        technology: {type: number, format: double, minimum: 0, maximum: 100}
+    ScoringModelInput:
+      type: object
+      additionalProperties: false
+      required: [name, weights]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 80}
+        weights: {$ref: "#/components/schemas/Weights"}
+    ScoringModel:
+      type: object
+      required: [id, name, version, weights, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        version: {type: integer}
+        weights: {$ref: "#/components/schemas/Weights"}
+        status: {type: string, enum: [draft, active, retired]}
+        created_at: {type: string, format: date-time}
+    ScoringModelList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/ScoringModel"}}
+    ListInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        description: {type: string, maxLength: 1000}
+    ListPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        description: {type: string, maxLength: 1000}
+    ProspectListItem:
+      type: object
+      required: [id, name, member_count, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        description: {type: string}
+        member_count: {type: integer}
+        updated_at: {type: string, format: date-time}
+    ProspectListList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/ProspectListItem"}}
+    ListMembers:
+      type: object
+      additionalProperties: false
+      required: [prospect_ids]
+      properties:
+        prospect_ids: {type: array, minItems: 1, maxItems: 500, items: {type: string, format: uuid}}
+    ImportMapping:
+      type: object
+      additionalProperties: false
+      required: [domain]
+      properties:
+        domain: {type: string, minLength: 1, maxLength: 120}
+        name: {type: string, maxLength: 120}
+        country: {type: string, maxLength: 120}
+        industry: {type: string, maxLength: 120}
+        employees: {type: string, maxLength: 120}
+    StartImport:
+      type: object
+      additionalProperties: false
+      required: [file_id, mapping, lawful_source_attested]
+      properties:
+        file_id: {type: string, format: uuid}
+        mapping: {$ref: "#/components/schemas/ImportMapping"}
+        lawful_source_attested: {type: boolean, enum: [true]}
+        list_id: {type: string, format: uuid}
+    Import:
+      type: object
+      required: [id, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [uploaded, validating, importing, completed, failed, cancelled]}
+        rows_total: {type: integer}
+        rows_imported: {type: integer}
+        rows_duplicate: {type: integer}
+        rows_rejected: {type: integer}
+        report_file_id: {type: string, format: uuid}
+        job_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+    StartExport:
+      type: object
+      additionalProperties: false
+      properties:
+        list_id: {type: string, format: uuid}
+        status: {$ref: "#/components/schemas/ProspectStatus"}
+    Export:
+      type: object
+      required: [id, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [queued, running, completed, failed, blocked_by_licence]}
+        rows_total: {type: integer}
+        values_withheld: {type: integer}
+        file_id: {type: string, format: uuid}
+        job_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}

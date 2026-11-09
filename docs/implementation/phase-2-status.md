@@ -1,6 +1,6 @@
 # Phase 2 status
 
-Status: built and verified locally, **awaiting the Phase 2 approval gate.** Phase 3 is not authorized.
+Status: built and verified locally. **Phase 2 gate approved by the product owner on 2026-11-09.**
 
 ## What exists
 

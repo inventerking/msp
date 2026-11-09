@@ -91,6 +91,35 @@ type Service struct {
 	Cooldown  time.Duration
 	verifiers map[string]Verifier
 	handlers  map[string]WebhookHandler
+	companies []CompanyData
+}
+
+// ErrNoProvider means no enabled provider offers the capability.
+var ErrNoProvider = errors.New("no enabled provider for this capability")
+
+// RegisterCompanyData adds a company data adapter. The first one whose provider row is enabled is used.
+func (s *Service) RegisterCompanyData(p CompanyData) { s.companies = append(s.companies, p) }
+
+// CompanyData returns the company data adapter to use, with its provider ID for call logs.
+func (s *Service) CompanyData(ctx context.Context) (CompanyData, uuid.UUID, error) {
+	for _, c := range s.companies {
+		var row repo.GetProviderByKeyRow
+		err := pgx.BeginFunc(ctx, s.pools.App, func(tx pgx.Tx) error {
+			var err error
+			row, err = repo.New(tx).GetProviderByKey(ctx, c.Key())
+			return err
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return nil, uuid.Nil, err
+		}
+		if row.Status == "enabled" && row.Kind == "company_data" {
+			return c, row.ID, nil
+		}
+	}
+	return nil, uuid.Nil, ErrNoProvider
 }
 
 // New creates the service.
@@ -188,7 +217,9 @@ func (s *Service) log(ctx context.Context, providerID uuid.UUID, tenantID *uuid.
 
 // --- Credentials ---
 
-func credAAD(providerID uuid.UUID, label string) []byte { return []byte(providerID.String() + "|" + label) }
+func credAAD(providerID uuid.UUID, label string) []byte {
+	return []byte(providerID.String() + "|" + label)
+}
 
 // SetCredential stores a provider secret encrypted. No API ever returns one.
 func (s *Service) SetCredential(ctx context.Context, a authctx.AdminPrincipal, providerID uuid.UUID, label, secret string) error {

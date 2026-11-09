@@ -33,6 +33,7 @@ import (
 	"mspengine/internal/kernel/ratelimit"
 	"mspengine/internal/platform/files"
 	"mspengine/internal/platform/identity"
+	"mspengine/internal/platform/shared"
 )
 
 // fakeMailer captures email. Tests never send real messages.
@@ -66,6 +67,13 @@ func (f *fakeMailer) waitFor(t *testing.T, to, subject string) mailer.Message {
 	}
 	t.Fatalf("no email to %s with subject containing %q", to, subject)
 	return mailer.Message{}
+}
+
+// fakePDF stands in for Gotenberg, which has its own live test.
+type fakePDF struct{}
+
+func (fakePDF) Render(_ context.Context, html []byte) ([]byte, error) {
+	return append([]byte("%PDF-1.7 fake\n"), html...), nil
 }
 
 // Env is one running application on a real, migrated PostgreSQL.
@@ -155,14 +163,15 @@ func run(m *testing.M) (int, error) {
 
 	keys := crypto.Keys{HMAC: bytes.Repeat([]byte{7}, 32), Encryption: bytes.Repeat([]byte{9}, 32)}
 	mail := &fakeMailer{}
-	g, err := app.Build(pools, keys, app.Options{Mailer: mail, Store: &files.MemoryStore{}, Scanner: files.AllowAllScanner{}, Bucket: "test", BaseURL: "http://app.test"})
+	shared.AllowReservedTLDs = true // Fake company data uses reserved .example domains.
+	g, err := app.Build(pools, keys, app.Options{FakeProviders: true, PDF: fakePDF{}, Mailer: mail, Store: &files.MemoryStore{}, Scanner: files.AllowAllScanner{}, Bucket: "test", BaseURL: "http://app.test"})
 	if err != nil {
 		return 1, err
 	}
 	ids := g.Identity
 	cfg := config.Config{Env: "test", AllowedOrigins: []string{"http://app.test"}, AuthRatePerMinute: 1_000_000}
 	h, err := api.New(api.Deps{Config: cfg, Identity: ids, Commercial: g.Commercial, Keys: keys, Limiter: ratelimit.New(nil), Hub: g.Hub, DB: pools.App,
-		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops})
+		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops, Modules: g.Modules})
 	if err != nil {
 		return 1, err
 	}
@@ -180,6 +189,8 @@ type Client struct {
 	csrf string
 	// log records every response body, for the canary scan.
 	log *[]string
+	// headers are sent with every request.
+	headers map[string]string
 }
 
 func newClient(t *testing.T) *Client {
@@ -211,6 +222,9 @@ func (c *Client) Do(method, path string, body any) (int, map[string]any) {
 	}
 	if c.csrf != "" {
 		req.Header.Set("X-CSRF-Token", c.csrf)
+	}
+	for k, v := range c.headers {
+		req.Header.Set(k, v)
 	}
 	resp, err := c.c.Do(req)
 	if err != nil {

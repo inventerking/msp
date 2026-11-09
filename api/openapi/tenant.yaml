@@ -179,6 +179,29 @@ paths:
       responses:
         "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantDetail"}}}}
         default: {$ref: "#/components/responses/Problem"}
+  /tenant/icp:
+    get:
+      operationId: getIcp
+      x-access: tenant
+      x-permission: lead.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Icp"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    put:
+      operationId: putIcp
+      x-access: tenant
+      x-permission: lead.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/IcpInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Icp"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /reference:
+    get:
+      operationId: getReference
+      x-access: tenant
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Reference"}}}}
+        default: {$ref: "#/components/responses/Problem"}
   /tenant/roles:
     get:
       operationId: listRoles
@@ -454,6 +477,40 @@ components:
     Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
     Cursor: {name: cursor, in: query, schema: {type: string}}
   schemas:
+    IcpInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, maxLength: 120}
+        industries: {type: array, maxItems: 50, items: {type: string, maxLength: 64}}
+        countries: {type: array, maxItems: 250, items: {type: string, pattern: "^[A-Za-z]{2}$"}}
+        min_employees: {type: integer, minimum: 1, maximum: 10000000, nullable: true}
+        max_employees: {type: integer, minimum: 1, maximum: 10000000, nullable: true}
+        technologies: {type: array, maxItems: 50, items: {type: string, maxLength: 64}}
+    Icp:
+      type: object
+      required: [configured, name, industries, countries, technologies, version]
+      properties:
+        configured: {type: boolean}
+        name: {type: string}
+        industries: {type: array, items: {type: string}}
+        countries: {type: array, items: {type: string}}
+        min_employees: {type: integer, nullable: true}
+        max_employees: {type: integer, nullable: true}
+        technologies: {type: array, items: {type: string}}
+        version: {type: integer}
+    Reference:
+      type: object
+      required: [countries, industries]
+      properties:
+        countries: {type: array, items: {$ref: "#/components/schemas/CodeName"}}
+        industries: {type: array, items: {$ref: "#/components/schemas/CodeName"}}
+    CodeName:
+      type: object
+      required: [code, name]
+      properties:
+        code: {type: string}
+        name: {type: string}
     Problem:
       type: object
       required: [type, title, status, code, request_id]

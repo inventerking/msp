@@ -324,6 +324,38 @@ export interface paths {
         patch: operations["updateTenant"];
         trace?: never;
     };
+    "/tenant/icp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getIcp"];
+        put: operations["putIcp"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReference"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tenant/roles": {
         parameters: {
             query?: never;
@@ -760,6 +792,32 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        IcpInput: {
+            name?: string;
+            industries?: string[];
+            countries?: string[];
+            min_employees?: number | null;
+            max_employees?: number | null;
+            technologies?: string[];
+        };
+        Icp: {
+            configured: boolean;
+            name: string;
+            industries: string[];
+            countries: string[];
+            min_employees?: number | null;
+            max_employees?: number | null;
+            technologies: string[];
+            version: number;
+        };
+        Reference: {
+            countries: components["schemas"]["CodeName"][];
+            industries: components["schemas"]["CodeName"][];
+        };
+        CodeName: {
+            code: string;
+            name: string;
+        };
         Problem: {
             type: string;
             title: string;
@@ -1607,6 +1665,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TenantDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getIcp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Icp"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    putIcp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IcpInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Icp"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getReference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reference"];
                 };
             };
             default: components["responses"]["Problem"];

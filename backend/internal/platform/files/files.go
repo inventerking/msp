@@ -212,6 +212,52 @@ func (s *Service) HandleScan(ctx context.Context, j jobs.Job) error {
 	})
 }
 
+// SaveGenerated stores a file the system produced itself, such as an export or a report. It is not
+// user-supplied, so it does not wait for a malware scan.
+func (s *Service) SaveGenerated(ctx context.Context, tenantID uuid.UUID, ownerModule, name, contentType string, body []byte) (uuid.UUID, error) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return uuid.Nil, err
+	}
+	key := "tenants/" + tenantID.String() + "/" + id.String()
+	if err := s.store.Put(ctx, key, body, contentType); err != nil {
+		return uuid.Nil, fmt.Errorf("store generated file: %w", err)
+	}
+	sum := sha256.Sum256(body)
+	size := int64(len(body))
+	clean := CleanName(name)
+	err = db.TenantTx(ctx, s.pools.App, tenantID, uuid.Nil, func(tx pgx.Tx) error {
+		q := repo.New(tx)
+		if _, err := q.CreateObject(ctx, repo.CreateObjectParams{ID: id, TenantID: &tenantID, Bucket: s.bucket, ObjectKey: key, ContentType: contentType, OriginalName: &clean, OwnerModule: ownerModule, SizeBytes: &size}); err != nil {
+			return err
+		}
+		if _, err := q.MarkUploaded(ctx, repo.MarkUploadedParams{TenantID: &tenantID, ID: id, Sha256: sum[:], SizeBytes: &size, ContentType: contentType}); err != nil {
+			return err
+		}
+		_, err := q.SetObjectStatus(ctx, repo.SetObjectStatusParams{TenantID: &tenantID, ID: id, Status: "clean"})
+		return err
+	})
+	return id, err
+}
+
+// ReadForTenant returns a clean file's bytes for background work in that tenant, with its purpose.
+func (s *Service) ReadForTenant(ctx context.Context, tenantID, id uuid.UUID) (Download, string, error) {
+	var obj repo.GetObjectRow
+	err := db.TenantTx(ctx, s.pools.App, tenantID, uuid.Nil, func(tx pgx.Tx) error {
+		var err error
+		obj, err = repo.New(tx).GetObject(ctx, repo.GetObjectParams{TenantID: &tenantID, ID: id})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperr.NotFound()
+		}
+		return err
+	})
+	if err != nil {
+		return Download{}, "", err
+	}
+	d, err := s.read(ctx, obj)
+	return d, obj.OwnerModule, err
+}
+
 // Meta returns a file's details, under tenant RLS.
 func (s *Service) Meta(ctx context.Context, p authctx.Principal, id uuid.UUID) (repo.GetObjectRow, error) {
 	var obj repo.GetObjectRow
@@ -357,4 +403,3 @@ func (m *MemoryStore) Keys() []string {
 	}
 	return out
 }
-

@@ -8,7 +8,7 @@ const deployed = Boolean(process.env.DEPLOYED_COMPOSE_DIR);
 const env: Record<string, string> = {};
 if (!deployed) {
   for (const line of readFileSync(resolve(import.meta.dirname, "../../.env"), "utf8").split("\n")) {
-    const m = /^([A-Z_]+)=(.*)$/.exec(line);
+    const m = /^([A-Z0-9_]+)=(.*)$/.exec(line);
     if (m?.[1]) env[m[1]] = m[2] ?? "";
   }
 }

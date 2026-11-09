@@ -110,7 +110,11 @@
     "amount": "Amount",
     "noCredits": "No credits yet",
     "entry": "Entry",
-    "granted": "Credits granted"
+    "granted": "Credits granted",
+    "meters": {
+      "ai_credits": "AI credits",
+      "lead_credits": "Lead credits"
+    }
   },
   "subscriptions": {
     "title": "Subscriptions",

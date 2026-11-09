@@ -403,10 +403,10 @@ func (s *Service) HandleErase(ctx context.Context, j jobs.Job) error {
 
 // ContactExport is everything held about a contact.
 type ContactExport struct {
-	Contact  repo.GetContactRow        `json:"contact"`
+	Contact  repo.GetContactRow           `json:"contact"`
 	Sources  []repo.ListContactSourcesRow `json:"sources"`
-	Consents []repo.ListConsentsRow    `json:"consents"`
-	Modules  map[string]any            `json:"modules"`
+	Consents []repo.ListConsentsRow       `json:"consents"`
+	Modules  map[string]any               `json:"modules"`
 }
 
 // ExportContact assembles a contact's data from identity and every registered module.
@@ -464,3 +464,41 @@ func (s *Service) Rate(ctx context.Context, base, quote string, on time.Time) (f
 	return rate, found, err
 }
 
+// CheckCodes rejects country or industry codes that are not in the reference data.
+func CheckCodes(ctx context.Context, tx pgx.Tx, countries, industries []string) error {
+	q := repo.New(tx)
+	if n, err := q.CountUnknownCountries(ctx, nonNil(countries)); err != nil {
+		return err
+	} else if n > 0 {
+		return apperr.Validation(apperr.FieldError{Field: "countries", Code: "unknown_country"})
+	}
+	if n, err := q.CountUnknownIndustries(ctx, nonNil(industries)); err != nil {
+		return err
+	} else if n > 0 {
+		return apperr.Validation(apperr.FieldError{Field: "industries", Code: "unknown_industry"})
+	}
+	return nil
+}
+
+// Reference returns the country and industry lists.
+func (s *Service) Reference(ctx context.Context) ([]repo.ListCountriesRow, []repo.ListIndustriesRow, error) {
+	var cs []repo.ListCountriesRow
+	var is []repo.ListIndustriesRow
+	err := pgx.BeginFunc(ctx, s.pools.App, func(tx pgx.Tx) error {
+		var err error
+		q := repo.New(tx)
+		if cs, err = q.ListCountries(ctx); err != nil {
+			return err
+		}
+		is, err = q.ListIndustries(ctx)
+		return err
+	})
+	return cs, is, err
+}
+
+func nonNil(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}

@@ -25,6 +25,12 @@ func (f *CompanyData) SearchCompanies(_ context.Context, q integration.CompanyQu
 		if len(q.Countries) > 0 && !contains(q.Countries, r.Country) {
 			continue
 		}
+		if len(q.Industries) > 0 && !contains(q.Industries, r.Industry) {
+			continue
+		}
+		if (q.EmployeeMin > 0 && r.Employees < q.EmployeeMin) || (q.EmployeeMax > 0 && r.Employees > q.EmployeeMax) {
+			continue
+		}
 		out = append(out, r)
 	}
 	if q.Limit > 0 && len(out) > q.Limit {

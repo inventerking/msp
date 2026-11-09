@@ -123,7 +123,19 @@ type Job struct {
 	Payload        []byte
 	PayloadVersion int32
 	Attempt        int32
+	MaxAttempts    int32
 	setProgress    func(ctx context.Context, v any) error
+}
+
+// Final reports whether a failure now would be the last try, so a handler can record the outcome
+// on its own records rather than leave them looking busy.
+func (j Job) Final(err error) bool {
+	var p permanentError
+	var l laterError
+	if errors.As(err, &l) {
+		return false
+	}
+	return errors.As(err, &p) || j.MaxAttempts > 0 && j.Attempt >= j.MaxAttempts
 }
 
 // Decode reads the payload.
@@ -169,13 +181,18 @@ type Runner struct {
 func NewRunner(pool *pgxpool.Pool, workerID string) *Runner {
 	return &Runner{
 		pool: pool, workerID: workerID, handlers: map[string]Handler{},
-		concurrency: map[string]int{QueueCritical: 4, QueueDefault: 4, QueueAI: 2, QueueAnalytics: 1},
+		// Every queue that has handlers must be listed, or its jobs wait forever. The PDF, email and
+		// assessment queues join when their phases add handlers for them.
+		concurrency: map[string]int{QueueCritical: 4, QueueDefault: 4, QueueAI: 2, QueueAnalytics: 1, QueueProviderIO: 2, QueueResearch: 2},
 		LockTTL:     time.Minute, Poll: time.Second, TenantLimit: 3, BackoffBase: 2 * time.Second, BackoffMax: 15 * time.Minute,
 	}
 }
 
 // Register adds a handler for a job kind.
 func (r *Runner) Register(kind string, h Handler) { r.handlers[kind] = h }
+
+// Polls reports whether this worker takes jobs from a queue.
+func (r *Runner) Polls(queue string) bool { return r.concurrency[queue] > 0 }
 
 // SetConcurrency sets how many jobs of a queue this worker runs at once.
 func (r *Runner) SetConcurrency(queue string, n int) { r.concurrency[queue] = n }
@@ -260,7 +277,7 @@ func (r *Runner) execute(parent context.Context, row repo.ClaimJobRow) {
 		err = context.Canceled
 	default:
 		if h, ok := r.handlers[row.Kind]; ok {
-			err = safely(ctx, h, Job{ID: row.ID, TenantID: row.TenantID, Kind: row.Kind, Payload: row.Payload, PayloadVersion: row.PayloadVersion, Attempt: row.Attempt,
+			err = safely(ctx, h, Job{ID: row.ID, TenantID: row.TenantID, Kind: row.Kind, Payload: row.Payload, PayloadVersion: row.PayloadVersion, Attempt: row.Attempt, MaxAttempts: row.MaxAttempts,
 				setProgress: func(c context.Context, v any) error {
 					b, err := json.Marshal(v)
 					if err != nil {

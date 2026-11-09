@@ -28,6 +28,7 @@ import (
 	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
 	"mspengine/internal/kernel/jobs"
+	"mspengine/internal/kernel/modulekit"
 	"mspengine/internal/kernel/ratelimit"
 	"mspengine/internal/kernel/realtime"
 	"mspengine/internal/platform/commercial"
@@ -56,6 +57,8 @@ type Deps struct {
 	AI         *aigateway.Gateway
 	Pools      *db.Pools
 	Ops        *jobs.Ops
+	// Modules replaces the skeleton of any module with the same key.
+	Modules []modulekit.Module
 }
 
 // Server holds handler dependencies.
@@ -92,15 +95,33 @@ func New(d Deps) (http.Handler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load module contract: %w", err)
 	}
-	for _, c := range []struct {
+	modules := s.modules()
+	contracts := []struct {
 		spec *openapi3.T
 		base string
-	}{{tenantSpec, tenantBase}, {moduleSpec, tenantBase}, {adminSpec, adminBase}} {
+	}{{tenantSpec, tenantBase}, {moduleSpec, tenantBase}, {adminSpec, adminBase}}
+	for _, m := range modules {
+		if m.Contract == nil {
+			continue
+		}
+		spec, err := m.Contract()
+		if err != nil {
+			return nil, fmt.Errorf("load %s contract: %w", m.Key, err)
+		}
+		contracts = append(contracts, struct {
+			spec *openapi3.T
+			base string
+		}{spec, tenantBase})
+	}
+	for _, c := range contracts {
 		ps, err := loadPolicies(c.spec, c.base)
 		if err != nil {
 			return nil, err
 		}
 		for k, v := range ps {
+			if s.policies[k] != nil {
+				return nil, fmt.Errorf("%s is declared by two contracts", k)
+			}
 			s.policies[k] = v
 		}
 	}
@@ -130,15 +151,32 @@ func New(d Deps) (http.Handler, error) {
 	}
 	tenantapi.HandlerWithOptions(tenantHandlers{s}, tenantapi.ChiServerOptions{BaseURL: tenantBase, BaseRouter: r, Middlewares: []tenantapi.MiddlewareFunc{s.guard}, ErrorHandlerFunc: bindErr})
 	adminapi.HandlerWithOptions(adminHandlers{s}, adminapi.ChiServerOptions{BaseURL: adminBase, BaseRouter: r, Middlewares: []adminapi.MiddlewareFunc{s.adminGuard}, ErrorHandlerFunc: bindErr})
-	for _, m := range allModules {
+	for _, m := range modules {
 		for _, rt := range m.Routes {
 			r.With(s.guard).Method(rt.Method, tenantBase+m.Prefix+rt.Path, rt.Handler)
+		}
+		if m.Mount != nil {
+			m.Mount(r, tenantBase, s.guard, bindErr)
 		}
 	}
 	if err := s.checkParity(r); err != nil {
 		return nil, err
 	}
 	return r, nil
+}
+
+// modules returns the ten modules, with built ones in place of their skeletons.
+func (s *Server) modules() []modulekit.Module {
+	out := make([]modulekit.Module, len(allModules))
+	copy(out, allModules)
+	for _, m := range s.Modules {
+		for i := range out {
+			if out[i].Key == m.Key {
+				out[i] = m
+			}
+		}
+	}
+	return out
 }
 
 // checkParity fails startup if a served route has no contract entry, or the reverse.

@@ -87,6 +87,161 @@ type AuditSupportAccessGrant struct {
 	RevokedAt *time.Time
 }
 
+type CompetitorIntelligenceChangeEvent struct {
+	ID                    uuid.UUID
+	TenantID              uuid.UUID
+	CreatedAt             time.Time
+	CompetitorID          uuid.UUID
+	AttributeType         string
+	PreviousObservationID *uuid.UUID
+	NewObservationID      uuid.UUID
+	Summary               *string
+	AcknowledgedAt        *time.Time
+}
+
+type CompetitorIntelligenceComparisonSet struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Name       string
+	Dimensions []string
+	CreatedBy  *uuid.UUID
+	DeletedAt  *time.Time
+}
+
+type CompetitorIntelligenceComparisonSetMember struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	ComparisonSetID uuid.UUID
+	CompetitorID    uuid.UUID
+}
+
+type CompetitorIntelligenceCompetitor struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CompanyID         uuid.UUID
+	DisplayName       string
+	Domain            *string
+	Status            string
+	Tier              *string
+	Notes             *string
+	MonitoringEnabled bool
+	CreatedBy         *uuid.UUID
+	DeletedAt         *time.Time
+}
+
+type CompetitorIntelligenceMarketOpportunity struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Geography     *string
+	IndustryID    *uuid.UUID
+	Title         string
+	Rationale     string
+	Score         *int32
+	EvidenceClass string
+	Status        string
+	AiRequestID   *uuid.UUID
+}
+
+type CompetitorIntelligenceObservation struct {
+	ID               uuid.UUID
+	TenantID         uuid.UUID
+	CreatedAt        time.Time
+	CompetitorID     uuid.UUID
+	AttributeType    string
+	Value            []byte
+	EvidenceClass    string
+	Confidence       *float64
+	SourceSnapshotID *uuid.UUID
+	AiRequestID      *uuid.UUID
+	ObservedAt       time.Time
+	SupersededByID   *uuid.UUID
+}
+
+type CompetitorIntelligenceOpportunityEvidence struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	OpportunityID uuid.UUID
+	ObservationID *uuid.UUID
+	Note          *string
+}
+
+type CompetitorIntelligenceReport struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Title       string
+	Kind        string
+	Status      string
+	Content     []byte
+	FileID      *uuid.UUID
+	AiRequestID *uuid.UUID
+	CreatedBy   *uuid.UUID
+	DeletedAt   *time.Time
+}
+
+type CompetitorIntelligenceResearchConfig struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CompetitorID uuid.UUID
+	Cadence      string
+	Scope        []byte
+	Enabled      bool
+	NextRunAt    *time.Time
+	DeletedAt    *time.Time
+}
+
+type CompetitorIntelligenceResearchRun struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CompetitorID uuid.UUID
+	ConfigID     *uuid.UUID
+	Status       string
+	PagesFetched int32
+	CreditsUsed  int64
+	JobID        *uuid.UUID
+	FinishedAt   *time.Time
+}
+
+type CompetitorIntelligenceSource struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	CompetitorID  uuid.UUID
+	Url           string
+	Kind          string
+	AccessStatus  string
+	LastFetchedAt *time.Time
+	DeletedAt     *time.Time
+}
+
+type CompetitorIntelligenceSourceSnapshot struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	SourceID    uuid.UUID
+	RunID       *uuid.UUID
+	ContentHash []byte
+	FileID      *uuid.UUID
+	FetchedAt   time.Time
+	HttpStatus  *int32
+}
+
 type FilesAccessGrant struct {
 	ID            uuid.UUID
 	CreatedAt     time.Time
@@ -620,6 +775,198 @@ type JobsOutboxEventsDefault struct {
 	Sequence      *int64
 }
 
+type LeadGenerationEnrichmentRun struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ProspectID  uuid.UUID
+	Kind        string
+	ProviderKey string
+	Status      string
+	CreditsUsed int64
+	ErrorCode   *string
+	JobID       *uuid.UUID
+	FinishedAt  *time.Time
+}
+
+type LeadGenerationExportJob struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Criteria       []byte
+	FileID         *uuid.UUID
+	Status         string
+	RowsTotal      *int32
+	ValuesWithheld *int32
+	CreatedBy      *uuid.UUID
+}
+
+type LeadGenerationImportJob struct {
+	ID                   uuid.UUID
+	TenantID             uuid.UUID
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	SourceFileID         uuid.UUID
+	ReportFileID         *uuid.UUID
+	Mapping              []byte
+	LawfulSourceAttested bool
+	Status               string
+	RowsTotal            *int32
+	RowsImported         *int32
+	RowsDuplicate        *int32
+	RowsRejected         *int32
+	CreatedBy            *uuid.UUID
+}
+
+type LeadGenerationProspect struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	CompanyID      uuid.UUID
+	DisplayName    string
+	Domain         *string
+	Status         string
+	SourceKey      string
+	SourceRef      *string
+	DataQuality    string
+	LatestScore    *int32
+	LatestCoverage *float64
+	CrmCompanyID   *uuid.UUID
+	OwnerUserID    *uuid.UUID
+	CreatedBy      *uuid.UUID
+	DeletedAt      *time.Time
+}
+
+type LeadGenerationProspectAttribute struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	ProspectID   uuid.UUID
+	Attribute    string
+	Value        []byte
+	SourceKey    string
+	SourceUrl    *string
+	LicenceClass string
+	Confidence   *float64
+	ObservedAt   time.Time
+	ExpiresAt    *time.Time
+}
+
+type LeadGenerationProspectContact struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	ProspectID      uuid.UUID
+	ContactID       uuid.UUID
+	RoleTitle       *string
+	IsDecisionMaker *bool
+	Confidence      *float64
+	SourceKey       string
+}
+
+type LeadGenerationProspectList struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Name        string
+	Description *string
+	CreatedBy   *uuid.UUID
+	DeletedAt   *time.Time
+}
+
+type LeadGenerationProspectListMember struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	ListID     uuid.UUID
+	ProspectID uuid.UUID
+	AddedBy    *uuid.UUID
+}
+
+type LeadGenerationProspectScore struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	ProspectID  uuid.UUID
+	ModelID     uuid.UUID
+	Score       int32
+	Coverage    float64
+	Explanation *string
+	AiRequestID *uuid.UUID
+}
+
+type LeadGenerationProspectScoreFactor struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	ScoreID   uuid.UUID
+	FactorKey string
+	State     string
+	Weight    float64
+	Earned    *float64
+	Evidence  []byte
+}
+
+type LeadGenerationSavedSearch struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	Criteria  []byte
+	CreatedBy *uuid.UUID
+	DeletedAt *time.Time
+}
+
+type LeadGenerationScoringModel struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	Version   int32
+	IcpID     *uuid.UUID
+	Weights   []byte
+	Status    string
+	CreatedBy *uuid.UUID
+}
+
+type LeadGenerationSearchJob struct {
+	ID               uuid.UUID
+	TenantID         uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	SavedSearchID    *uuid.UUID
+	CriteriaSnapshot []byte
+	Status           string
+	ProgressPercent  int32
+	ResultCount      int32
+	ProviderKeys     []string
+	CreditsReserved  int64
+	CreditsUsed      int64
+	JobID            *uuid.UUID
+	CreatedBy        *uuid.UUID
+}
+
+type LeadGenerationSearchResult struct {
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	CreatedAt          time.Time
+	SearchJobID        uuid.UUID
+	CompanyID          uuid.UUID
+	Rank               int32
+	SourceKey          string
+	Preview            []byte
+	PromotedProspectID *uuid.UUID
+}
+
 type NotificationDeliveryAttempt struct {
 	ID             uuid.UUID
 	CreatedAt      time.Time
@@ -850,7 +1197,7 @@ type PlatformPromotion struct {
 	UpdatedAt      time.Time
 	Code           string
 	Kind           string
-	PercentOff     pgtype.Numeric
+	PercentOff     *float64
 	AmountOffMinor *int64
 	Currency       *string
 	MaxRedemptions *int32
@@ -998,7 +1345,7 @@ type SharedCompanySourceFact struct {
 	SourceKey    string
 	SourceUrl    *string
 	LicenceClass string
-	Confidence   pgtype.Numeric
+	Confidence   float64
 	ObservedAt   time.Time
 	ExpiresAt    *time.Time
 }
@@ -1062,7 +1409,7 @@ type SharedFxRate struct {
 	UpdatedAt     time.Time
 	BaseCurrency  string
 	QuoteCurrency string
-	Rate          pgtype.Numeric
+	Rate          float64
 	RateDate      pgtype.Date
 	SourceKey     string
 }

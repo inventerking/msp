@@ -11,6 +11,10 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+// AllowReservedTLDs accepts the reserved .example and .test domains. It is on outside production, so
+// fake data never creates canonical records for real companies' domains, and off in production.
+var AllowReservedTLDs = false
+
 // ErrBadDomain means an input cannot identify a company.
 var ErrBadDomain = errors.New("not a company domain")
 
@@ -50,6 +54,11 @@ func NormalizeDomain(input string) (string, error) {
 	ascii, err := idna.Lookup.ToASCII(s)
 	if err != nil {
 		return "", ErrBadDomain
+	}
+	if AllowReservedTLDs {
+		if labels := strings.Split(ascii, "."); len(labels) >= 2 && (labels[len(labels)-1] == "example" || labels[len(labels)-1] == "test") {
+			return strings.Join(labels[len(labels)-2:], "."), nil
+		}
 	}
 	reg, err := publicsuffix.EffectiveTLDPlusOne(ascii)
 	if err != nil {

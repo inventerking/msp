@@ -31,14 +31,16 @@ import (
 
 // Action classes decide what may happen to a task's output.
 const (
-	Informational           = "informational"
-	Recommendation          = "recommendation"
-	HumanApprovalRequired   = "human_approval_required"
-	ProhibitedWithoutAuth   = "prohibited_without_authorization"
+	Informational         = "informational"
+	Recommendation        = "recommendation"
+	HumanApprovalRequired = "human_approval_required"
+	ProhibitedWithoutAuth = "prohibited_without_authorization"
 )
 
 // ProviderRequest is what a provider adapter receives.
 type ProviderRequest struct {
+	// Task is the registered task key. Real adapters ignore it; the fake uses it to pick a reply.
+	Task      string
 	Model     string
 	System    string
 	User      string
@@ -62,9 +64,9 @@ type Provider interface {
 type Task struct {
 	Key string
 	// Module is the entitlement required. Empty means a platform task.
-	Module          string
-	ReserveCredits  int64
-	Timeout         time.Duration
+	Module         string
+	ReserveCredits int64
+	Timeout        time.Duration
 }
 
 // Input is what a module gives the gateway. Trusted values come from the module's own code.
@@ -221,7 +223,7 @@ func (g *Gateway) Run(ctx context.Context, r Request) (Result, error) {
 		return Result{}, fmt.Errorf("task %s has an invalid output schema: %w", r.Task, err)
 	}
 	result := Result{ActionClass: prompt.ActionClass}
-	resp, used, err := g.complete(ctx, r, task, &route, ProviderRequest{Model: route.Model, System: system, User: user, MaxTokens: route.MaxOutputTokens})
+	resp, used, err := g.complete(ctx, r, task, &route, ProviderRequest{Task: r.Task, Model: route.Model, System: system, User: user, MaxTokens: route.MaxOutputTokens})
 	if err != nil {
 		outcome := "provider_error"
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -237,7 +239,7 @@ func (g *Gateway) Run(ctx context.Context, r Request) (Result, error) {
 	output, verr := validate(resp.Text, schema)
 	if verr != nil {
 		// One repair attempt, telling the model what was wrong. Its reply goes through the same check.
-		repair := ProviderRequest{Model: route.Model, System: system, User: user, MaxTokens: route.MaxOutputTokens, JSONHint: "Your last reply did not match the required JSON format: " + verr.Error()}
+		repair := ProviderRequest{Task: r.Task, Model: route.Model, System: system, User: user, MaxTokens: route.MaxOutputTokens, JSONHint: "Your last reply did not match the required JSON format: " + verr.Error()}
 		resp2, _, err := g.complete(ctx, r, task, &route, repair)
 		if err == nil {
 			result.InputTokens += resp2.InputTokens

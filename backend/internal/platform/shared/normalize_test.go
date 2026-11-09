@@ -2,6 +2,24 @@ package shared
 
 import "testing"
 
+func TestReservedDomainsOnlyWhenAllowed(t *testing.T) {
+	AllowReservedTLDs = false
+	if _, err := NormalizeDomain("acme.example"); err == nil {
+		t.Fatal("a reserved domain was accepted in production mode")
+	}
+	AllowReservedTLDs = true
+	defer func() { AllowReservedTLDs = false }()
+	if got, err := NormalizeDomain("https://www.Acme-Legal.example/x"); err != nil || got != "acme-legal.example" {
+		t.Fatalf("%q %v", got, err)
+	}
+	if got, _ := NormalizeDomain("a.b.acme.test"); got != "acme.test" {
+		t.Fatalf("%q", got)
+	}
+	if _, err := NormalizeDomain("example"); err == nil {
+		t.Fatal("a bare reserved label was accepted")
+	}
+}
+
 func TestNormalizeDomain(t *testing.T) {
 	good := map[string]string{
 		"example.com": "example.com", "EXAMPLE.COM": "example.com", "www.example.com": "example.com", "https://www.Example.com/about?x=1": "example.com",

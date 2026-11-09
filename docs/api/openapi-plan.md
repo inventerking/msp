@@ -1,6 +1,6 @@
 # OpenAPI plan
 
-Status: Phase 1 contracts exist in `api/openapi/`: `tenant.yaml`, `admin.yaml` and `modules.yaml`. The rest of this plan describes where they are heading.
+Status: contracts exist in `api/openapi/`: `tenant.yaml`, `admin.yaml`, `modules.yaml` (status routes for every module), and one document per built module in `api/openapi/modules/`. The rest of this plan describes where they are heading.
 
 ## Approach
 
