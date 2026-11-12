@@ -5,10 +5,10 @@
 package repo
 
 import (
+	"net/netip"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AuditEvent struct {
@@ -240,6 +240,284 @@ type CompetitorIntelligenceSourceSnapshot struct {
 	FileID      *uuid.UUID
 	FetchedAt   time.Time
 	HttpStatus  *int32
+}
+
+type CrmActivity struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	ActivityType  string
+	CrmCompanyID  *uuid.UUID
+	ContactID     *uuid.UUID
+	DealID        *uuid.UUID
+	ActorUserID   *uuid.UUID
+	Summary       string
+	Detail        []byte
+	OccurredAt    time.Time
+	SourceModule  *string
+	SourceEventID *uuid.UUID
+}
+
+type CrmAiRecommendation struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DealID       *uuid.UUID
+	CrmCompanyID *uuid.UUID
+	Kind         string
+	Content      []byte
+	Status       string
+	AiRequestID  *uuid.UUID
+	DecidedBy    *uuid.UUID
+}
+
+type CrmAttachment struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	SubjectType string
+	SubjectID   uuid.UUID
+	FileID      uuid.UUID
+	CreatedBy   *uuid.UUID
+	DeletedAt   *time.Time
+}
+
+type CrmCompany struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CompanyID    *uuid.UUID
+	Name         string
+	Domain       *string
+	Lifecycle    string
+	OwnerUserID  *uuid.UUID
+	SourceModule *string
+	SourceRef    *uuid.UUID
+	CreatedBy    *uuid.UUID
+	DeletedAt    *time.Time
+}
+
+type CrmContact struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	ContactID    uuid.UUID
+	CrmCompanyID *uuid.UUID
+	IsPrimary    bool
+	OwnerUserID  *uuid.UUID
+	DeletedAt    *time.Time
+}
+
+type CrmCustomFieldDefinition struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Entity    string
+	Key       string
+	Label     string
+	FieldType string
+	Options   []byte
+	Archived  bool
+}
+
+type CrmCustomFieldValue struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DefinitionID uuid.UUID
+	SubjectID    uuid.UUID
+	Value        []byte
+}
+
+type CrmDeal struct {
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	PipelineID         uuid.UUID
+	StageID            uuid.UUID
+	CrmCompanyID       uuid.UUID
+	PrimaryContactID   *uuid.UUID
+	Title              string
+	OwnerUserID        *uuid.UUID
+	Currency           string
+	ContractValueMinor *int64
+	ExpectedMrrMinor   *int64
+	Probability        int32
+	ExpectedCloseDate  *time.Time
+	Status             string
+	ClosedAt           *time.Time
+	LossReason         *string
+	SourceModule       *string
+	SourceRef          *uuid.UUID
+	RowVersion         int32
+	CreatedBy          *uuid.UUID
+	DeletedAt          *time.Time
+}
+
+type CrmDealStageHistory struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	DealID      uuid.UUID
+	FromStageID *uuid.UUID
+	ToStageID   uuid.UUID
+	ChangedBy   *uuid.UUID
+	Reason      *string
+}
+
+type CrmMeeting struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	CrmCompanyID    *uuid.UUID
+	DealID          *uuid.UUID
+	Title           string
+	StartsAt        time.Time
+	EndsAt          time.Time
+	Status          string
+	OrganizerUserID *uuid.UUID
+	ProviderEventID *string
+	SourceModule    *string
+	SourceRef       *uuid.UUID
+	Outcome         *string
+	IdempotencyKey  *string
+	DeletedAt       *time.Time
+}
+
+type CrmMeetingAttendee struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	MeetingID uuid.UUID
+	ContactID *uuid.UUID
+	UserID    *uuid.UUID
+	Response  *string
+}
+
+type CrmNote struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	SubjectType string
+	SubjectID   uuid.UUID
+	Body        string
+	CreatedBy   *uuid.UUID
+	DeletedAt   *time.Time
+}
+
+type CrmPipeline struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	IsDefault bool
+	Status    string
+}
+
+type CrmPipelineStage struct {
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	PipelineID         uuid.UUID
+	Key                string
+	Name               string
+	Position           int32
+	Kind               string
+	DefaultProbability int32
+}
+
+type CrmProspectConversion struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	ProspectID   uuid.UUID
+	CrmCompanyID uuid.UUID
+	DealID       *uuid.UUID
+	ConvertedBy  *uuid.UUID
+}
+
+type CrmReminder struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	TaskID    *uuid.UUID
+	UserID    uuid.UUID
+	RemindAt  time.Time
+	FiredAt   *time.Time
+}
+
+type CrmSalesRep struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	UserID        uuid.UUID
+	QuotaMinor    *int64
+	QuotaCurrency *string
+	Territory     *string
+	Active        bool
+}
+
+type CrmTask struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Title          string
+	Description    *string
+	AssigneeUserID *uuid.UUID
+	CrmCompanyID   *uuid.UUID
+	DealID         *uuid.UUID
+	DueAt          *time.Time
+	Status         string
+	CompletedAt    *time.Time
+	CreatedBy      *uuid.UUID
+	DeletedAt      *time.Time
+}
+
+type CustomerExpansionContract struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CustomerProfileID uuid.UUID
+	ProposalVersionID *uuid.UUID
+	DealID            *uuid.UUID
+	Status            string
+	StartDate         time.Time
+	EndDate           *time.Time
+	TermMonths        *int32
+	AutoRenew         *bool
+	NoticeDays        *int32
+	Currency          string
+	MrrMinor          int64
+	SetupMinor        int64
+	Source            string
+}
+
+type CustomerExpansionCustomerProfile struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CrmCompanyID uuid.UUID
+	CompanyID    *uuid.UUID
+	HealthStatus string
+	HealthAsOf   *time.Time
+	DeletedAt    *time.Time
 }
 
 type FilesAccessGrant struct {
@@ -660,6 +938,165 @@ type IntegrationWebhookEndpoint struct {
 	SecretCiphertext []byte
 	KeyID            string
 	Status           string
+}
+
+type ItAssessmentAssessment struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	AuthorizationID uuid.UUID
+	TemplateID      uuid.UUID
+	LeadCaptureID   *uuid.UUID
+	Domain          string
+	CompanyID       *uuid.UUID
+	CrmCompanyID    *uuid.UUID
+	Origin          string
+	Status          string
+	Score           *int32
+	RiskLevel       *string
+	JobID           *uuid.UUID
+	StartedAt       *time.Time
+	CompletedAt     *time.Time
+	CreatedBy       *uuid.UUID
+	DeletedAt       *time.Time
+}
+
+type ItAssessmentAuthorization struct {
+	ID                   uuid.UUID
+	TenantID             uuid.UUID
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	Domain               string
+	Tier                 string
+	Method               string
+	AuthorizerName       string
+	AuthorizerEmail      string
+	AuthorizerRole       *string
+	TermsVersion         string
+	DomainVerificationID *uuid.UUID
+	IpHash               []byte
+	Status               string
+	GrantedAt            time.Time
+	ExpiresAt            time.Time
+	RevokedAt            *time.Time
+}
+
+type ItAssessmentCheck struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	AssessmentID uuid.UUID
+	CheckKey     string
+	Status       string
+	Target       string
+	RawResult    []byte
+	DurationMs   *int32
+}
+
+type ItAssessmentConsultationBooking struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	AssessmentID    uuid.UUID
+	ContactID       *uuid.UUID
+	Status          string
+	StartsAt        *time.Time
+	EndsAt          *time.Time
+	ProviderEventID *string
+	CrmMeetingID    *uuid.UUID
+	IdempotencyKey  string
+}
+
+type ItAssessmentDomainVerification struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Domain     string
+	Method     string
+	TokenHash  []byte
+	Status     string
+	VerifiedAt *time.Time
+	ExpiresAt  time.Time
+}
+
+type ItAssessmentEgressDecision struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	AssessmentID  uuid.UUID
+	CheckKey      string
+	RequestedHost string
+	ResolvedIp    *netip.Addr
+	Decision      string
+	Reason        *string
+}
+
+type ItAssessmentFinding struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	AssessmentID   uuid.UUID
+	CheckID        uuid.UUID
+	Severity       string
+	Classification string
+	Title          string
+	Description    string
+	Recommendation string
+	Evidence       []byte
+}
+
+type ItAssessmentLandingPage struct {
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	TemplateID         uuid.UUID
+	Slug               string
+	Title              string
+	Branding           []byte
+	ConsentTextVersion string
+	Status             string
+	DeletedAt          *time.Time
+}
+
+type ItAssessmentLeadCapture struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	LandingPageID uuid.UUID
+	ContactID     *uuid.UUID
+	Domain        string
+	Consent       []byte
+	SourceIpHash  []byte
+}
+
+type ItAssessmentReport struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	AssessmentID uuid.UUID
+	Version      int32
+	FileID       *uuid.UUID
+	Status       string
+	DeletedAt    *time.Time
+}
+
+type ItAssessmentTemplate struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Name           string
+	Tier           string
+	CheckKeys      []string
+	ScoringVersion string
+	DeletedAt      *time.Time
 }
 
 type JobsDeadLetter struct {
@@ -1295,9 +1732,174 @@ type PlatformUsageRollup struct {
 	UpdatedAt         time.Time
 	MeterID           uuid.UUID
 	ModuleKey         string
-	PeriodStart       pgtype.Date
+	PeriodStart       time.Time
 	Quantity          int64
 	CostEstimateMinor *int64
+}
+
+type ProposalsApproval struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	VersionID   uuid.UUID
+	Status      string
+	ContentHash []byte
+	RequestedBy uuid.UUID
+	DecidedBy   *uuid.UUID
+	DecidedAt   *time.Time
+	Reason      *string
+}
+
+type ProposalsProposal struct {
+	ID               uuid.UUID
+	TenantID         uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Number           string
+	Title            string
+	CrmCompanyID     uuid.UUID
+	DealID           *uuid.UUID
+	TemplateID       *uuid.UUID
+	CurrentVersionID *uuid.UUID
+	Status           string
+	OwnerUserID      *uuid.UUID
+	CreatedBy        *uuid.UUID
+	DeletedAt        *time.Time
+}
+
+type ProposalsProposalLineItem struct {
+	ID                  uuid.UUID
+	TenantID            uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	VersionID           uuid.UUID
+	CatalogItemID       *uuid.UUID
+	Position            int32
+	Name                string
+	PricingModel        string
+	Quantity            int32
+	UnitPriceMinor      int64
+	SetupFeeMinor       int64
+	DiscountBps         int32
+	RecurringTotalMinor int64
+}
+
+type ProposalsProposalTemplate struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Name           string
+	Sections       []byte
+	Branding       []byte
+	DefaultSlaID   *uuid.UUID
+	DefaultTermsID *uuid.UUID
+	DeletedAt      *time.Time
+}
+
+type ProposalsProposalVersion struct {
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	ProposalID         uuid.UUID
+	Version            int32
+	Status             string
+	Content            []byte
+	CommercialSnapshot []byte
+	SnapshotHash       []byte
+	Currency           string
+	SetupTotalMinor    int64
+	MrrTotalMinor      int64
+	TermMonths         int32
+	TcvMinor           int64
+	ValidUntil         *time.Time
+	PdfFileID          *uuid.UUID
+	IssuedAt           *time.Time
+	AiRequestID        *uuid.UUID
+	CreatedBy          *uuid.UUID
+}
+
+type ProposalsServiceCatalogItem struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	TenantServiceID *uuid.UUID
+	Name            string
+	Description     *string
+	PricingModel    string
+	Currency        string
+	UnitPriceMinor  int64
+	SetupFeeMinor   int64
+	Status          string
+}
+
+type ProposalsShareLink struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	VersionID      uuid.UUID
+	RecipientEmail string
+	TokenHash      []byte
+	ExpiresAt      time.Time
+	RevokedAt      *time.Time
+}
+
+type ProposalsSignatureEvent struct {
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	CreatedAt          time.Time
+	SignatureRequestID uuid.UUID
+	ProviderEventID    string
+	EventType          string
+	OccurredAt         time.Time
+	Detail             []byte
+}
+
+type ProposalsSignatureRequest struct {
+	ID                 uuid.UUID
+	TenantID           uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	VersionID          uuid.UUID
+	ProviderKey        string
+	ProviderEnvelopeID *string
+	Status             string
+	SignedFileID       *uuid.UUID
+	IdempotencyKey     string
+}
+
+type ProposalsSlaTemplate struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	Body      string
+	Version   int32
+	DeletedAt *time.Time
+}
+
+type ProposalsTermsTemplate struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	Body      string
+	Version   int32
+	DeletedAt *time.Time
+}
+
+type ProposalsViewEvent struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	ShareLinkID uuid.UUID
+	ViewedAt    time.Time
+	IpHash      []byte
 }
 
 type SharedCompany struct {
@@ -1410,7 +2012,7 @@ type SharedFxRate struct {
 	BaseCurrency  string
 	QuoteCurrency string
 	Rate          float64
-	RateDate      pgtype.Date
+	RateDate      time.Time
 	SourceKey     string
 }
 

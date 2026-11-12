@@ -34,6 +34,19 @@ func HTML(tmpl string, data any) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// HTMLFuncs is HTML with extra template functions, such as money formatting. Values stay escaped.
+func HTMLFuncs(tmpl string, data any, funcs template.FuncMap) ([]byte, error) {
+	t, err := template.New("document").Option("missingkey=error").Funcs(funcs).Parse(tmpl)
+	if err != nil {
+		return nil, fmt.Errorf("parse template: %w", err)
+	}
+	var b bytes.Buffer
+	if err := t.Execute(&b, data); err != nil {
+		return nil, fmt.Errorf("render template: %w", err)
+	}
+	return b.Bytes(), nil
+}
+
 // Gotenberg calls a Gotenberg service.
 type Gotenberg struct {
 	URL    string

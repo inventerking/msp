@@ -502,3 +502,35 @@ func nonNil(s []string) []string {
 	}
 	return s
 }
+
+// ContactView is what other modules may show about a contact.
+type ContactView struct {
+	ID                        uuid.UUID
+	CompanyID                 *uuid.UUID
+	FullName, JobTitle, Email *string
+	Phone                     *string
+	Erased                    bool
+}
+
+// ContactsByID returns the tenant's contacts by ID. Erased contacts come back with no details.
+func (s *Service) ContactsByID(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]ContactView, error) {
+	out := map[uuid.UUID]ContactView{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	err := db.TenantTx(ctx, s.pools.App, tenantID, uuid.Nil, func(tx pgx.Tx) error {
+		rows, err := repo.New(tx).ContactsByIDs(ctx, repo.ContactsByIDsParams{TenantID: tenantID, Ids: ids})
+		if err != nil {
+			return err
+		}
+		for _, r := range rows {
+			v := ContactView{ID: r.ID, CompanyID: r.CompanyID, Erased: r.ErasedAt != nil}
+			if !v.Erased {
+				v.FullName, v.JobTitle, v.Email, v.Phone = r.FullName, r.JobTitle, r.Email, r.Phone
+			}
+			out[r.ID] = v
+		}
+		return nil
+	})
+	return out, err
+}

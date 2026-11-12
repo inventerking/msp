@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "gen": "openapi-typescript ../../api/openapi/tenant.yaml -o src/tenant.gen.ts && openapi-typescript ../../api/openapi/admin.yaml -o src/admin.gen.ts && openapi-typescript ../../api/openapi/modules.yaml -o src/modules.gen.ts && openapi-typescript ../../api/openapi/modules/lead-generation.yaml -o src/leadgen.gen.ts && openapi-typescript ../../api/openapi/modules/competitor-intelligence.yaml -o src/competitors.gen.ts",
+    "gen": "openapi-typescript ../../api/openapi/tenant.yaml -o src/tenant.gen.ts && openapi-typescript ../../api/openapi/admin.yaml -o src/admin.gen.ts && openapi-typescript ../../api/openapi/modules.yaml -o src/modules.gen.ts && openapi-typescript ../../api/openapi/modules/lead-generation.yaml -o src/leadgen.gen.ts && openapi-typescript ../../api/openapi/modules/competitor-intelligence.yaml -o src/competitors.gen.ts && openapi-typescript ../../api/openapi/modules/crm.yaml -o src/crm.gen.ts && openapi-typescript ../../api/openapi/modules/proposals.yaml -o src/proposals.gen.ts && openapi-typescript ../../api/openapi/modules/it-assessment.yaml -o src/assessment.gen.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

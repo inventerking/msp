@@ -1,9 +1,10 @@
 import { ShieldCheck } from "lucide-react";
+import { basePath } from "./paths";
 import type { ModuleManifest } from "../types";
 
 export const manifest: ModuleManifest = {
   key: "it_assessment",
-  path: "assessments",
+  path: basePath,
   group: "sell",
   icon: ShieldCheck,
   permission: "assessment.read",

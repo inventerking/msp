@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
-import type { AdminPaths, CompetitorPaths, LeadPaths, ModulePaths, TenantPaths } from "@msp/types";
+import type { AdminPaths, AssessmentPaths, CompetitorPaths, CrmPaths, LeadPaths, ModulePaths, ProposalPaths, TenantPaths } from "@msp/types";
 
 /** A failed API call. Code branches on `code`, which never changes once released. */
 export class ApiError extends Error {
@@ -68,7 +68,13 @@ export function createTenantApi(csrf: CsrfStore, hooks: ApiHooks = {}) {
   leads.use(middleware(csrf, hooks));
   const competitors = createClient<CompetitorPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
   competitors.use(middleware(csrf, hooks));
-  return { client, modules, leads, competitors };
+  const crm = createClient<CrmPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
+  crm.use(middleware(csrf, hooks));
+  const proposals = createClient<ProposalPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
+  proposals.use(middleware(csrf, hooks));
+  const assessments = createClient<AssessmentPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
+  assessments.use(middleware(csrf, hooks));
+  return { client, modules, leads, competitors, crm, proposals, assessments };
 }
 
 export function createAdminApi(csrf: CsrfStore, hooks: ApiHooks = {}) {

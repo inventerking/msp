@@ -183,7 +183,7 @@ func NewRunner(pool *pgxpool.Pool, workerID string) *Runner {
 		pool: pool, workerID: workerID, handlers: map[string]Handler{},
 		// Every queue that has handlers must be listed, or its jobs wait forever. The PDF, email and
 		// assessment queues join when their phases add handlers for them.
-		concurrency: map[string]int{QueueCritical: 4, QueueDefault: 4, QueueAI: 2, QueueAnalytics: 1, QueueProviderIO: 2, QueueResearch: 2},
+		concurrency: map[string]int{QueueCritical: 4, QueueDefault: 4, QueueAI: 2, QueueAnalytics: 1, QueueProviderIO: 2, QueueResearch: 2, QueueAssessment: 2},
 		LockTTL:     time.Minute, Poll: time.Second, TenantLimit: 3, BackoffBase: 2 * time.Second, BackoffMax: 15 * time.Minute,
 	}
 }

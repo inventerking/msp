@@ -184,7 +184,12 @@ func TestLeadSearchToScoredProspects(t *testing.T) {
 	if sc := c.must(200, http.MethodGet, "/api/v1/lead-generation/prospects/"+legal["id"].(string)+"/score", nil); sc["explanation"] == nil || sc["explanation_is_ai"] != true {
 		t.Fatalf("explanation: %v", sc)
 	}
-	c.wantCode(409, "crm_unavailable", http.MethodPost, "/api/v1/lead-generation/prospects/"+legal["id"].(string)+"/convert", nil)
+	// Conversion goes through the CRM registry, which works without the CRM module (D-02), and is idempotent.
+	conv := c.must(200, http.MethodPost, "/api/v1/lead-generation/prospects/"+legal["id"].(string)+"/convert", nil)
+	again = c.must(200, http.MethodPost, "/api/v1/lead-generation/prospects/"+legal["id"].(string)+"/convert", nil)
+	if conv["status"] != "converted" || conv["crm_company_id"] == nil || conv["crm_company_id"] != again["crm_company_id"] {
+		t.Fatalf("conversion: %v %v", conv, again)
+	}
 }
 
 func TestNewScoringModelVersionChangesScores(t *testing.T) {
@@ -409,7 +414,7 @@ func TestLosingTheModuleCancelsOpenSearches(t *testing.T) {
 // Module jobs go to these queues, so a worker that did not poll one would leave them waiting forever.
 func TestWorkerPollsEveryModuleQueue(t *testing.T) {
 	r, _ := graph.Worker("queue-check")
-	for _, q := range []string{jobs.QueueDefault, jobs.QueueProviderIO, jobs.QueueResearch, jobs.QueueAI} {
+	for _, q := range []string{jobs.QueueDefault, jobs.QueueProviderIO, jobs.QueueResearch, jobs.QueueAI, jobs.QueueAssessment} {
 		if !r.Polls(q) {
 			t.Errorf("the worker does not poll %s", q)
 		}

@@ -1,0 +1,880 @@
+openapi: 3.0.3
+info: {title: MSP Growth Engine CRM API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /crm/companies:
+    get:
+      operationId: listCompanies
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/Limit"}, {$ref: "#/components/parameters/Cursor"}, {$ref: "#/components/parameters/Lifecycle"}, {$ref: "#/components/parameters/Q"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CompanyList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createCompany
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CompanyInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Company"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/companies/{id}:
+    get:
+      operationId: getCompany
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Company"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateCompany
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CompanyPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Company"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteCompany
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.delete
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/contacts:
+    get:
+      operationId: listContacts
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/CompanyFilter"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ContactList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createContact
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ContactInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Contact"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/contacts/{id}:
+    get:
+      operationId: getContact
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Contact"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateContact
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ContactPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Contact"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteContact
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.delete
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/pipelines:
+    get:
+      operationId: listPipelines
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PipelineList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createPipeline
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PipelineInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PipelineList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/pipelines/{id}:
+    patch:
+      operationId: updatePipeline
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PipelinePatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PipelineList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/pipelines/{id}/stages:
+    put:
+      operationId: setStages
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/StagesInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PipelineList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/pipelines/{id}/board:
+    get:
+      operationId: getBoard
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Board"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/deals:
+    get:
+      operationId: listDeals
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/StatusOfDeal"}, {$ref: "#/components/parameters/PipelineFilter"}, {$ref: "#/components/parameters/CompanyFilter"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/DealList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createDeal
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/DealInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Deal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/deals/{id}:
+    get:
+      operationId: getDeal
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/DealDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateDeal
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/DealPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Deal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteDeal
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.delete
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/deals/{id}/move:
+    post:
+      operationId: moveDeal
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MoveDeal"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Deal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/deals/{id}/win:
+    post:
+      operationId: winDeal
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.close_deal
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/WinDeal"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Deal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/deals/{id}/lose:
+    post:
+      operationId: loseDeal
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.close_deal
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/LoseDeal"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Deal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/deals/{id}/reopen:
+    post:
+      operationId: reopenDeal
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Deal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/tasks:
+    get:
+      operationId: listTasks
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/StatusOfTask"}, {$ref: "#/components/parameters/Mine"}, {$ref: "#/components/parameters/DealFilter"}, {$ref: "#/components/parameters/CompanyFilter"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TaskList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createTask
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TaskInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Task"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/tasks/{id}:
+    patch:
+      operationId: updateTask
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TaskPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Task"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteTask
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/tasks/{id}/complete:
+    post:
+      operationId: completeTask
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Task"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/notes:
+    get:
+      operationId: listNotes
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/SubjectType"}, {$ref: "#/components/parameters/SubjectId"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/NoteList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createNote
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/NoteInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/NoteRef"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/notes/{id}:
+    patch:
+      operationId: updateNote
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/NotePatch"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteNote
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/attachments:
+    get:
+      operationId: listAttachments
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/SubjectType"}, {$ref: "#/components/parameters/SubjectId"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AttachmentList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createAttachment
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AttachmentInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AttachmentRef"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/attachments/{id}:
+    delete:
+      operationId: deleteAttachment
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/meetings:
+    get:
+      operationId: listMeetings
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/DealFilter"}, {$ref: "#/components/parameters/CompanyFilter"}, {$ref: "#/components/parameters/From"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/MeetingList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createMeeting
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MeetingInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Meeting"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/meetings/{id}:
+    patch:
+      operationId: updateMeeting
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MeetingPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Meeting"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /crm/activities:
+    get:
+      operationId: listActivities
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.read
+      parameters: [{$ref: "#/components/parameters/DealFilter"}, {$ref: "#/components/parameters/CompanyFilter"}, {$ref: "#/components/parameters/ContactFilter"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ActivityList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: logActivity
+      x-access: tenant
+      x-module: crm
+      x-permission: crm.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ActivityInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+    Cursor: {name: cursor, in: query, schema: {type: string, maxLength: 64}}
+    Lifecycle: {name: lifecycle, in: query, schema: {$ref: "#/components/schemas/Lifecycle"}}
+    Q: {name: q, in: query, schema: {type: string, minLength: 1, maxLength: 120}}
+    CompanyFilter: {name: crm_company_id, in: query, schema: {type: string, format: uuid}}
+    DealFilter: {name: deal_id, in: query, schema: {type: string, format: uuid}}
+    ContactFilter: {name: contact_id, in: query, schema: {type: string, format: uuid}}
+    PipelineFilter: {name: pipeline_id, in: query, schema: {type: string, format: uuid}}
+    StatusOfDeal: {name: status, in: query, schema: {type: string, enum: [open, won, lost]}}
+    StatusOfTask: {name: status, in: query, schema: {type: string, enum: [open, done, cancelled]}}
+    Mine: {name: mine, in: query, schema: {type: boolean}}
+    From: {name: from, in: query, schema: {type: string, format: date-time}}
+    SubjectType: {name: subject_type, in: query, required: true, schema: {type: string, enum: [company, contact, deal]}}
+    SubjectId: {name: subject_id, in: query, required: true, schema: {type: string, format: uuid}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    Lifecycle: {type: string, enum: [prospect, customer, former_customer, partner, other]}
+    Money: {type: integer, format: int64, minimum: 0, maximum: 100000000000000}
+    Company:
+      type: object
+      required: [id, name, lifecycle, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        company_id: {type: string, format: uuid}
+        name: {type: string}
+        domain: {type: string}
+        lifecycle: {$ref: "#/components/schemas/Lifecycle"}
+        owner_user_id: {type: string, format: uuid}
+        source_module: {type: string}
+        open_deals: {type: integer}
+        updated_at: {type: string, format: date-time}
+    CompanyList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Company"}}
+        next_cursor: {type: string}
+    CompanyInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        domain: {type: string, maxLength: 253}
+        lifecycle: {$ref: "#/components/schemas/Lifecycle"}
+        owner_user_id: {type: string, format: uuid}
+    CompanyPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        lifecycle: {$ref: "#/components/schemas/Lifecycle"}
+        owner_user_id: {type: string, format: uuid, nullable: true}
+    Contact:
+      type: object
+      required: [id, contact_id, is_primary, erased]
+      properties:
+        id: {type: string, format: uuid}
+        contact_id: {type: string, format: uuid}
+        crm_company_id: {type: string, format: uuid}
+        is_primary: {type: boolean}
+        full_name: {type: string}
+        job_title: {type: string}
+        email: {type: string}
+        phone: {type: string}
+        erased: {type: boolean}
+    ContactList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Contact"}}
+    ContactInput:
+      type: object
+      additionalProperties: false
+      properties:
+        full_name: {type: string, maxLength: 200}
+        email: {type: string, format: email, maxLength: 254}
+        job_title: {type: string, maxLength: 200}
+        crm_company_id: {type: string, format: uuid}
+        is_primary: {type: boolean}
+    ContactPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        crm_company_id: {type: string, format: uuid, nullable: true}
+        is_primary: {type: boolean}
+    Stage:
+      type: object
+      required: [id, key, name, position, kind, default_probability]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        name: {type: string}
+        position: {type: integer}
+        kind: {type: string, enum: [open, won, lost]}
+        default_probability: {type: integer}
+    Pipeline:
+      type: object
+      required: [id, name, is_default, status, stages]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        is_default: {type: boolean}
+        status: {type: string, enum: [active, archived]}
+        stages: {type: array, items: {$ref: "#/components/schemas/Stage"}}
+    PipelineList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Pipeline"}}
+    PipelineInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+    PipelinePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        status: {type: string, enum: [active, archived]}
+    StagesInput:
+      type: object
+      additionalProperties: false
+      required: [stages]
+      properties:
+        stages:
+          type: array
+          minItems: 3
+          maxItems: 30
+          items:
+            type: object
+            additionalProperties: false
+            required: [key, name, kind, default_probability]
+            properties:
+              id: {type: string, format: uuid}
+              key: {type: string, pattern: "^[a-z][a-z0-9_]{0,39}$"}
+              name: {type: string, minLength: 1, maxLength: 80}
+              kind: {type: string, enum: [open, won, lost]}
+              default_probability: {type: integer, minimum: 0, maximum: 100}
+    Deal:
+      type: object
+      required: [id, title, pipeline_id, stage_id, crm_company_id, company_name, stage_name, currency, probability, status, row_version, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        pipeline_id: {type: string, format: uuid}
+        stage_id: {type: string, format: uuid}
+        stage_name: {type: string}
+        crm_company_id: {type: string, format: uuid}
+        company_name: {type: string}
+        primary_contact_id: {type: string, format: uuid}
+        owner_user_id: {type: string, format: uuid}
+        currency: {type: string}
+        contract_value_minor: {type: integer, format: int64}
+        expected_mrr_minor: {type: integer, format: int64}
+        probability: {type: integer}
+        expected_close_date: {type: string, format: date}
+        status: {type: string, enum: [open, won, lost]}
+        closed_at: {type: string, format: date-time}
+        loss_reason: {type: string}
+        source_module: {type: string}
+        row_version: {type: integer}
+        updated_at: {type: string, format: date-time}
+    DealDetail:
+      allOf:
+        - {$ref: "#/components/schemas/Deal"}
+        - type: object
+          required: [history]
+          properties:
+            history:
+              type: array
+              items:
+                type: object
+                required: [to_stage_name, created_at]
+                properties:
+                  to_stage_name: {type: string}
+                  reason: {type: string}
+                  changed_by: {type: string, format: uuid}
+                  created_at: {type: string, format: date-time}
+    DealList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Deal"}}
+    DealInput:
+      type: object
+      additionalProperties: false
+      required: [crm_company_id, title, currency]
+      properties:
+        crm_company_id: {type: string, format: uuid}
+        primary_contact_id: {type: string, format: uuid}
+        title: {type: string, minLength: 1, maxLength: 200}
+        pipeline_id: {type: string, format: uuid}
+        stage_id: {type: string, format: uuid}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        contract_value_minor: {$ref: "#/components/schemas/Money"}
+        expected_mrr_minor: {$ref: "#/components/schemas/Money"}
+        probability: {type: integer, minimum: 0, maximum: 100}
+        expected_close_date: {type: string, format: date}
+        owner_user_id: {type: string, format: uuid}
+    DealPatch:
+      type: object
+      additionalProperties: false
+      required: [row_version]
+      properties:
+        row_version: {type: integer}
+        title: {type: string, minLength: 1, maxLength: 200}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        contract_value_minor: {type: integer, format: int64, minimum: 0, nullable: true}
+        expected_mrr_minor: {type: integer, format: int64, minimum: 0, nullable: true}
+        probability: {type: integer, minimum: 0, maximum: 100}
+        expected_close_date: {type: string, format: date, nullable: true}
+        owner_user_id: {type: string, format: uuid, nullable: true}
+        primary_contact_id: {type: string, format: uuid, nullable: true}
+    MoveDeal:
+      type: object
+      additionalProperties: false
+      required: [stage_id, row_version]
+      properties:
+        stage_id: {type: string, format: uuid}
+        row_version: {type: integer}
+        reason: {type: string, maxLength: 500}
+    WinDeal:
+      type: object
+      additionalProperties: false
+      required: [row_version]
+      properties:
+        row_version: {type: integer}
+    LoseDeal:
+      type: object
+      additionalProperties: false
+      required: [row_version, loss_reason]
+      properties:
+        row_version: {type: integer}
+        loss_reason: {type: string, minLength: 2, maxLength: 500}
+    BoardDeal:
+      type: object
+      required: [id, title, stage_id, crm_company_id, company_name, currency, probability, status, row_version]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        stage_id: {type: string, format: uuid}
+        crm_company_id: {type: string, format: uuid}
+        company_name: {type: string}
+        owner_user_id: {type: string, format: uuid}
+        currency: {type: string}
+        contract_value_minor: {type: integer, format: int64}
+        expected_mrr_minor: {type: integer, format: int64}
+        probability: {type: integer}
+        expected_close_date: {type: string, format: date}
+        status: {type: string}
+        row_version: {type: integer}
+    Board:
+      type: object
+      required: [stages]
+      properties:
+        stages:
+          type: array
+          items:
+            type: object
+            required: [stage, deals, totals]
+            properties:
+              stage: {$ref: "#/components/schemas/Stage"}
+              deals: {type: array, items: {$ref: "#/components/schemas/BoardDeal"}}
+              totals:
+                type: array
+                description: Totals per currency. Amounts in different currencies are never added together.
+                items:
+                  type: object
+                  required: [currency, count, mrr_minor, contract_value_minor]
+                  properties:
+                    currency: {type: string}
+                    count: {type: integer}
+                    mrr_minor: {type: integer, format: int64}
+                    contract_value_minor: {type: integer, format: int64}
+    Task:
+      type: object
+      required: [id, title, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        description: {type: string}
+        assignee_user_id: {type: string, format: uuid}
+        crm_company_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        due_at: {type: string, format: date-time}
+        status: {type: string, enum: [open, done, cancelled]}
+        completed_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    TaskList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Task"}}
+    TaskInput:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 300}
+        description: {type: string, maxLength: 4000}
+        assignee_user_id: {type: string, format: uuid}
+        crm_company_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        due_at: {type: string, format: date-time}
+        remind_at: {type: string, format: date-time}
+    TaskPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        title: {type: string, minLength: 1, maxLength: 300}
+        description: {type: string, maxLength: 4000}
+        status: {type: string, enum: [open, done, cancelled]}
+        assignee_user_id: {type: string, format: uuid, nullable: true}
+        due_at: {type: string, format: date-time, nullable: true}
+    Note:
+      type: object
+      required: [id, body, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        body: {type: string}
+        created_by: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    NoteList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Note"}}
+    NoteInput:
+      type: object
+      additionalProperties: false
+      required: [subject_type, subject_id, body]
+      properties:
+        subject_type: {type: string, enum: [company, contact, deal]}
+        subject_id: {type: string, format: uuid}
+        body: {type: string, minLength: 1, maxLength: 20000}
+    NotePatch:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body: {type: string, minLength: 1, maxLength: 20000}
+    NoteRef:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string, format: uuid}
+    Attachment:
+      type: object
+      required: [id, file_id, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        file_id: {type: string, format: uuid}
+        created_by: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+    AttachmentList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Attachment"}}
+    AttachmentInput:
+      type: object
+      additionalProperties: false
+      required: [subject_type, subject_id, file_id]
+      properties:
+        subject_type: {type: string, enum: [company, contact, deal]}
+        subject_id: {type: string, format: uuid}
+        file_id: {type: string, format: uuid}
+    AttachmentRef:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string, format: uuid}
+    Meeting:
+      type: object
+      required: [id, title, starts_at, ends_at, status, attendees]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        crm_company_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        starts_at: {type: string, format: date-time}
+        ends_at: {type: string, format: date-time}
+        status: {type: string, enum: [scheduled, completed, cancelled, no_show]}
+        outcome: {type: string}
+        source_module: {type: string}
+        attendees:
+          type: array
+          items:
+            type: object
+            properties:
+              contact_id: {type: string, format: uuid}
+              user_id: {type: string, format: uuid}
+    MeetingList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Meeting"}}
+    MeetingInput:
+      type: object
+      additionalProperties: false
+      required: [title, starts_at, ends_at]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        starts_at: {type: string, format: date-time}
+        ends_at: {type: string, format: date-time}
+        crm_company_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        contact_ids: {type: array, maxItems: 50, items: {type: string, format: uuid}}
+    MeetingPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        starts_at: {type: string, format: date-time}
+        ends_at: {type: string, format: date-time}
+        status: {type: string, enum: [scheduled, completed, cancelled, no_show]}
+        outcome: {type: string, maxLength: 4000}
+    Activity:
+      type: object
+      required: [id, activity_type, summary, occurred_at]
+      properties:
+        id: {type: string, format: uuid}
+        activity_type: {type: string}
+        crm_company_id: {type: string, format: uuid}
+        contact_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        actor_user_id: {type: string, format: uuid}
+        summary: {type: string}
+        source_module: {type: string}
+        occurred_at: {type: string, format: date-time}
+    ActivityList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Activity"}}
+    ActivityInput:
+      type: object
+      additionalProperties: false
+      required: [activity_type, subject_type, subject_id, summary]
+      properties:
+        activity_type: {type: string, enum: [call, email_sent, meeting, note]}
+        subject_type: {type: string, enum: [company, contact, deal]}
+        subject_id: {type: string, format: uuid}
+        summary: {type: string, minLength: 1, maxLength: 1000}
+        occurred_at: {type: string, format: date-time}

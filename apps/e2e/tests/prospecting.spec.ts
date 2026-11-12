@@ -77,7 +77,8 @@ test("a workspace finds, scores and saves prospects, and researches a competitor
   await customer.getByRole("button", { name: "Explain" }).click();
   await expect(customer.getByText("AI generated")).toBeVisible({ timeout: 60_000 });
   await customer.getByRole("button", { name: "Convert to CRM" }).click();
-  await expect(customer.getByText("Converting to CRM becomes available when the CRM module is built.")).toBeVisible();
+  // Conversion uses the customer registry, which works even without the CRM module (D-02).
+  await expect(customer.getByText("Converted", { exact: true }).first()).toBeVisible();
 
   // A competitor is researched: facts copied from its page are labelled Observed, with their source.
   await customer.getByRole("navigation").getByRole("link", { name: "Competitor Intelligence" }).click();

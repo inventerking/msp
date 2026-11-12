@@ -12,4 +12,6 @@ export interface ModuleManifest {
   /** Permission required to open the module at all. */
   permission: string;
   load: () => Promise<{ Component: ComponentType }>;
+  /** Pages anyone may open without signing in, such as a proposal share link. */
+  publicRoutes?: { path: string; load: () => Promise<{ Component: ComponentType }> }[];
 }

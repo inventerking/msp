@@ -1,0 +1,648 @@
+openapi: 3.0.3
+info: {title: MSP Growth Engine Proposals API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /proposals/catalog:
+    get:
+      operationId: listCatalog
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CatalogList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createCatalogItem
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CatalogInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CatalogItem"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/catalog/{id}:
+    patch:
+      operationId: updateCatalogItem
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CatalogPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CatalogItem"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/text-templates:
+    get:
+      operationId: listTextTemplates
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TextTemplateList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createTextTemplate
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TextTemplateInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/text-templates/{kind}/{id}:
+    patch:
+      operationId: updateTextTemplate
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.configure
+      parameters: [{$ref: "#/components/parameters/Kind"}, {$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TextTemplatePatch"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/templates:
+    get:
+      operationId: listTemplates
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TemplateList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createTemplate
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TemplateInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/templates/{id}:
+    patch:
+      operationId: updateTemplate
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TemplatePatch"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals:
+    get:
+      operationId: listProposals
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      parameters: [{$ref: "#/components/parameters/StatusFilter"}, {$ref: "#/components/parameters/CompanyFilter"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProposalList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createProposal
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CreateProposal"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Proposal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}:
+    get:
+      operationId: getProposal
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Proposal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteProposal
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/activity:
+    get:
+      operationId: getProposalActivity
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ProposalActivity"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions:
+    post:
+      operationId: createVersion
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Version"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions/{version}:
+    get:
+      operationId: getVersion
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Version"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: editVersion
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.write
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/EditVersion"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Version"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions/{version}/calculate:
+    post:
+      operationId: calculateVersion
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.read
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/EditVersion"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Totals"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions/{version}/ai-draft:
+    post:
+      operationId: aiDraft
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.write
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AIDraftInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AIDraft"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions/{version}/submit:
+    post:
+      operationId: submitVersion
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.write
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Version"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions/{version}/approve:
+    post:
+      operationId: approveVersion
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.approve
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Decision"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Version"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions/{version}/reject:
+    post:
+      operationId: rejectVersion
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.approve
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Decision"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Version"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions/{version}/issue:
+    post:
+      operationId: issueVersion
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.send
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}, {$ref: "#/components/parameters/IdempotencyKey"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/IssueInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Version"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/proposals/{id}/versions/{version}/signature-requests:
+    post:
+      operationId: requestSignature
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.send
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/VersionNumber"}, {$ref: "#/components/parameters/IdempotencyKey"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SignatureInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SignatureRequest"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /proposals/share-links/{id}/revoke:
+    post:
+      operationId: revokeShareLink
+      x-access: tenant
+      x-module: proposals
+      x-permission: proposal.send
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/proposals/{token}:
+    get:
+      operationId: viewPublicProposal
+      x-access: public
+      security: []
+      parameters: [{$ref: "#/components/parameters/Token"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PublicProposal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/proposals/{token}/pdf:
+    get:
+      operationId: downloadPublicProposal
+      x-access: public
+      security: []
+      parameters: [{$ref: "#/components/parameters/Token"}]
+      responses:
+        "200": {description: PDF, content: {application/pdf: {schema: {type: string, format: binary}}}}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    VersionNumber: {name: version, in: path, required: true, schema: {type: integer, minimum: 1, maximum: 1000}}
+    Kind: {name: kind, in: path, required: true, schema: {type: string, enum: [sla, terms]}}
+    Token: {name: token, in: path, required: true, schema: {type: string, minLength: 20, maxLength: 100}}
+    IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 128}}
+    StatusFilter: {name: status, in: query, schema: {$ref: "#/components/schemas/ProposalStatus"}}
+    CompanyFilter: {name: crm_company_id, in: query, schema: {type: string, format: uuid}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    Ref:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string, format: uuid}
+    Money: {type: integer, format: int64, minimum: 0, maximum: 100000000000}
+    PricingModel: {type: string, enum: [per_user, per_device, fixed]}
+    CatalogItem:
+      type: object
+      required: [id, name, pricing_model, currency, unit_price_minor, setup_fee_minor, status]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        description: {type: string}
+        pricing_model: {$ref: "#/components/schemas/PricingModel"}
+        currency: {type: string}
+        unit_price_minor: {type: integer, format: int64}
+        setup_fee_minor: {type: integer, format: int64}
+        status: {type: string, enum: [active, retired]}
+    CatalogList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/CatalogItem"}}
+    CatalogInput:
+      type: object
+      additionalProperties: false
+      required: [name, pricing_model, currency, unit_price_minor]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        description: {type: string, maxLength: 4000}
+        pricing_model: {$ref: "#/components/schemas/PricingModel"}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        unit_price_minor: {$ref: "#/components/schemas/Money"}
+        setup_fee_minor: {$ref: "#/components/schemas/Money"}
+    CatalogPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        description: {type: string, maxLength: 4000}
+        unit_price_minor: {$ref: "#/components/schemas/Money"}
+        setup_fee_minor: {$ref: "#/components/schemas/Money"}
+        status: {type: string, enum: [active, retired]}
+    TextTemplate:
+      type: object
+      required: [id, kind, name, body, version]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string, enum: [sla, terms]}
+        name: {type: string}
+        body: {type: string}
+        version: {type: integer}
+    TextTemplateList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/TextTemplate"}}
+    TextTemplateInput:
+      type: object
+      additionalProperties: false
+      required: [kind, name, body]
+      properties:
+        kind: {type: string, enum: [sla, terms]}
+        name: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, minLength: 1, maxLength: 50000}
+    TextTemplatePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, minLength: 1, maxLength: 50000}
+    Section:
+      type: object
+      additionalProperties: false
+      required: [heading, body]
+      properties:
+        heading: {type: string, maxLength: 200}
+        body: {type: string, maxLength: 20000}
+    Template:
+      type: object
+      required: [id, name, sections]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        sections: {type: array, items: {$ref: "#/components/schemas/Section"}}
+        default_sla_id: {type: string, format: uuid}
+        default_terms_id: {type: string, format: uuid}
+    TemplateList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Template"}}
+    TemplateInput:
+      type: object
+      additionalProperties: false
+      required: [name, sections]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        sections: {type: array, maxItems: 30, items: {$ref: "#/components/schemas/Section"}}
+        default_sla_id: {type: string, format: uuid}
+        default_terms_id: {type: string, format: uuid}
+    TemplatePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        sections: {type: array, maxItems: 30, items: {$ref: "#/components/schemas/Section"}}
+        default_sla_id: {type: string, format: uuid, nullable: true}
+        default_terms_id: {type: string, format: uuid, nullable: true}
+    ProposalStatus: {type: string, enum: [draft, in_review, issued, viewed, signed, declined, expired, withdrawn]}
+    VersionSummary:
+      type: object
+      required: [version, status, currency, mrr_total_minor, setup_total_minor, tcv_minor, term_months, created_at]
+      properties:
+        version: {type: integer}
+        status: {type: string}
+        currency: {type: string}
+        mrr_total_minor: {type: integer, format: int64}
+        setup_total_minor: {type: integer, format: int64}
+        tcv_minor: {type: integer, format: int64}
+        term_months: {type: integer}
+        valid_until: {type: string, format: date}
+        issued_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    Proposal:
+      type: object
+      required: [id, number, title, crm_company_id, status, versions, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        number: {type: string}
+        title: {type: string}
+        crm_company_id: {type: string, format: uuid}
+        customer: {type: string}
+        deal_id: {type: string, format: uuid}
+        status: {$ref: "#/components/schemas/ProposalStatus"}
+        current_version: {type: integer}
+        versions: {type: array, items: {$ref: "#/components/schemas/VersionSummary"}}
+        updated_at: {type: string, format: date-time}
+    ProposalListItem:
+      type: object
+      required: [id, number, title, crm_company_id, status, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        number: {type: string}
+        title: {type: string}
+        crm_company_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        status: {$ref: "#/components/schemas/ProposalStatus"}
+        version: {type: integer}
+        currency: {type: string}
+        mrr_total_minor: {type: integer, format: int64}
+        tcv_minor: {type: integer, format: int64}
+        updated_at: {type: string, format: date-time}
+    ProposalList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/ProposalListItem"}}
+    CreateProposal:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        crm_company_id: {type: string, format: uuid}
+        new_company:
+          type: object
+          additionalProperties: false
+          required: [name]
+          properties:
+            name: {type: string, minLength: 1, maxLength: 200}
+            domain: {type: string, maxLength: 253}
+        deal_id: {type: string, format: uuid}
+        template_id: {type: string, format: uuid}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+    LineInput:
+      type: object
+      additionalProperties: false
+      required: [name, pricing_model, quantity, unit_price_minor]
+      properties:
+        catalog_item_id: {type: string, format: uuid}
+        name: {type: string, minLength: 1, maxLength: 200}
+        pricing_model: {$ref: "#/components/schemas/PricingModel"}
+        quantity: {type: integer, minimum: 1, maximum: 1000000}
+        unit_price_minor: {$ref: "#/components/schemas/Money"}
+        setup_fee_minor: {$ref: "#/components/schemas/Money"}
+        discount_bps: {type: integer, minimum: 0, maximum: 10000}
+    EditVersion:
+      type: object
+      additionalProperties: false
+      required: [sections, term_months, currency, lines]
+      properties:
+        sections: {type: array, maxItems: 30, items: {$ref: "#/components/schemas/Section"}}
+        sla_id: {type: string, format: uuid}
+        terms_id: {type: string, format: uuid}
+        term_months: {type: integer, minimum: 1, maximum: 120}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        valid_until: {type: string, format: date}
+        lines: {type: array, maxItems: 200, items: {$ref: "#/components/schemas/LineInput"}}
+    LineTotal:
+      type: object
+      required: [name, pricing_model, quantity, unit_price_minor, setup_fee_minor, discount_bps, recurring_total_minor]
+      properties:
+        catalog_item_id: {type: string, format: uuid}
+        name: {type: string}
+        pricing_model: {type: string}
+        quantity: {type: integer}
+        unit_price_minor: {type: integer, format: int64}
+        setup_fee_minor: {type: integer, format: int64}
+        discount_bps: {type: integer}
+        recurring_total_minor: {type: integer, format: int64}
+    Totals:
+      type: object
+      required: [currency, lines, setup_total_minor, mrr_total_minor, term_months, tcv_minor, tax_note]
+      properties:
+        currency: {type: string}
+        lines: {type: array, items: {$ref: "#/components/schemas/LineTotal"}}
+        setup_total_minor: {type: integer, format: int64}
+        mrr_total_minor: {type: integer, format: int64}
+        term_months: {type: integer}
+        tcv_minor: {type: integer, format: int64}
+        tax_note: {type: string}
+    Version:
+      type: object
+      required: [id, version, status, sections, currency, term_months, lines, setup_total_minor, mrr_total_minor, tcv_minor, content_hash, needs_approval, approved, ai_assisted, has_pdf, tax_note]
+      properties:
+        id: {type: string, format: uuid}
+        version: {type: integer}
+        status: {type: string, enum: [draft, pending_approval, approved, issued, superseded, expired]}
+        sections: {type: array, items: {$ref: "#/components/schemas/Section"}}
+        sla_id: {type: string, format: uuid}
+        terms_id: {type: string, format: uuid}
+        currency: {type: string}
+        term_months: {type: integer}
+        valid_until: {type: string, format: date}
+        lines: {type: array, items: {$ref: "#/components/schemas/LineTotal"}}
+        setup_total_minor: {type: integer, format: int64}
+        mrr_total_minor: {type: integer, format: int64}
+        tcv_minor: {type: integer, format: int64}
+        tax_note: {type: string}
+        content_hash: {type: string, description: "Hex SHA-256 of what would be issued. Approvals and issue requests must send it back."}
+        needs_approval: {type: boolean}
+        approved: {type: boolean}
+        ai_assisted: {type: boolean}
+        has_pdf: {type: boolean}
+        issued_at: {type: string, format: date-time}
+    AIDraftInput:
+      type: object
+      additionalProperties: false
+      required: [section]
+      properties:
+        section: {type: string, minLength: 1, maxLength: 200}
+        notes: {type: string, maxLength: 4000}
+    AIDraft:
+      type: object
+      required: [heading, body, ai_generated]
+      properties:
+        heading: {type: string}
+        body: {type: string}
+        ai_generated: {type: boolean}
+    Decision:
+      type: object
+      additionalProperties: false
+      required: [content_hash]
+      properties:
+        content_hash: {type: string, pattern: "^[0-9a-f]{64}$"}
+        reason: {type: string, maxLength: 1000}
+    Recipient:
+      type: object
+      additionalProperties: false
+      required: [name, email]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        email: {type: string, format: email, maxLength: 254}
+    IssueInput:
+      type: object
+      additionalProperties: false
+      required: [recipients, content_hash]
+      properties:
+        recipients: {type: array, minItems: 1, maxItems: 10, items: {$ref: "#/components/schemas/Recipient"}}
+        message: {type: string, maxLength: 4000}
+        content_hash: {type: string, pattern: "^[0-9a-f]{64}$"}
+    SignatureInput:
+      type: object
+      additionalProperties: false
+      required: [recipients]
+      properties:
+        recipients: {type: array, minItems: 1, maxItems: 10, items: {$ref: "#/components/schemas/Recipient"}}
+    SignatureRequest:
+      type: object
+      required: [id, status, provider_key]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string}
+        provider_key: {type: string}
+        envelope_id: {type: string}
+    ProposalActivity:
+      type: object
+      required: [views, signatures, links]
+      properties:
+        views:
+          type: array
+          items:
+            type: object
+            required: [viewed_at, recipient_email]
+            properties:
+              viewed_at: {type: string, format: date-time}
+              recipient_email: {type: string}
+        signatures:
+          type: array
+          items:
+            type: object
+            required: [event_type, occurred_at]
+            properties:
+              event_type: {type: string}
+              occurred_at: {type: string, format: date-time}
+        links:
+          type: array
+          items:
+            type: object
+            required: [id, recipient_email, expires_at, views]
+            properties:
+              id: {type: string, format: uuid}
+              recipient_email: {type: string}
+              expires_at: {type: string, format: date-time}
+              revoked_at: {type: string, format: date-time}
+              views: {type: integer}
+    PublicProposal:
+      type: object
+      required: [title, customer, version, sections, totals, superseded, expired, has_pdf]
+      properties:
+        title: {type: string}
+        customer: {type: string}
+        version: {type: integer}
+        valid_until: {type: string}
+        sections: {type: array, items: {$ref: "#/components/schemas/Section"}}
+        totals: {$ref: "#/components/schemas/Totals"}
+        sla: {type: string}
+        terms: {type: string}
+        superseded: {type: boolean}
+        expired: {type: boolean}
+        has_pdf: {type: boolean}

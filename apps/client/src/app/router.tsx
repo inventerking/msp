@@ -21,6 +21,7 @@ export const router = createBrowserRouter([
   { path: "/reset-password", Component: ResetPassword },
   { path: "/mfa", Component: Mfa },
   { path: "/invite/:token", Component: AcceptInvite },
+  ...modules.flatMap((m) => (m.publicRoutes ?? []).map((r) => ({ path: r.path, lazy: r.load }))),
   {
     Component: RequireSession,
     children: [

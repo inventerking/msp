@@ -1,0 +1,3 @@
+package: httpapi
+output: internal/modules/crm/httpapi/gen.go
+generate: {chi-server: true, models: true, embedded-spec: true}

@@ -10,6 +10,8 @@ overrides:
       - {db_type: timestamptz, nullable: true, go_type: {import: time, type: Time, pointer: true}}
       - {db_type: pg_catalog.numeric, go_type: float64}
       - {db_type: pg_catalog.numeric, nullable: true, go_type: {type: float64, pointer: true}}
+      - {db_type: date, go_type: time.Time}
+      - {db_type: date, nullable: true, go_type: {import: time, type: Time, pointer: true}}
 sql:
   - engine: postgresql
     schema: db/migrations
@@ -51,3 +53,19 @@ sql:
     schema: db/migrations
     queries: internal/modules/competitorintel/queries.sql
     gen: {go: {package: repo, out: internal/modules/competitorintel/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/modules/crm/queries.sql
+    gen: {go: {package: repo, out: internal/modules/crm/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/modules/proposals/queries.sql
+    gen: {go: {package: repo, out: internal/modules/proposals/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/modules/itassessment/queries.sql
+    gen: {go: {package: repo, out: internal/modules/itassessment/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}
+  - engine: postgresql
+    schema: db/migrations
+    queries: internal/modules/customerexpansion/queries.sql
+    gen: {go: {package: repo, out: internal/modules/customerexpansion/repo, sql_package: pgx/v5, emit_pointers_for_null_types: true}}

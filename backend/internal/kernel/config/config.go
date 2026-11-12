@@ -34,6 +34,9 @@ type Config struct {
 	ClamAVAddr                                     string
 	// ResearchFetcher is "fake" (canned pages) or "live" (real public websites, through the Egress Guard).
 	ResearchFetcher string
+	// AssessmentProbe is "fake" (invented results) or "live" (real DNS and the authorized domain's
+	// own web host, through the Egress Guard).
+	AssessmentProbe string
 	// FileScanner is clamav, or allow-all, which is refused outside local development.
 	FileScanner string
 	// TrustForwarded uses X-Forwarded-For. Enable only behind a trusted proxy such as Traefik.
@@ -68,6 +71,7 @@ func Load() (Config, error) {
 		GotenbergURL:      os.Getenv("GOTENBERG_URL"),
 		ClamAVAddr:        os.Getenv("CLAMAV_ADDR"),
 		ResearchFetcher:   get("RESEARCH_FETCHER", "fake"),
+		AssessmentProbe:   get("ASSESSMENT_PROBE", "fake"),
 		FileScanner:       get("FILE_SCANNER", "clamav"),
 	}
 	for _, o := range strings.Split(get("ALLOWED_ORIGINS", "http://localhost:5180,http://localhost:5181"), ",") {

@@ -1,0 +1,329 @@
+openapi: 3.0.3
+info: {title: MSP Growth Engine IT Assessment API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /it-assessments/templates:
+    get:
+      operationId: listAssessmentTemplates
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TemplateList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createAssessmentTemplate
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TemplateInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/domain-verifications:
+    get:
+      operationId: listVerifications
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/VerificationList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: startVerification
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.run
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/VerificationInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/NewVerification"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/domain-verifications/{id}/check:
+    post:
+      operationId: checkVerification
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.run
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Verification"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/authorizations:
+    get:
+      operationId: listAuthorizations
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AuthorizationList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createAuthorization
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.run
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AuthorizationInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Authorization"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/authorizations/{id}/revoke:
+    post:
+      operationId: revokeAuthorization
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.run
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/assessments:
+    get:
+      operationId: listAssessments
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AssessmentList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: startAssessment
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.run
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AssessmentInput"}}}}
+      responses:
+        "202": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Assessment"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/assessments/{id}:
+    get:
+      operationId: getAssessment
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AssessmentDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/assessments/{id}/cancel:
+    post:
+      operationId: cancelAssessment
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.run
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Assessment"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/assessments/{id}/reports:
+    post:
+      operationId: createAssessmentReport
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "202": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Report"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/reports/{id}:
+    get:
+      operationId: getAssessmentReport
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Report"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /it-assessments/reports/{id}/pdf:
+    get:
+      operationId: downloadAssessmentReport
+      x-access: tenant
+      x-module: it_assessment
+      x-permission: assessment.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: PDF, content: {application/pdf: {schema: {type: string, format: binary}}}}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    Ref:
+      type: object
+      required: [id]
+      properties:
+        id: {type: string, format: uuid}
+    Tier: {type: string, enum: [passive, exposure]}
+    CheckKey: {type: string, enum: [email.spf, email.dmarc, email.dkim_common_selectors, email.mx, web.tls, web.security_headers]}
+    Template:
+      type: object
+      required: [id, name, tier, check_keys]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        tier: {$ref: "#/components/schemas/Tier"}
+        check_keys: {type: array, items: {type: string}}
+    TemplateList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Template"}}
+    TemplateInput:
+      type: object
+      additionalProperties: false
+      required: [name, tier, check_keys]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        tier: {$ref: "#/components/schemas/Tier"}
+        check_keys: {type: array, minItems: 1, maxItems: 10, uniqueItems: true, items: {$ref: "#/components/schemas/CheckKey"}}
+    VerificationInput:
+      type: object
+      additionalProperties: false
+      required: [domain, method]
+      properties:
+        domain: {type: string, minLength: 3, maxLength: 253}
+        method: {type: string, enum: [dns_txt, http_file]}
+    Verification:
+      type: object
+      required: [id, domain, method, status, expires_at]
+      properties:
+        id: {type: string, format: uuid}
+        domain: {type: string}
+        method: {type: string}
+        status: {type: string, enum: [pending, verified, failed, expired]}
+        verified_at: {type: string, format: date-time}
+        expires_at: {type: string, format: date-time}
+    NewVerification:
+      allOf:
+        - {$ref: "#/components/schemas/Verification"}
+        - type: object
+          required: [instructions]
+          properties:
+            instructions: {type: string, description: "What to publish. The token in it is shown only once."}
+    VerificationList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Verification"}}
+    AuthorizationInput:
+      type: object
+      additionalProperties: false
+      required: [domain, tier, authorizer_name, authorizer_email, attested]
+      properties:
+        domain: {type: string, minLength: 3, maxLength: 253}
+        tier: {$ref: "#/components/schemas/Tier"}
+        authorizer_name: {type: string, minLength: 2, maxLength: 200}
+        authorizer_email: {type: string, format: email, maxLength: 254}
+        authorizer_role: {type: string, maxLength: 200}
+        domain_verification_id: {type: string, format: uuid}
+        attested: {type: boolean, description: "The authorizer confirms they have authority to permit these checks on this domain."}
+    Authorization:
+      type: object
+      required: [id, domain, tier, method, authorizer_name, authorizer_email, terms_version, status, granted_at, expires_at]
+      properties:
+        id: {type: string, format: uuid}
+        domain: {type: string}
+        tier: {$ref: "#/components/schemas/Tier"}
+        method: {type: string, enum: [attestation, verified_domain_control]}
+        authorizer_name: {type: string}
+        authorizer_email: {type: string}
+        authorizer_role: {type: string}
+        terms_version: {type: string}
+        status: {type: string, enum: [active, expired, revoked]}
+        granted_at: {type: string, format: date-time}
+        expires_at: {type: string, format: date-time}
+    AuthorizationList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Authorization"}}
+    AssessmentInput:
+      type: object
+      additionalProperties: false
+      required: [authorization_id, template_id]
+      properties:
+        authorization_id: {type: string, format: uuid}
+        template_id: {type: string, format: uuid}
+        crm_company_id: {type: string, format: uuid}
+    Assessment:
+      type: object
+      required: [id, domain, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        domain: {type: string}
+        crm_company_id: {type: string, format: uuid}
+        status: {type: string, enum: [queued, running, completed, partial, failed, cancelled]}
+        score: {type: integer}
+        risk_level: {type: string, enum: [low, moderate, elevated, high]}
+        created_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
+    AssessmentList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Assessment"}}
+    AssessmentDetail:
+      allOf:
+        - {$ref: "#/components/schemas/Assessment"}
+        - type: object
+          required: [checks, findings, coverage, notice, counts]
+          properties:
+            coverage: {type: number, format: double}
+            notice: {type: string}
+            counts: {type: object, additionalProperties: {type: integer}}
+            checks:
+              type: array
+              items:
+                type: object
+                required: [check_key, status, target]
+                properties:
+                  check_key: {type: string}
+                  status: {type: string}
+                  target: {type: string}
+                  evidence: {type: object, additionalProperties: true}
+            findings:
+              type: array
+              items:
+                type: object
+                required: [id, check_key, severity, classification, title, description, recommendation]
+                properties:
+                  id: {type: string, format: uuid}
+                  check_key: {type: string}
+                  severity: {type: string, enum: [info, low, medium, high, critical]}
+                  classification: {type: string, enum: [informational, potential_issue, confirmed_misconfiguration]}
+                  title: {type: string}
+                  description: {type: string}
+                  recommendation: {type: string}
+                  evidence: {type: object, additionalProperties: true}
+    Report:
+      type: object
+      required: [id, assessment_id, version, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        assessment_id: {type: string, format: uuid}
+        version: {type: integer}
+        status: {type: string, enum: [queued, generating, ready, failed]}
+        has_pdf: {type: boolean}
+        created_at: {type: string, format: date-time}

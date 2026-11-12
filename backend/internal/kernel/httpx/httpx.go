@@ -93,3 +93,23 @@ func Attachment(w http.ResponseWriter, name, contentType string, body []byte) {
 	h.Set("Content-Length", strconv.Itoa(len(body)))
 	_, _ = w.Write(body)
 }
+
+// DecodePatch reads a JSON body into a struct and also reports which keys were present, so a
+// handler can tell an explicit null (clear the value) from an absent field (leave it).
+func DecodePatch(w http.ResponseWriter, r *http.Request, into any) (map[string]bool, bool) {
+	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
+	if err != nil {
+		Error(w, r, apperr.New(http.StatusBadRequest, "malformed_request", "The request could not be read"))
+		return nil, false
+	}
+	var keys map[string]json.RawMessage
+	if json.Unmarshal(raw, into) != nil || json.Unmarshal(raw, &keys) != nil {
+		Error(w, r, apperr.New(http.StatusBadRequest, "malformed_request", "The request could not be read"))
+		return nil, false
+	}
+	present := map[string]bool{}
+	for k := range keys {
+		present[k] = true
+	}
+	return present, true
+}

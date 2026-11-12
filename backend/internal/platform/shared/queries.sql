@@ -91,3 +91,7 @@ SELECT code, name FROM shared.countries ORDER BY name;
 
 -- name: ListIndustries :many
 SELECT id, code, name FROM shared.industries ORDER BY name;
+
+-- name: ContactsByIDs :many
+SELECT id, company_id, full_name, job_title, email, phone, status, erased_at FROM shared.contacts
+WHERE tenant_id = @tenant_id AND id = ANY(@ids::uuid[]);

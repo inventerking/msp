@@ -1,19 +1,25 @@
-import { Card, EmptyState, ErrorState, PageHeader, SkeletonRows } from "@msp/ui";
-import { ShieldCheck } from "lucide-react";
+import { PageHeader } from "@msp/ui";
 import { useTranslation } from "react-i18next";
-import { useStatus } from "../api/status";
+import { Route, Routes } from "react-router";
+import { NotFound } from "../../../shell/StatusPages";
+import { Tabs } from "../components/Tabs";
+import { assessPath } from "../paths";
+import { AssessmentDetail, Assessments } from "./Assessments";
+import { Authorizations } from "./Authorizations";
 
+/** IT Assessment: authorized, non-invasive checks of a domain's public email and web set-up. */
 export function Overview() {
   const { t } = useTranslation();
-  const status = useStatus();
   return (
     <>
       <PageHeader title={t("modules.it_assessment.name")} description={t("modules.it_assessment.description")} />
-      <Card>
-        {status.isPending ? <SkeletonRows label={t("common.loading")} /> : null}
-        {status.isError ? <div className="p-4"><ErrorState title={t("errors.internal_error")} onRetry={() => void status.refetch()} retryLabel={t("common.retry")} /></div> : null}
-        {status.isSuccess ? <EmptyState icon={ShieldCheck} title={t("modules.placeholderTitle")} description={t("modules.placeholderPhase", { phase: 4 })} /> : null}
-      </Card>
+      <Tabs items={[{ to: assessPath(), label: t("assess.tabs.assessments"), end: true }, { to: assessPath("authorizations"), label: t("assess.tabs.authorizations") }]} />
+      <Routes>
+        <Route index element={<Assessments />} />
+        <Route path="authorizations" element={<Authorizations />} />
+        <Route path=":id" element={<AssessmentDetail />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </>
   );
 }

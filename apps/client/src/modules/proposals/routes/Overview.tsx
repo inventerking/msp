@@ -1,19 +1,29 @@
-import { Card, EmptyState, ErrorState, PageHeader, SkeletonRows } from "@msp/ui";
-import { FileText } from "lucide-react";
+import { PageHeader } from "@msp/ui";
 import { useTranslation } from "react-i18next";
-import { useStatus } from "../api/status";
+import { Route, Routes } from "react-router";
+import { useMe } from "../../../app/api";
+import { NotFound } from "../../../shell/StatusPages";
+import { Tabs } from "../components/Tabs";
+import { proposalPath } from "../paths";
+import { Catalog } from "./Catalog";
+import { ProposalDetail } from "./ProposalDetail";
+import { Proposals } from "./Proposals";
 
+/** Proposals: offers with prices calculated on the server, approval, sending and signature. */
 export function Overview() {
   const { t } = useTranslation();
-  const status = useStatus();
+  const { data: me } = useMe();
+  const tabs = [{ to: proposalPath(), label: t("proposals.tabs.proposals"), end: true }, ...(me?.permissions.includes("proposal.configure") ? [{ to: proposalPath("catalog"), label: t("proposals.tabs.catalog") }] : [])];
   return (
     <>
       <PageHeader title={t("modules.proposals.name")} description={t("modules.proposals.description")} />
-      <Card>
-        {status.isPending ? <SkeletonRows label={t("common.loading")} /> : null}
-        {status.isError ? <div className="p-4"><ErrorState title={t("errors.internal_error")} onRetry={() => void status.refetch()} retryLabel={t("common.retry")} /></div> : null}
-        {status.isSuccess ? <EmptyState icon={FileText} title={t("modules.placeholderTitle")} description={t("modules.placeholderPhase", { phase: 4 })} /> : null}
-      </Card>
+      <Tabs items={tabs} />
+      <Routes>
+        <Route index element={<Proposals />} />
+        <Route path="catalog" element={<Catalog />} />
+        <Route path=":id" element={<ProposalDetail />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </>
   );
 }

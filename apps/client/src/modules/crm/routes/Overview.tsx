@@ -1,19 +1,29 @@
-import { Card, EmptyState, ErrorState, PageHeader, SkeletonRows } from "@msp/ui";
-import { KanbanSquare } from "lucide-react";
+import { PageHeader } from "@msp/ui";
 import { useTranslation } from "react-i18next";
-import { useStatus } from "../api/status";
+import { Route, Routes } from "react-router";
+import { NotFound } from "../../../shell/StatusPages";
+import { Tabs } from "../components/Tabs";
+import { crmPath } from "../paths";
+import { Board } from "./Board";
+import { Companies, CompanyDetail } from "./Companies";
+import { DealDetail } from "./DealDetail";
+import { Tasks } from "./Tasks";
 
+/** CRM: the pipeline board, companies and their people, deals, and tasks. */
 export function Overview() {
   const { t } = useTranslation();
-  const status = useStatus();
   return (
     <>
       <PageHeader title={t("modules.crm.name")} description={t("modules.crm.description")} />
-      <Card>
-        {status.isPending ? <SkeletonRows label={t("common.loading")} /> : null}
-        {status.isError ? <div className="p-4"><ErrorState title={t("errors.internal_error")} onRetry={() => void status.refetch()} retryLabel={t("common.retry")} /></div> : null}
-        {status.isSuccess ? <EmptyState icon={KanbanSquare} title={t("modules.placeholderTitle")} description={t("modules.placeholderPhase", { phase: 4 })} /> : null}
-      </Card>
+      <Tabs items={[{ to: crmPath(), label: t("crm.tabs.pipeline"), end: true }, { to: crmPath("companies"), label: t("crm.tabs.companies") }, { to: crmPath("tasks"), label: t("crm.tabs.tasks") }]} />
+      <Routes>
+        <Route index element={<Board />} />
+        <Route path="companies" element={<Companies />} />
+        <Route path="companies/:id" element={<CompanyDetail />} />
+        <Route path="deals/:id" element={<DealDetail />} />
+        <Route path="tasks" element={<Tasks />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </>
   );
 }

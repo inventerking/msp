@@ -175,16 +175,20 @@ func wrongSchemas(sql string, owned ...string) []string {
 // A repository's SQL may touch only the schema its owner owns.
 func TestSQLStaysInOwnSchema(t *testing.T) {
 	owners := map[string]string{
-		"../platform/identity/queries.sql":       "identity",
-		"../platform/commercial/queries.sql":     "platform",
-		"../platform/audit/queries.sql":          "audit",
-		"../kernel/jobs/queries.sql":             "jobs",
-		"../platform/shared/queries.sql":         "shared",
-		"../platform/integration/queries.sql":    "integration",
-		"../platform/notification/queries.sql":   "notification",
-		"../platform/files/queries.sql":          "files",
-		"../modules/leadgeneration/queries.sql":  "lead_generation",
-		"../modules/competitorintel/queries.sql": "competitor_intelligence",
+		"../platform/identity/queries.sql":         "identity",
+		"../platform/commercial/queries.sql":       "platform",
+		"../platform/audit/queries.sql":            "audit",
+		"../kernel/jobs/queries.sql":               "jobs",
+		"../platform/shared/queries.sql":           "shared",
+		"../platform/integration/queries.sql":      "integration",
+		"../platform/notification/queries.sql":     "notification",
+		"../platform/files/queries.sql":            "files",
+		"../modules/leadgeneration/queries.sql":    "lead_generation",
+		"../modules/competitorintel/queries.sql":   "competitor_intelligence",
+		"../modules/crm/queries.sql":               "crm",
+		"../modules/proposals/queries.sql":         "proposals",
+		"../modules/itassessment/queries.sql":      "it_assessment",
+		"../modules/customerexpansion/queries.sql": "customer_expansion",
 	}
 	for path, schema := range owners {
 		b, err := os.ReadFile(path)

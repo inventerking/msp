@@ -23,6 +23,56 @@ func (q *Queries) CompanyActive(ctx context.Context, id uuid.UUID) (int32, error
 	return column_1, err
 }
 
+const contactsByIDs = `-- name: ContactsByIDs :many
+SELECT id, company_id, full_name, job_title, email, phone, status, erased_at FROM shared.contacts
+WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+`
+
+type ContactsByIDsParams struct {
+	TenantID uuid.UUID
+	Ids      []uuid.UUID
+}
+
+type ContactsByIDsRow struct {
+	ID        uuid.UUID
+	CompanyID *uuid.UUID
+	FullName  *string
+	JobTitle  *string
+	Email     *string
+	Phone     *string
+	Status    string
+	ErasedAt  *time.Time
+}
+
+func (q *Queries) ContactsByIDs(ctx context.Context, arg ContactsByIDsParams) ([]ContactsByIDsRow, error) {
+	rows, err := q.db.Query(ctx, contactsByIDs, arg.TenantID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ContactsByIDsRow
+	for rows.Next() {
+		var i ContactsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.FullName,
+			&i.JobTitle,
+			&i.Email,
+			&i.Phone,
+			&i.Status,
+			&i.ErasedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countUnknownCountries = `-- name: CountUnknownCountries :one
 SELECT count(*)::int FROM unnest($1::text[]) AS c(code) WHERE NOT EXISTS (SELECT 1 FROM shared.countries s WHERE s.code = c.code)
 `

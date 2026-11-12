@@ -374,6 +374,9 @@ func TestEveryModuleRouteRequiresEntitlement(t *testing.T) {
 	c, _, _ := newTenant(t, "No Modules")
 	seen := map[string]bool{}
 	for _, o := range moduleOps(t) {
+		if o.access == "public" {
+			continue // Share links work without a session. Their tests cover them.
+		}
 		if o.module == "" {
 			t.Errorf("%s has no x-module", o.path)
 			continue

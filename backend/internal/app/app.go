@@ -19,8 +19,15 @@ import (
 	"mspengine/internal/kernel/realtime"
 	"mspengine/internal/modules/competitorintel"
 	ciapp "mspengine/internal/modules/competitorintel/app"
+	"mspengine/internal/modules/crm"
+	crmapp "mspengine/internal/modules/crm/app"
+	"mspengine/internal/modules/customerexpansion"
+	"mspengine/internal/modules/itassessment"
+	itaapp "mspengine/internal/modules/itassessment/app"
 	"mspengine/internal/modules/leadgeneration"
 	leadapp "mspengine/internal/modules/leadgeneration/app"
+	"mspengine/internal/modules/proposals"
+	propapp "mspengine/internal/modules/proposals/app"
 	"mspengine/internal/platform/commercial"
 	"mspengine/internal/platform/files"
 	"mspengine/internal/platform/identity"
@@ -50,6 +57,9 @@ type Graph struct {
 	Ops         *jobs.Ops
 	Leads       *leadapp.Service
 	Competitors *ciapp.Service
+	CRM         *crmapp.Service
+	Proposals   *propapp.Service
+	Assessments *itaapp.Service
 	// Modules are the built business modules. The others are served as skeletons.
 	Modules []modulekit.Module
 }
@@ -68,6 +78,8 @@ type Options struct {
 	PDF pdf.Renderer
 	// Fetcher reads competitor pages. Nil means the fake fetcher, which reaches no real website.
 	Fetcher ciapp.Fetcher
+	// Prober runs assessment checks. Nil means the fake prober, which reaches nothing.
+	Prober itaapp.Prober
 }
 
 // Build assembles the services. Only fake providers exist until D-05 selects real ones, so no
@@ -92,9 +104,14 @@ func Build(pools *db.Pools, keys crypto.Keys, o Options) (*Graph, error) {
 		Notify: notification.New(pools, o.Mailer, hub), Ops: jobs.NewOps(pools.Platform),
 	}
 	comps, compSvc := competitorintel.New(ciapp.Deps{Pools: pools, Identity: ids, Commercial: com, Shared: g.Shared, Integration: ints, Files: g.Files, AI: gw, PDF: o.PDF, Fetcher: o.Fetcher})
-	leads, leadSvc := leadgeneration.New(leadapp.Deps{Pools: pools, Identity: ids, Commercial: com, Shared: g.Shared, Integration: ints, Files: g.Files, AI: gw, Competitors: compSvc})
-	g.Leads, g.Competitors = leadSvc, compSvc
-	g.Modules = []modulekit.Module{leads, comps}
+	crmMod, crmSvc := crm.New(crmapp.Deps{Pools: pools, Identity: ids, Shared: g.Shared, Files: g.Files, Notify: g.Notify})
+	leads, leadSvc := leadgeneration.New(leadapp.Deps{Pools: pools, Identity: ids, Commercial: com, Shared: g.Shared, Integration: ints, Files: g.Files, AI: gw, Competitors: compSvc, CRM: crmSvc})
+	g.Leads, g.Competitors, g.CRM = leadSvc, compSvc, crmSvc
+	expansion, _ := customerexpansion.New(pools, crmSvc)
+	props, propSvc := proposals.New(propapp.Deps{Pools: pools, Keys: keys, Registry: crmSvc, Deals: crmSvc, Files: g.Files, PDF: o.PDF, AI: gw, Mailer: o.Mailer, Integration: ints, BaseURL: o.BaseURL})
+	assess, assessSvc := itassessment.New(itaapp.Deps{Pools: pools, Registry: crmSvc, Shared: g.Shared, Files: g.Files, PDF: o.PDF, Prober: o.Prober})
+	g.Proposals, g.Assessments = propSvc, assessSvc
+	g.Modules = []modulekit.Module{leads, comps, crmMod, expansion, props, assess}
 	return g, nil
 }
 
@@ -216,9 +233,18 @@ func BuildFromConfig(ctx context.Context, c config.Config, pools *db.Pools, rdb 
 	default:
 		return nil, fmt.Errorf("RESEARCH_FETCHER must be fake or live, not %q", c.ResearchFetcher)
 	}
+	var prober itaapp.Prober // Nil is the fake prober.
+	switch c.AssessmentProbe {
+	case "fake", "":
+	case "live":
+		slog.Warn("IT assessments probe real domains; run them only on domains whose owners authorized it")
+		prober = itaapp.NewLiveProber()
+	default:
+		return nil, fmt.Errorf("ASSESSMENT_PROBE must be fake or live, not %q", c.AssessmentProbe)
+	}
 	return Build(pools, crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}, Options{
 		Mailer: mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, Store: store, Scanner: scanner, Bucket: c.S3Bucket, BaseURL: c.AppBaseURL, Redis: rdb, FakeProviders: fakes,
-		PDF: renderer, Fetcher: fetcher,
+		PDF: renderer, Fetcher: fetcher, Prober: prober,
 	})
 }
 

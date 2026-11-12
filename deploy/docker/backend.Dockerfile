@@ -1,5 +1,5 @@
 # One image for every backend role. The final image has no shell and runs as a non-root user.
-FROM golang:1.27.3-alpine AS build
+FROM golang:1.27.4-alpine AS build
 WORKDIR /src/backend
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download

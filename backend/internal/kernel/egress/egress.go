@@ -193,6 +193,7 @@ type Response struct {
 	Body        []byte
 	Truncated   bool
 	FinalURL    string
+	Header      http.Header
 }
 
 // Get fetches a URL through the guard.
@@ -216,7 +217,7 @@ func (c *Client) Get(ctx context.Context, raw string) (Response, error) {
 	if err != nil {
 		return Response{}, err
 	}
-	out := Response{Status: resp.StatusCode, ContentType: resp.Header.Get("Content-Type"), FinalURL: resp.Request.URL.String()}
+	out := Response{Status: resp.StatusCode, ContentType: resp.Header.Get("Content-Type"), FinalURL: resp.Request.URL.String(), Header: resp.Header.Clone()}
 	if int64(len(body)) > c.MaxBytes {
 		out.Truncated, body = true, body[:c.MaxBytes]
 	}

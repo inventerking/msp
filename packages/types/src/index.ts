@@ -3,3 +3,6 @@ export type { paths as AdminPaths, components as AdminComponents } from "./admin
 export type { paths as ModulePaths } from "./modules.gen";
 export type { paths as LeadPaths, components as LeadComponents } from "./leadgen.gen";
 export type { paths as CompetitorPaths, components as CompetitorComponents } from "./competitors.gen";
+export type { paths as CrmPaths, components as CrmComponents } from "./crm.gen";
+export type { paths as ProposalPaths, components as ProposalComponents } from "./proposals.gen";
+export type { paths as AssessmentPaths, components as AssessmentComponents } from "./assessment.gen";
