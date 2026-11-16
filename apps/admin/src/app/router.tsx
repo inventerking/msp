@@ -8,6 +8,7 @@ import { Ai } from "../features/Ai";
 import { Integrations } from "../features/Integrations";
 import { Login } from "../features/Login";
 import { Operations } from "../features/Operations";
+import { OutreachPolicy } from "../features/OutreachPolicy";
 import { Subscriptions } from "../features/Subscriptions";
 import { TenantDetail } from "../features/TenantDetail";
 import { Tenants } from "../features/Tenants";
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
           { path: "/integrations", Component: Integrations },
           { path: "/operations", Component: Operations },
           { path: "/ai", Component: Ai },
+          { path: "/outreach-policy", Component: OutreachPolicy },
         ],
       },
     ],

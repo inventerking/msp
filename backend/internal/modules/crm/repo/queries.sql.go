@@ -465,6 +465,27 @@ func (q *Queries) FindContact(ctx context.Context, arg FindContactParams) (uuid.
 	return id, err
 }
 
+const findContactCompany = `-- name: FindContactCompany :one
+SELECT id, crm_company_id FROM crm.contacts WHERE tenant_id = $1 AND contact_id = $2 AND deleted_at IS NULL ORDER BY is_primary DESC, created_at LIMIT 1
+`
+
+type FindContactCompanyParams struct {
+	TenantID  uuid.UUID
+	ContactID uuid.UUID
+}
+
+type FindContactCompanyRow struct {
+	ID           uuid.UUID
+	CrmCompanyID *uuid.UUID
+}
+
+func (q *Queries) FindContactCompany(ctx context.Context, arg FindContactCompanyParams) (FindContactCompanyRow, error) {
+	row := q.db.QueryRow(ctx, findContactCompany, arg.TenantID, arg.ContactID)
+	var i FindContactCompanyRow
+	err := row.Scan(&i.ID, &i.CrmCompanyID)
+	return i, err
+}
+
 const findMeetingByKey = `-- name: FindMeetingByKey :one
 SELECT id FROM crm.meetings WHERE tenant_id = $1 AND idempotency_key = $2
 `

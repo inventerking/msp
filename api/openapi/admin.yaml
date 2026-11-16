@@ -448,6 +448,48 @@ paths:
       responses:
         "204": {description: Done}
         default: {$ref: "#/components/responses/Problem"}
+  /outreach/jurisdiction-rules:
+    get:
+      operationId: listJurisdictionRules
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/JurisdictionRuleList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/jurisdiction-rules/{countryCode}:
+    put:
+      operationId: setJurisdictionRule
+      x-access: admin
+      x-admin-roles: [super_admin]
+      parameters: [{$ref: "#/components/parameters/CountryCode"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/JurisdictionRuleInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteJurisdictionRule
+      x-access: admin
+      x-admin-roles: [super_admin]
+      parameters: [{$ref: "#/components/parameters/CountryCode"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/global-suppressions:
+    get:
+      operationId: getGlobalSuppressionCount
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/GlobalSuppressionCount"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addGlobalSuppression
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/GlobalSuppressionInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
 components:
   securitySchemes:
     sessionCookie: {type: apiKey, in: cookie, name: admin_session}
@@ -461,7 +503,39 @@ components:
     Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
     Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
     Cursor: {name: cursor, in: query, schema: {type: string}}
+    CountryCode: {name: countryCode, in: path, required: true, schema: {type: string, pattern: "^[A-Za-z]{2}$"}}
   schemas:
+    JurisdictionRule:
+      type: object
+      required: [country_code, rule, updated_at]
+      properties:
+        country_code: {type: string}
+        rule: {type: string, enum: [opt_out_allowed, consent_required, blocked]}
+        note: {type: string}
+        updated_by: {type: string, format: uuid}
+        updated_at: {type: string, format: date-time}
+    JurisdictionRuleList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/JurisdictionRule"}}}
+    JurisdictionRuleInput:
+      type: object
+      required: [rule]
+      additionalProperties: false
+      properties:
+        rule: {type: string, enum: [opt_out_allowed, consent_required, blocked]}
+        note: {type: string, maxLength: 1000}
+    GlobalSuppressionInput:
+      type: object
+      required: [email, reason]
+      additionalProperties: false
+      properties:
+        email: {type: string, format: email, maxLength: 254}
+        reason: {type: string, enum: [legal_request, abuse, complaint]}
+    GlobalSuppressionCount:
+      type: object
+      required: [count]
+      properties: {count: {type: integer}}
     Problem:
       type: object
       required: [type, title, status, code, request_id]

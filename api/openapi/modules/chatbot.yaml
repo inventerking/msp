@@ -1,0 +1,444 @@
+openapi: 3.0.3
+info: {title: Chatbot API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /chatbot/bots:
+    get:
+      operationId: listBots
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/BotList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createBot
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/BotInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Bot"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/bots/{id}:
+    get:
+      operationId: getBot
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Bot"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateBot
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/BotPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Bot"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteBot
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/bots/{id}/knowledge:
+    get:
+      operationId: listKnowledge
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/KnowledgeList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addKnowledge
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/KnowledgeInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/knowledge/{id}:
+    delete:
+      operationId: deleteKnowledge
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/bots/{id}/questions:
+    get:
+      operationId: listQuestions
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/QuestionList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    put:
+      operationId: setQuestions
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/QuestionsInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/conversations:
+    get:
+      operationId: listConversations
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.read
+      parameters: [{$ref: "#/components/parameters/StatusFilter"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ConversationList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/conversations/{id}:
+    get:
+      operationId: getConversation
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ConversationDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/conversations/{id}/reply:
+    post:
+      operationId: replyToConversation
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.handle
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ReplyInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/conversations/{id}/close:
+    post:
+      operationId: closeConversation
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.handle
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /chatbot/handoffs:
+    get:
+      operationId: listHandoffs
+      x-access: tenant
+      x-module: chatbot
+      x-permission: chatbot.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/HandoffList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/chat/{key}/config:
+    get:
+      operationId: getChatConfig
+      x-access: public
+      security: []
+      parameters: [{$ref: "#/components/parameters/Key"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ChatConfig"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/chat/{key}/conversations:
+    post:
+      operationId: startChat
+      x-access: public
+      security: []
+      parameters: [{$ref: "#/components/parameters/Key"}]
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ChatStart"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/chat/{key}/messages:
+    post:
+      operationId: sendChatMessage
+      x-access: public
+      security: []
+      parameters: [{$ref: "#/components/parameters/Key"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ChatMessageInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ChatMessages"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/chat/{key}/poll:
+    post:
+      operationId: pollChat
+      x-access: public
+      security: []
+      parameters: [{$ref: "#/components/parameters/Key"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ChatTokenInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ChatMessages"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/chat/{key}/lead:
+    post:
+      operationId: captureChatLead
+      x-access: public
+      security: []
+      parameters: [{$ref: "#/components/parameters/Key"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/LeadInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    Key: {name: key, in: path, required: true, schema: {type: string, maxLength: 64}}
+    StatusFilter: {name: status, in: query, required: false, schema: {type: string, enum: [active, awaiting_human, human_active, closed]}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    Ref:
+      type: object
+      required: [id]
+      properties: {id: {type: string, format: uuid}}
+    Persona:
+      type: object
+      additionalProperties: false
+      properties:
+        business_name: {type: string, maxLength: 200}
+        greeting: {type: string, maxLength: 500}
+    BotInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        allowed_origins: {type: array, maxItems: 20, items: {type: string, maxLength: 300}}
+        persona: {$ref: "#/components/schemas/Persona"}
+        disclosure_text: {type: string, minLength: 1, maxLength: 1000}
+    BotPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        allowed_origins: {type: array, maxItems: 20, items: {type: string, maxLength: 300}}
+        persona: {$ref: "#/components/schemas/Persona"}
+        disclosure_text: {type: string, minLength: 1, maxLength: 1000}
+        status: {type: string, enum: [draft, active, paused]}
+    Bot:
+      type: object
+      required: [id, name, public_key, allowed_origins, persona, disclosure_text, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        public_key: {type: string}
+        allowed_origins: {type: array, items: {type: string}}
+        persona: {$ref: "#/components/schemas/Persona"}
+        disclosure_text: {type: string}
+        status: {type: string}
+        created_at: {type: string, format: date-time}
+        stats: {$ref: "#/components/schemas/BotStats"}
+    BotStats:
+      type: object
+      required: [conversations, leads, handoffs]
+      properties:
+        conversations: {type: integer}
+        leads: {type: integer}
+        handoffs: {type: integer}
+    BotList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Bot"}}}
+    KnowledgeInput:
+      type: object
+      required: [kind, title, content]
+      additionalProperties: false
+      properties:
+        kind: {type: string, enum: [faq, document, service_catalog]}
+        title: {type: string, minLength: 1, maxLength: 200}
+        content: {type: string, minLength: 1, maxLength: 100000}
+    Knowledge:
+      type: object
+      required: [id, kind, title, status, chunks, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string}
+        title: {type: string}
+        status: {type: string}
+        chunks: {type: integer}
+        created_at: {type: string, format: date-time}
+    KnowledgeList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Knowledge"}}}
+    Question:
+      type: object
+      required: [field_key, question, weight, required]
+      additionalProperties: false
+      properties:
+        field_key: {type: string, pattern: "^[a-z][a-z0-9_]{0,39}$"}
+        question: {type: string, minLength: 1, maxLength: 300}
+        weight: {type: integer, minimum: 0, maximum: 100}
+        required: {type: boolean}
+    QuestionList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Question"}}}
+    QuestionsInput:
+      type: object
+      required: [questions]
+      additionalProperties: false
+      properties: {questions: {type: array, maxItems: 10, items: {$ref: "#/components/schemas/Question"}}}
+    Conversation:
+      type: object
+      required: [id, bot_id, bot_name, status, created_at, messages]
+      properties:
+        id: {type: string, format: uuid}
+        bot_id: {type: string, format: uuid}
+        bot_name: {type: string}
+        status: {type: string}
+        contact_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+        last_message_at: {type: string, format: date-time}
+        messages: {type: integer}
+    ConversationList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Conversation"}}}
+    TranscriptMessage:
+      type: object
+      required: [id, role, content, safety_flags, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        role: {type: string}
+        content: {type: string}
+        safety_flags: {type: array, items: {type: string}}
+        ai_generated: {type: boolean}
+        sender_user_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+    Qualification:
+      type: object
+      required: [answers, status]
+      properties:
+        answers: {type: object, additionalProperties: {type: string}}
+        score: {type: integer}
+        status: {type: string}
+        crm_company_id: {type: string, format: uuid}
+    ConversationDetail:
+      type: object
+      required: [id, bot_id, bot_name, status, created_at, transcript]
+      properties:
+        id: {type: string, format: uuid}
+        bot_id: {type: string, format: uuid}
+        bot_name: {type: string}
+        status: {type: string}
+        contact_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+        transcript: {type: array, items: {$ref: "#/components/schemas/TranscriptMessage"}}
+        qualification: {$ref: "#/components/schemas/Qualification"}
+    ReplyInput:
+      type: object
+      required: [message]
+      additionalProperties: false
+      properties: {message: {type: string, minLength: 1, maxLength: 4000}}
+    Handoff:
+      type: object
+      required: [id, conversation_id, bot_name, reason, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        conversation_id: {type: string, format: uuid}
+        bot_name: {type: string}
+        reason: {type: string}
+        status: {type: string}
+        assigned_user_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+    HandoffList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Handoff"}}}
+    ChatQuestion:
+      type: object
+      required: [field_key, question, required]
+      properties:
+        field_key: {type: string}
+        question: {type: string}
+        required: {type: boolean}
+    ChatConfig:
+      type: object
+      required: [name, disclosure, greeting, consent_text, questions]
+      properties:
+        name: {type: string}
+        disclosure: {type: string}
+        greeting: {type: string}
+        consent_text: {type: string}
+        questions: {type: array, items: {$ref: "#/components/schemas/ChatQuestion"}}
+    ChatStart:
+      type: object
+      required: [token, messages]
+      properties:
+        token: {type: string}
+        messages: {type: array, items: {$ref: "#/components/schemas/ChatMessage"}}
+    ChatMessage:
+      type: object
+      required: [id, role, content, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        role: {type: string}
+        content: {type: string}
+        created_at: {type: string, format: date-time}
+    ChatMessages:
+      type: object
+      required: [messages]
+      properties: {messages: {type: array, items: {$ref: "#/components/schemas/ChatMessage"}}}
+    ChatTokenInput:
+      type: object
+      required: [token]
+      additionalProperties: false
+      properties: {token: {type: string, maxLength: 100}}
+    ChatMessageInput:
+      type: object
+      required: [token, message]
+      additionalProperties: false
+      properties:
+        token: {type: string, maxLength: 100}
+        message: {type: string, minLength: 1, maxLength: 4000}
+    LeadInput:
+      type: object
+      required: [token, name, email, marketing_consent]
+      additionalProperties: false
+      properties:
+        token: {type: string, maxLength: 100}
+        name: {type: string, minLength: 1, maxLength: 200}
+        email: {type: string, format: email, maxLength: 254}
+        company: {type: string, maxLength: 200}
+        preferred_time: {type: string, maxLength: 200}
+        marketing_consent: {type: boolean}
+        answers: {type: object, maxProperties: 10, additionalProperties: {type: string, maxLength: 500}}

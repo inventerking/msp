@@ -157,7 +157,7 @@ func (h Handlers) DeleteCompany(w http.ResponseWriter, r *http.Request, id Id) {
 // Contacts.
 
 func contactOut(c app.ContactView) Contact {
-	return Contact{Id: c.ID, ContactId: c.ContactID, CrmCompanyId: c.CrmCompanyID, IsPrimary: c.IsPrimary, FullName: c.Person.FullName, JobTitle: c.Person.JobTitle, Email: c.Person.Email, Phone: c.Person.Phone, Erased: c.Person.Erased}
+	return Contact{Id: c.ID, ContactId: c.ContactID, CrmCompanyId: c.CrmCompanyID, IsPrimary: c.IsPrimary, FullName: c.Person.FullName, JobTitle: c.Person.JobTitle, Email: c.Person.Email, Phone: c.Person.Phone, CountryCode: c.Person.CountryCode, Erased: c.Person.Erased}
 }
 
 // ListContacts handles GET /crm/contacts.
@@ -180,7 +180,7 @@ func (h Handlers) CreateContact(w http.ResponseWriter, r *http.Request) {
 	if !httpx.Decode(w, r, &b) {
 		return
 	}
-	c, err := h.S.CreateContact(r.Context(), principal(r), app.ContactInput{Email: string(deref(b.Email)), FullName: deref(b.FullName), JobTitle: deref(b.JobTitle), CRMCompanyID: b.CrmCompanyId, Primary: deref(b.IsPrimary)})
+	c, err := h.S.CreateContact(r.Context(), principal(r), app.ContactInput{Email: string(deref(b.Email)), FullName: deref(b.FullName), JobTitle: deref(b.JobTitle), CountryCode: deref(b.CountryCode), CRMCompanyID: b.CrmCompanyId, Primary: deref(b.IsPrimary)})
 	if err != nil {
 		fail(w, r, err)
 		return

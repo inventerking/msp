@@ -45,6 +45,9 @@ gen: ## Regenerate code from the contracts and SQL
 	cd backend && $(GO_TOOL) oapi-codegen -config internal/modules/crm/httpapi/oapi.yaml ../api/openapi/modules/crm.yaml
 	cd backend && $(GO_TOOL) oapi-codegen -config internal/modules/proposals/httpapi/oapi.yaml ../api/openapi/modules/proposals.yaml
 	cd backend && $(GO_TOOL) oapi-codegen -config internal/modules/itassessment/httpapi/oapi.yaml ../api/openapi/modules/it-assessment.yaml
+	cd backend && $(GO_TOOL) oapi-codegen -config internal/modules/outreach/httpapi/oapi.yaml ../api/openapi/modules/outreach.yaml
+	cd backend && $(GO_TOOL) oapi-codegen -config internal/modules/visitorintel/httpapi/oapi.yaml ../api/openapi/modules/visitor-intelligence.yaml
+	cd backend && $(GO_TOOL) oapi-codegen -config internal/modules/chatbot/httpapi/oapi.yaml ../api/openapi/modules/chatbot.yaml
 	pnpm gen:api
 
 test: test-go test-web

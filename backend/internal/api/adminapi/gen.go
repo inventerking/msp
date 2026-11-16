@@ -93,6 +93,69 @@ func (e CreateProductKind) Valid() bool {
 	}
 }
 
+// Defines values for GlobalSuppressionInputReason.
+const (
+	Abuse        GlobalSuppressionInputReason = "abuse"
+	Complaint    GlobalSuppressionInputReason = "complaint"
+	LegalRequest GlobalSuppressionInputReason = "legal_request"
+)
+
+// Valid indicates whether the value is a known member of the GlobalSuppressionInputReason enum.
+func (e GlobalSuppressionInputReason) Valid() bool {
+	switch e {
+	case Abuse:
+		return true
+	case Complaint:
+		return true
+	case LegalRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JurisdictionRuleRule.
+const (
+	JurisdictionRuleRuleBlocked         JurisdictionRuleRule = "blocked"
+	JurisdictionRuleRuleConsentRequired JurisdictionRuleRule = "consent_required"
+	JurisdictionRuleRuleOptOutAllowed   JurisdictionRuleRule = "opt_out_allowed"
+)
+
+// Valid indicates whether the value is a known member of the JurisdictionRuleRule enum.
+func (e JurisdictionRuleRule) Valid() bool {
+	switch e {
+	case JurisdictionRuleRuleBlocked:
+		return true
+	case JurisdictionRuleRuleConsentRequired:
+		return true
+	case JurisdictionRuleRuleOptOutAllowed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JurisdictionRuleInputRule.
+const (
+	JurisdictionRuleInputRuleBlocked         JurisdictionRuleInputRule = "blocked"
+	JurisdictionRuleInputRuleConsentRequired JurisdictionRuleInputRule = "consent_required"
+	JurisdictionRuleInputRuleOptOutAllowed   JurisdictionRuleInputRule = "opt_out_allowed"
+)
+
+// Valid indicates whether the value is a known member of the JurisdictionRuleInputRule enum.
+func (e JurisdictionRuleInputRule) Valid() bool {
+	switch e {
+	case JurisdictionRuleInputRuleBlocked:
+		return true
+	case JurisdictionRuleInputRuleConsentRequired:
+		return true
+	case JurisdictionRuleInputRuleOptOutAllowed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProductKind.
 const (
 	ProductKindAddon  ProductKind = "addon"
@@ -393,6 +456,20 @@ type EntitlementList struct {
 	Data []Entitlement `json:"data"`
 }
 
+// GlobalSuppressionCount defines model for GlobalSuppressionCount.
+type GlobalSuppressionCount struct {
+	Count int `json:"count"`
+}
+
+// GlobalSuppressionInput defines model for GlobalSuppressionInput.
+type GlobalSuppressionInput struct {
+	Email  openapi_types.Email          `json:"email"`
+	Reason GlobalSuppressionInputReason `json:"reason"`
+}
+
+// GlobalSuppressionInputReason defines model for GlobalSuppressionInput.Reason.
+type GlobalSuppressionInputReason string
+
 // GrantCredits defines model for GrantCredits.
 type GrantCredits struct {
 	Amount         int64  `json:"amount"`
@@ -419,6 +496,32 @@ type JobStats struct {
 	OldestUnpublishedSeconds int64       `json:"oldest_unpublished_seconds"`
 	PendingDeliveries        int64       `json:"pending_deliveries"`
 	Queues                   []QueueStat `json:"queues"`
+}
+
+// JurisdictionRule defines model for JurisdictionRule.
+type JurisdictionRule struct {
+	CountryCode string               `json:"country_code"`
+	Note        *string              `json:"note,omitempty"`
+	Rule        JurisdictionRuleRule `json:"rule"`
+	UpdatedAt   time.Time            `json:"updated_at"`
+	UpdatedBy   *openapi_types.UUID  `json:"updated_by,omitempty"`
+}
+
+// JurisdictionRuleRule defines model for JurisdictionRule.Rule.
+type JurisdictionRuleRule string
+
+// JurisdictionRuleInput defines model for JurisdictionRuleInput.
+type JurisdictionRuleInput struct {
+	Note *string                   `json:"note,omitempty"`
+	Rule JurisdictionRuleInputRule `json:"rule"`
+}
+
+// JurisdictionRuleInputRule defines model for JurisdictionRuleInput.Rule.
+type JurisdictionRuleInputRule string
+
+// JurisdictionRuleList defines model for JurisdictionRuleList.
+type JurisdictionRuleList struct {
+	Data []JurisdictionRule `json:"data"`
 }
 
 // LedgerEntry defines model for LedgerEntry.
@@ -645,6 +748,9 @@ type WebhookEndpoint struct {
 	Secret string `json:"secret"`
 }
 
+// CountryCode defines model for CountryCode.
+type CountryCode = string
+
 // Cursor defines model for Cursor.
 type Cursor = string
 
@@ -713,6 +819,12 @@ type SetProviderStatusJSONRequestBody = ProviderStatus
 
 // CreateWebhookEndpointJSONRequestBody defines body for CreateWebhookEndpoint for application/json ContentType.
 type CreateWebhookEndpointJSONRequestBody = CreateWebhookEndpoint
+
+// AddGlobalSuppressionJSONRequestBody defines body for AddGlobalSuppression for application/json ContentType.
+type AddGlobalSuppressionJSONRequestBody = GlobalSuppressionInput
+
+// SetJurisdictionRuleJSONRequestBody defines body for SetJurisdictionRule for application/json ContentType.
+type SetJurisdictionRuleJSONRequestBody = JurisdictionRuleInput
 
 // CreatePlanJSONRequestBody defines body for CreatePlan for application/json ContentType.
 type CreatePlanJSONRequestBody = CreatePlan
@@ -827,6 +939,21 @@ type ServerInterface interface {
 
 	// (GET /modules)
 	ListModules(w http.ResponseWriter, r *http.Request)
+
+	// (GET /outreach/global-suppressions)
+	GetGlobalSuppressionCount(w http.ResponseWriter, r *http.Request)
+
+	// (POST /outreach/global-suppressions)
+	AddGlobalSuppression(w http.ResponseWriter, r *http.Request)
+
+	// (GET /outreach/jurisdiction-rules)
+	ListJurisdictionRules(w http.ResponseWriter, r *http.Request)
+
+	// (DELETE /outreach/jurisdiction-rules/{countryCode})
+	DeleteJurisdictionRule(w http.ResponseWriter, r *http.Request, countryCode CountryCode)
+
+	// (PUT /outreach/jurisdiction-rules/{countryCode})
+	SetJurisdictionRule(w http.ResponseWriter, r *http.Request, countryCode CountryCode)
 
 	// (GET /plans)
 	ListPlans(w http.ResponseWriter, r *http.Request)
@@ -1022,6 +1149,31 @@ func (_ Unimplemented) GetAdminContext(w http.ResponseWriter, r *http.Request) {
 
 // (GET /modules)
 func (_ Unimplemented) ListModules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /outreach/global-suppressions)
+func (_ Unimplemented) GetGlobalSuppressionCount(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /outreach/global-suppressions)
+func (_ Unimplemented) AddGlobalSuppression(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /outreach/jurisdiction-rules)
+func (_ Unimplemented) ListJurisdictionRules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (DELETE /outreach/jurisdiction-rules/{countryCode})
+func (_ Unimplemented) DeleteJurisdictionRule(w http.ResponseWriter, r *http.Request, countryCode CountryCode) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /outreach/jurisdiction-rules/{countryCode})
+func (_ Unimplemented) SetJurisdictionRule(w http.ResponseWriter, r *http.Request, countryCode CountryCode) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1626,6 +1778,100 @@ func (siw *ServerInterfaceWrapper) ListModules(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListModules(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGlobalSuppressionCount operation middleware
+func (siw *ServerInterfaceWrapper) GetGlobalSuppressionCount(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGlobalSuppressionCount(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddGlobalSuppression operation middleware
+func (siw *ServerInterfaceWrapper) AddGlobalSuppression(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddGlobalSuppression(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListJurisdictionRules operation middleware
+func (siw *ServerInterfaceWrapper) ListJurisdictionRules(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListJurisdictionRules(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteJurisdictionRule operation middleware
+func (siw *ServerInterfaceWrapper) DeleteJurisdictionRule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "countryCode" -------------
+	var countryCode CountryCode
+
+	err = runtime.BindStyledParameterWithOptions("simple", "countryCode", chi.URLParam(r, "countryCode"), &countryCode, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "countryCode", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteJurisdictionRule(w, r, countryCode)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetJurisdictionRule operation middleware
+func (siw *ServerInterfaceWrapper) SetJurisdictionRule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "countryCode" -------------
+	var countryCode CountryCode
+
+	err = runtime.BindStyledParameterWithOptions("simple", "countryCode", chi.URLParam(r, "countryCode"), &countryCode, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "countryCode", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetJurisdictionRule(w, r, countryCode)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2358,6 +2604,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai/prompt-versions/{id}/activate", wrapper.ActivateAiPromptVersion)
 	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/outreach/jurisdiction-rules", wrapper.ListJurisdictionRules)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/outreach/jurisdiction-rules/{countryCode}", wrapper.DeleteJurisdictionRule)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/outreach/jurisdiction-rules/{countryCode}", wrapper.SetJurisdictionRule)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/outreach/global-suppressions", wrapper.GetGlobalSuppressionCount)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/outreach/global-suppressions", wrapper.AddGlobalSuppression)
+	})
 
 	return r
 }
@@ -2367,69 +2628,75 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
+	"Ury4P9a3vXmb681/BgA=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

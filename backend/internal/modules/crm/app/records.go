@@ -185,6 +185,7 @@ func (s *Service) Contacts(ctx context.Context, p authctx.Principal, company *uu
 // ContactInput describes a new contact.
 type ContactInput struct {
 	Email, FullName, JobTitle string
+	CountryCode               string
 	CRMCompanyID              *uuid.UUID
 	Primary                   bool
 }
@@ -203,7 +204,7 @@ func (s *Service) CreateContact(ctx context.Context, p authctx.Principal, in Con
 		}
 		canonical = c.CompanyID
 	}
-	contactID, err := s.Shared.ResolveOrCreateContact(ctx, p.TenantID, shared.ContactInput{Email: in.Email, FullName: in.FullName, JobTitle: in.JobTitle, CompanyID: canonical, SourceKey: "manual", Licence: "tenant_provided", CreatedBy: uid(p)})
+	contactID, err := s.Shared.ResolveOrCreateContact(ctx, p.TenantID, shared.ContactInput{Email: in.Email, FullName: in.FullName, JobTitle: in.JobTitle, CountryCode: in.CountryCode, CompanyID: canonical, SourceKey: "manual", Licence: "tenant_provided", CreatedBy: uid(p)})
 	if err != nil {
 		return ContactView{}, err
 	}

@@ -17,6 +17,8 @@ import (
 	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/kernel/modulekit"
 	"mspengine/internal/kernel/realtime"
+	"mspengine/internal/modules/chatbot"
+	cbapp "mspengine/internal/modules/chatbot/app"
 	"mspengine/internal/modules/competitorintel"
 	ciapp "mspengine/internal/modules/competitorintel/app"
 	"mspengine/internal/modules/crm"
@@ -26,8 +28,12 @@ import (
 	itaapp "mspengine/internal/modules/itassessment/app"
 	"mspengine/internal/modules/leadgeneration"
 	leadapp "mspengine/internal/modules/leadgeneration/app"
+	"mspengine/internal/modules/outreach"
+	outapp "mspengine/internal/modules/outreach/app"
 	"mspengine/internal/modules/proposals"
 	propapp "mspengine/internal/modules/proposals/app"
+	"mspengine/internal/modules/visitorintel"
+	viapp "mspengine/internal/modules/visitorintel/app"
 	"mspengine/internal/platform/commercial"
 	"mspengine/internal/platform/files"
 	"mspengine/internal/platform/identity"
@@ -60,6 +66,9 @@ type Graph struct {
 	CRM         *crmapp.Service
 	Proposals   *propapp.Service
 	Assessments *itaapp.Service
+	Outreach    *outapp.Service
+	Visitors    *viapp.Service
+	Chatbot     *cbapp.Service
 	// Modules are the built business modules. The others are served as skeletons.
 	Modules []modulekit.Module
 }
@@ -80,6 +89,8 @@ type Options struct {
 	Fetcher ciapp.Fetcher
 	// Prober runs assessment checks. Nil means the fake prober, which reaches nothing.
 	Prober itaapp.Prober
+	// DomainChecker reads sending domains' DNS. Nil means the fake checker, which looks nothing up.
+	DomainChecker outapp.DomainChecker
 }
 
 // Build assembles the services. Only fake providers exist until D-05 selects real ones, so no
@@ -97,6 +108,9 @@ func Build(pools *db.Pools, keys crypto.Keys, o Options) (*Graph, error) {
 	gw.RegisterTask(aigateway.Task{Key: "platform.summarize"})
 	if o.FakeProviders {
 		ints.RegisterCompanyData(fakes.SampleCompanies())
+		// Outbound email has only the sink until D-05. It delivers through the configured mailer,
+		// which is the local mail catcher outside production, so no outreach reaches a real inbox.
+		ints.RegisterEmailSender(&fakes.SinkEmail{Mailer: o.Mailer})
 	}
 	g := &Graph{
 		Pools: pools, Keys: keys, Hub: hub, Identity: ids, Commercial: com, Integration: ints, AI: gw,
@@ -110,8 +124,11 @@ func Build(pools *db.Pools, keys crypto.Keys, o Options) (*Graph, error) {
 	expansion, _ := customerexpansion.New(pools, crmSvc)
 	props, propSvc := proposals.New(propapp.Deps{Pools: pools, Keys: keys, Registry: crmSvc, Deals: crmSvc, Files: g.Files, PDF: o.PDF, AI: gw, Mailer: o.Mailer, Integration: ints, BaseURL: o.BaseURL})
 	assess, assessSvc := itassessment.New(itaapp.Deps{Pools: pools, Registry: crmSvc, Shared: g.Shared, Files: g.Files, PDF: o.PDF, Prober: o.Prober})
-	g.Proposals, g.Assessments = propSvc, assessSvc
-	g.Modules = []modulekit.Module{leads, comps, crmMod, expansion, props, assess}
+	out, outSvc := outreach.New(outapp.Deps{Pools: pools, Keys: keys, Commercial: com, Shared: g.Shared, Integration: ints, AI: gw, Lists: leadSvc, BaseURL: o.BaseURL, Checker: o.DomainChecker})
+	vis, visSvc := visitorintel.New(viapp.Deps{Pools: pools, Keys: keys, Commercial: com, Shared: g.Shared, Registry: crmSvc})
+	chat, chatSvc := chatbot.New(cbapp.Deps{Pools: pools, Keys: keys, Commercial: com, Shared: g.Shared, AI: gw, Registry: crmSvc})
+	g.Proposals, g.Assessments, g.Outreach, g.Visitors, g.Chatbot = propSvc, assessSvc, outSvc, visSvc, chatSvc
+	g.Modules = []modulekit.Module{leads, comps, crmMod, expansion, props, assess, out, vis, chat}
 	return g, nil
 }
 
@@ -169,7 +186,7 @@ func (g *Graph) EnsureSchedules(ctx context.Context) error {
 }
 
 func (g *Graph) housekeepPartitions(ctx context.Context, _ jobs.Job) error {
-	for _, s := range []string{`SELECT audit.ensure_partitions(3)`, `SELECT jobs.ensure_partitions(3)`} {
+	for _, s := range []string{`SELECT audit.ensure_partitions(3)`, `SELECT jobs.ensure_partitions(3)`, `SELECT visitor_intelligence.ensure_partitions(3)`, `SELECT visitor_intelligence.purge_expired()`} {
 		if _, err := g.Pools.System.Exec(ctx, s); err != nil {
 			return fmt.Errorf("%s: %w", s, err)
 		}
@@ -242,9 +259,17 @@ func BuildFromConfig(ctx context.Context, c config.Config, pools *db.Pools, rdb 
 	default:
 		return nil, fmt.Errorf("ASSESSMENT_PROBE must be fake or live, not %q", c.AssessmentProbe)
 	}
+	var checker outapp.DomainChecker // Nil is the fake checker.
+	switch c.SendingDomainCheck {
+	case "fake", "":
+	case "live":
+		checker = outapp.LiveChecker{}
+	default:
+		return nil, fmt.Errorf("SENDING_DOMAIN_CHECK must be fake or live, not %q", c.SendingDomainCheck)
+	}
 	return Build(pools, crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}, Options{
 		Mailer: mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, Store: store, Scanner: scanner, Bucket: c.S3Bucket, BaseURL: c.AppBaseURL, Redis: rdb, FakeProviders: fakes,
-		PDF: renderer, Fetcher: fetcher, Prober: prober,
+		PDF: renderer, Fetcher: fetcher, Prober: prober, DomainChecker: checker,
 	})
 }
 

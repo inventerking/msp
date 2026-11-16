@@ -1,0 +1,730 @@
+openapi: 3.0.3
+info: {title: Outreach API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /outreach/domains:
+    get:
+      operationId: listSendingDomains
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/DomainList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addSendingDomain
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/DomainInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Domain"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/domains/{id}/check:
+    post:
+      operationId: checkSendingDomain
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Domain"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/senders:
+    get:
+      operationId: listSenders
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SenderList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addSender
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SenderInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Sender"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/senders/{id}:
+    patch:
+      operationId: updateSender
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SenderPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Sender"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteSender
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/templates:
+    get:
+      operationId: listOutreachTemplates
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TemplateList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createOutreachTemplate
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TemplateInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/templates/draft:
+    post:
+      operationId: draftOutreachTemplate
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/DraftInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Draft"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/templates/{id}/versions:
+    post:
+      operationId: addOutreachTemplateVersion
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/VersionInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/audiences:
+    get:
+      operationId: listAudiences
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AudienceList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createAudience
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AudienceInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/audiences/{id}/members:
+    post:
+      operationId: addAudienceMembers
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/MembersInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Count"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns:
+    get:
+      operationId: listCampaigns
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CampaignList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CampaignInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}:
+    get:
+      operationId: getCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CampaignDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CampaignPatch"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/steps:
+    put:
+      operationId: setCampaignSteps
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/StepsInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/preflight:
+    get:
+      operationId: preflightCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Preflight"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/submit:
+    post:
+      operationId: submitCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/HashOut"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/approve:
+    post:
+      operationId: approveCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.approve
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ApproveInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/reject:
+    post:
+      operationId: rejectCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.approve
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RejectInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/start:
+    post:
+      operationId: startCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.send
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Count"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/pause:
+    post:
+      operationId: pauseCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.send
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/resume:
+    post:
+      operationId: resumeCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.send
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/campaigns/{id}/cancel:
+    post:
+      operationId: cancelCampaign
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.send
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/approvals:
+    get:
+      operationId: listOutreachApprovals
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.approve
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ApprovalList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/messages:
+    get:
+      operationId: listOutreachMessages
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      parameters: [{$ref: "#/components/parameters/CampaignFilter"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/MessageList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/messages/{id}:
+    get:
+      operationId: getOutreachMessage
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Message"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/replies:
+    get:
+      operationId: listReplies
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ReplyList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/replies/{id}/classify:
+    post:
+      operationId: classifyReply
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ClassifyInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/suppressions:
+    get:
+      operationId: listSuppressions
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SuppressionList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addSuppression
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SuppressInput"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /outreach/suppressions/{id}:
+    delete:
+      operationId: removeSuppression
+      x-access: tenant
+      x-module: outreach
+      x-permission: outreach.suppression_remove
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/outreach/unsubscribe/{token}:
+    get:
+      operationId: getUnsubscribe
+      x-access: public
+      security: []
+      parameters: [{$ref: "#/components/parameters/Token"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/UnsubscribeStatus"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: unsubscribe
+      x-access: public
+      security: []
+      x-raw-body: true
+      parameters: [{$ref: "#/components/parameters/Token"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    Token: {name: token, in: path, required: true, schema: {type: string, maxLength: 128}}
+    CampaignFilter: {name: campaign_id, in: query, required: false, schema: {type: string, format: uuid}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    Ref:
+      type: object
+      required: [id]
+      properties: {id: {type: string, format: uuid}}
+    Count:
+      type: object
+      required: [count]
+      properties: {count: {type: integer}}
+    HashOut:
+      type: object
+      required: [content_hash]
+      properties: {content_hash: {type: string}}
+    DomainInput:
+      type: object
+      required: [domain]
+      additionalProperties: false
+      properties: {domain: {type: string, minLength: 3, maxLength: 253}}
+    Domain:
+      type: object
+      required: [id, domain, spf_status, dkim_status, dmarc_status, authenticated, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        domain: {type: string}
+        spf_status: {type: string}
+        dkim_status: {type: string}
+        dmarc_status: {type: string}
+        authenticated: {type: boolean}
+        last_checked_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    DomainList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Domain"}}}
+    SenderInput:
+      type: object
+      required: [sending_domain_id, from_email, from_name]
+      additionalProperties: false
+      properties:
+        sending_domain_id: {type: string, format: uuid}
+        from_email: {type: string, format: email, maxLength: 254}
+        from_name: {type: string, minLength: 1, maxLength: 100}
+        daily_limit: {type: integer, minimum: 1, maximum: 2000}
+    SenderPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        from_name: {type: string, minLength: 1, maxLength: 100}
+        status: {type: string, enum: [active, paused]}
+        daily_limit: {type: integer, minimum: 1, maximum: 2000}
+    Sender:
+      type: object
+      required: [id, sending_domain_id, from_email, from_name, status, daily_limit, reputation_state, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        sending_domain_id: {type: string, format: uuid}
+        from_email: {type: string}
+        from_name: {type: string}
+        status: {type: string}
+        daily_limit: {type: integer}
+        reputation_state: {type: string}
+        domain_authenticated: {type: boolean}
+        created_at: {type: string, format: date-time}
+    SenderList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Sender"}}}
+    TemplateInput:
+      type: object
+      required: [name, subject, body]
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        subject: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, minLength: 1, maxLength: 10000}
+        ai_request_id: {type: string, format: uuid}
+    VersionInput:
+      type: object
+      required: [subject, body]
+      additionalProperties: false
+      properties:
+        subject: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, minLength: 1, maxLength: 10000}
+    Template:
+      type: object
+      required: [id, name, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        current_version_id: {type: string, format: uuid}
+        version: {type: integer}
+        subject: {type: string}
+        body: {type: string}
+        ai_generated: {type: boolean}
+        updated_at: {type: string, format: date-time}
+    TemplateList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Template"}}}
+    DraftInput:
+      type: object
+      required: [purpose]
+      additionalProperties: false
+      properties:
+        purpose: {type: string, minLength: 1, maxLength: 1000}
+        audience: {type: string, maxLength: 1000}
+    Draft:
+      type: object
+      required: [subject, body, ai_request_id, ai_generated]
+      properties:
+        subject: {type: string}
+        body: {type: string}
+        ai_request_id: {type: string, format: uuid}
+        ai_generated: {type: boolean}
+    AudienceInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties: {name: {type: string, minLength: 1, maxLength: 200}}
+    MembersInput:
+      type: object
+      additionalProperties: false
+      properties:
+        contact_ids: {type: array, maxItems: 5000, items: {type: string, format: uuid}}
+        list_id: {type: string, format: uuid}
+    Audience:
+      type: object
+      required: [id, name, kind, members, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        kind: {type: string}
+        members: {type: integer}
+        created_at: {type: string, format: date-time}
+    AudienceList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Audience"}}}
+    Window:
+      type: object
+      required: [days, start, end]
+      additionalProperties: false
+      properties:
+        days: {type: array, minItems: 1, maxItems: 7, items: {type: integer, minimum: 0, maximum: 6}}
+        start: {type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$"}
+        end: {type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$"}
+    CampaignInput:
+      type: object
+      required: [name, sender_account_id, postal_address]
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        sender_account_id: {type: string, format: uuid}
+        audience_id: {type: string, format: uuid}
+        timezone: {type: string, maxLength: 64}
+        sending_window: {$ref: "#/components/schemas/Window"}
+        purpose: {type: string, maxLength: 1000}
+        postal_address: {type: string, minLength: 5, maxLength: 500}
+    CampaignPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        audience_id: {type: string, format: uuid}
+        timezone: {type: string, maxLength: 64}
+        sending_window: {$ref: "#/components/schemas/Window"}
+        purpose: {type: string, maxLength: 1000}
+        postal_address: {type: string, minLength: 5, maxLength: 500}
+    Campaign:
+      type: object
+      required: [id, name, sender_account_id, status, timezone, sending_window, purpose, postal_address, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        sender_account_id: {type: string, format: uuid}
+        audience_id: {type: string, format: uuid}
+        status: {type: string, enum: [draft, pending_approval, approved, running, paused, completed, cancelled]}
+        timezone: {type: string}
+        sending_window: {$ref: "#/components/schemas/Window"}
+        purpose: {type: string}
+        postal_address: {type: string}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CampaignList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Campaign"}}}
+    Step:
+      type: object
+      required: [id, position, delay_minutes, template_version_id, subject, body, ai_generated]
+      properties:
+        id: {type: string, format: uuid}
+        position: {type: integer}
+        delay_minutes: {type: integer}
+        template_version_id: {type: string, format: uuid}
+        subject: {type: string}
+        body: {type: string}
+        ai_generated: {type: boolean}
+    StepCount:
+      type: object
+      required: [status, stop_reason, count]
+      properties:
+        status: {type: string}
+        stop_reason: {type: string}
+        count: {type: integer}
+    Totals:
+      type: object
+      required: [sent, delivered, bounced, replied, unsubscribed]
+      properties:
+        sent: {type: integer}
+        delivered: {type: integer}
+        bounced: {type: integer}
+        replied: {type: integer}
+        unsubscribed: {type: integer}
+    CampaignDetail:
+      allOf:
+        - {$ref: "#/components/schemas/Campaign"}
+        - type: object
+          required: [steps, enrollments, totals, content_hash, approved]
+          properties:
+            steps: {type: array, items: {$ref: "#/components/schemas/Step"}}
+            enrollments: {type: array, items: {$ref: "#/components/schemas/StepCount"}}
+            totals: {$ref: "#/components/schemas/Totals"}
+            content_hash: {type: string}
+            approved: {type: boolean}
+    StepsInput:
+      type: object
+      required: [steps]
+      additionalProperties: false
+      properties:
+        steps:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [template_version_id, delay_minutes]
+            additionalProperties: false
+            properties:
+              template_version_id: {type: string, format: uuid}
+              delay_minutes: {type: integer, minimum: 0, maximum: 129600}
+    Preflight:
+      type: object
+      required: [blockers, warnings, audience, content_hash]
+      properties:
+        blockers: {type: array, items: {type: string}}
+        warnings: {type: array, items: {type: string}}
+        content_hash: {type: string}
+        audience:
+          type: object
+          required: [total, no_email, suppressed, blocked, sendable]
+          properties:
+            total: {type: integer}
+            no_email: {type: integer}
+            suppressed: {type: integer}
+            blocked: {type: integer}
+            sendable: {type: integer}
+    ApproveInput:
+      type: object
+      required: [content_hash]
+      additionalProperties: false
+      properties: {content_hash: {type: string, minLength: 64, maxLength: 64}}
+    RejectInput:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties: {reason: {type: string, minLength: 1, maxLength: 1000}}
+    Approval:
+      type: object
+      required: [id, campaign_id, campaign_name, requested_by, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        campaign_id: {type: string, format: uuid}
+        campaign_name: {type: string}
+        requested_by: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+    ApprovalList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Approval"}}}
+    Message:
+      type: object
+      required: [id, status, contact_id, campaign_id, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        subject: {type: string}
+        body: {type: string}
+        status: {type: string}
+        sent_at: {type: string, format: date-time}
+        contact_id: {type: string, format: uuid}
+        campaign_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
+    MessageList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Message"}}}
+    Reply:
+      type: object
+      required: [id, classification, received_at]
+      properties:
+        id: {type: string, format: uuid}
+        message_id: {type: string, format: uuid}
+        classification: {type: string}
+        snippet: {type: string}
+        received_at: {type: string, format: date-time}
+        contact_id: {type: string, format: uuid}
+        campaign_id: {type: string, format: uuid}
+    ReplyList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Reply"}}}
+    ClassifyInput:
+      type: object
+      required: [classification]
+      additionalProperties: false
+      properties: {classification: {type: string, enum: [interested, not_interested, out_of_office, unsubscribe_request, other]}}
+    SuppressInput:
+      type: object
+      required: [email]
+      additionalProperties: false
+      properties: {email: {type: string, format: email, maxLength: 254}}
+    Suppression:
+      type: object
+      required: [id, reason, source, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        reason: {type: string}
+        source: {type: string}
+        created_at: {type: string, format: date-time}
+    SuppressionList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Suppression"}}}
+    UnsubscribeStatus:
+      type: object
+      required: [sender, done]
+      properties:
+        sender: {type: string}
+        done: {type: boolean}

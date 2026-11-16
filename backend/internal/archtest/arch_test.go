@@ -189,6 +189,9 @@ func TestSQLStaysInOwnSchema(t *testing.T) {
 		"../modules/proposals/queries.sql":         "proposals",
 		"../modules/itassessment/queries.sql":      "it_assessment",
 		"../modules/customerexpansion/queries.sql": "customer_expansion",
+		"../modules/outreach/queries.sql":          "outreach",
+		"../modules/visitorintel/queries.sql":      "visitor_intelligence",
+		"../modules/chatbot/queries.sql":           "chatbot",
 	}
 	for path, schema := range owners {
 		b, err := os.ReadFile(path)

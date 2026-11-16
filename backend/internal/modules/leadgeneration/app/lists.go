@@ -120,3 +120,17 @@ func (s *Service) RemoveMembers(ctx context.Context, p authctx.Principal, listID
 		return nil
 	})
 }
+
+// ListContacts implements the Lists contract.
+func (s *Service) ListContacts(ctx context.Context, tenantID, listID uuid.UUID) ([]uuid.UUID, error) {
+	var out []uuid.UUID
+	err := s.systemTx(ctx, tenantID, func(q *repo.Queries, _ pgx.Tx) error {
+		if _, err := q.GetList(ctx, repo.GetListParams{TenantID: tenantID, ID: listID}); err != nil {
+			return notFound(err)
+		}
+		var err error
+		out, err = q.ListContactIDs(ctx, repo.ListContactIDsParams{TenantID: tenantID, ListID: listID})
+		return err
+	})
+	return out, err
+}

@@ -87,6 +87,156 @@ type AuditSupportAccessGrant struct {
 	RevokedAt *time.Time
 }
 
+type ChatbotBooking struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	ConversationID  uuid.UUID
+	ConfigID        uuid.UUID
+	ContactID       *uuid.UUID
+	StartsAt        time.Time
+	EndsAt          time.Time
+	Status          string
+	ProviderEventID *string
+	CrmMeetingID    *uuid.UUID
+	IdempotencyKey  string
+}
+
+type ChatbotBookingConfig struct {
+	ID                   uuid.UUID
+	TenantID             uuid.UUID
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	BotID                uuid.UUID
+	ConnectionID         uuid.UUID
+	DurationMinutes      int32
+	BufferMinutes        int32
+	MinimumNoticeMinutes int32
+	Availability         []byte
+	DeletedAt            *time.Time
+}
+
+type ChatbotBot struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Name           string
+	PublicKey      string
+	AllowedOrigins []string
+	Persona        []byte
+	DisclosureText string
+	Status         string
+	DeletedAt      *time.Time
+}
+
+type ChatbotConversation struct {
+	ID               uuid.UUID
+	TenantID         uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	BotID            uuid.UUID
+	SessionTokenHash []byte
+	VisitorRef       *uuid.UUID
+	ContactID        *uuid.UUID
+	Status           string
+	LastMessageAt    *time.Time
+}
+
+type ChatbotDailyStat struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	BotID         uuid.UUID
+	Day           time.Time
+	Conversations int32
+	Qualified     int32
+	Handoffs      int32
+	Bookings      int32
+}
+
+type ChatbotHandoff struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	ConversationID uuid.UUID
+	Reason         string
+	Status         string
+	AssignedUserID *uuid.UUID
+	ResolvedAt     *time.Time
+}
+
+type ChatbotKnowledgeChunk struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	BotID      uuid.UUID
+	SourceID   uuid.UUID
+	Position   int32
+	Content    string
+	Embedding  *string
+	TokenCount int32
+}
+
+type ChatbotKnowledgeSource struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	BotID       uuid.UUID
+	Kind        string
+	Title       string
+	FileID      *uuid.UUID
+	Url         *string
+	ContentHash []byte
+	Status      string
+	Version     int32
+	DeletedAt   *time.Time
+}
+
+type ChatbotMessage struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	ConversationID    uuid.UUID
+	Role              string
+	Content           string
+	RetrievedChunkIds []uuid.UUID
+	SafetyFlags       []string
+	AiRequestID       *uuid.UUID
+	SenderUserID      *uuid.UUID
+}
+
+type ChatbotQualification struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	ConversationID uuid.UUID
+	Answers        []byte
+	Score          *int32
+	Status         string
+	CrmCompanyID   *uuid.UUID
+}
+
+type ChatbotQualificationRule struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	BotID     uuid.UUID
+	Position  int32
+	FieldKey  string
+	Question  string
+	Weight    int32
+	Required  bool
+	DeletedAt *time.Time
+}
+
 type CompetitorIntelligenceChangeEvent struct {
 	ID                    uuid.UUID
 	TenantID              uuid.UUID
@@ -1454,6 +1604,235 @@ type NotificationTemplate struct {
 	Version   int32
 }
 
+type OutreachApproval struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	SubjectType string
+	SubjectID   uuid.UUID
+	Status      string
+	ContentHash []byte
+	RequestedBy uuid.UUID
+	DecidedBy   *uuid.UUID
+	DecidedAt   *time.Time
+	Reason      *string
+}
+
+type OutreachAudience struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Name       string
+	Kind       string
+	Definition []byte
+	CreatedBy  *uuid.UUID
+	DeletedAt  *time.Time
+}
+
+type OutreachAudienceMember struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	AudienceID uuid.UUID
+	ContactID  uuid.UUID
+}
+
+type OutreachCampaign struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Name            string
+	SenderAccountID uuid.UUID
+	AudienceID      *uuid.UUID
+	Status          string
+	ApprovalMode    string
+	Timezone        string
+	SendingWindow   []byte
+	Purpose         string
+	PostalAddress   string
+	CreatedBy       *uuid.UUID
+	DeletedAt       *time.Time
+}
+
+type OutreachCampaignStat struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CampaignID   uuid.UUID
+	Day          time.Time
+	Sent         int32
+	Delivered    int32
+	Bounced      int32
+	Replied      int32
+	Unsubscribed int32
+}
+
+type OutreachDeliveryEvent struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	MessageID       *uuid.UUID
+	ProviderKey     string
+	ProviderEventID string
+	EventType       string
+	OccurredAt      time.Time
+	Detail          []byte
+}
+
+type OutreachEnrollment struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CampaignID  uuid.UUID
+	ContactID   uuid.UUID
+	Status      string
+	CurrentStep int32
+	NextSendAt  *time.Time
+	StopReason  *string
+}
+
+type OutreachGlobalSuppression struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	EmailHmac []byte
+	Reason    string
+}
+
+type OutreachJurisdictionRule struct {
+	CountryCode string
+	Rule        string
+	Note        *string
+	UpdatedBy   *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type OutreachMessage struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	EnrollmentID      uuid.UUID
+	StepID            uuid.UUID
+	ApprovalID        *uuid.UUID
+	Subject           *string
+	Body              *string
+	AiGenerated       bool
+	AiRequestID       *uuid.UUID
+	Status            string
+	ScheduledAt       *time.Time
+	SentAt            *time.Time
+	ProviderMessageID *string
+	IdempotencyKey    string
+}
+
+type OutreachReply struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	EnrollmentID      *uuid.UUID
+	MessageID         *uuid.UUID
+	ProviderMessageID string
+	Classification    string
+	Snippet           *string
+	ReceivedAt        time.Time
+	AiRequestID       *uuid.UUID
+}
+
+type OutreachSenderAccount struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	SendingDomainID uuid.UUID
+	ConnectionID    uuid.UUID
+	FromEmail       string
+	FromName        string
+	Status          string
+	DailyLimit      int32
+	ReputationState string
+	DeletedAt       *time.Time
+}
+
+type OutreachSendingDomain struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Domain        string
+	SpfStatus     string
+	DkimStatus    string
+	DmarcStatus   string
+	LastCheckedAt *time.Time
+	DeletedAt     *time.Time
+}
+
+type OutreachSendingQuotaCounter struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	SenderAccountID uuid.UUID
+	Day             time.Time
+	SentCount       int32
+	BounceCount     int32
+	ComplaintCount  int32
+}
+
+type OutreachSequenceStep struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CampaignID        uuid.UUID
+	Position          int32
+	DelayMinutes      int32
+	TemplateVersionID uuid.UUID
+	SendCondition     []byte
+}
+
+type OutreachSuppression struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	EmailHash  []byte
+	DomainHash []byte
+	Reason     string
+	Source     string
+	CreatedBy  *uuid.UUID
+}
+
+type OutreachTemplate struct {
+	ID               uuid.UUID
+	TenantID         uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Name             string
+	CurrentVersionID *uuid.UUID
+	CreatedBy        *uuid.UUID
+	DeletedAt        *time.Time
+}
+
+type OutreachTemplateVersion struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	TemplateID  uuid.UUID
+	Version     int32
+	Subject     string
+	Body        string
+	AiGenerated bool
+	AiRequestID *uuid.UUID
+}
+
 type PlatformCreditAccount struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID
@@ -2044,4 +2423,146 @@ type SharedTenantService struct {
 	Description *string
 	Status      string
 	DeletedAt   *time.Time
+}
+
+type VisitorIntelligenceBusinessIdentification struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	SiteID      uuid.UUID
+	SessionID   *uuid.UUID
+	CompanyID   uuid.UUID
+	ProviderKey string
+	Confidence  float64
+	ObservedAt  time.Time
+}
+
+type VisitorIntelligenceConsentRecord struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	SiteID          uuid.UUID
+	AnonymousIDHash []byte
+	State           string
+	Mechanism       string
+	PolicyVersion   *string
+}
+
+type VisitorIntelligenceConversion struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	SiteID      uuid.UUID
+	GoalID      uuid.UUID
+	SessionID   *uuid.UUID
+	VisitorID   *uuid.UUID
+	ContactID   *uuid.UUID
+	Attribution []byte
+	DedupeKey   string
+	OccurredAt  time.Time
+}
+
+type VisitorIntelligenceConversionGoal struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	SiteID    uuid.UUID
+	Name      string
+	Kind      string
+	Rule      []byte
+	DeletedAt *time.Time
+}
+
+type VisitorIntelligenceDailyRollup struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	SiteID         uuid.UUID
+	Day            time.Time
+	Dimension      string
+	DimensionValue string
+	Sessions       int32
+	Visitors       int32
+	PageViews      int32
+	Conversions    int32
+}
+
+type VisitorIntelligenceEvent struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	SiteID     uuid.UUID
+	SessionID  *uuid.UUID
+	EventType  string
+	Url        *string
+	Properties []byte
+	OccurredAt time.Time
+}
+
+type VisitorIntelligenceEventsDefault struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	SiteID     uuid.UUID
+	SessionID  *uuid.UUID
+	EventType  string
+	Url        *string
+	Properties []byte
+	OccurredAt time.Time
+}
+
+type VisitorIntelligenceSession struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	SiteID       uuid.UUID
+	VisitorID    *uuid.UUID
+	StartedAt    time.Time
+	EndedAt      *time.Time
+	LandingUrl   *string
+	ReferrerHost *string
+	Utm          []byte
+	DeviceClass  *string
+	ConsentState string
+}
+
+type VisitorIntelligenceSessionsDefault struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	SiteID       uuid.UUID
+	VisitorID    *uuid.UUID
+	StartedAt    time.Time
+	EndedAt      *time.Time
+	LandingUrl   *string
+	ReferrerHost *string
+	Utm          []byte
+	DeviceClass  *string
+	ConsentState string
+}
+
+type VisitorIntelligenceSite struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Domain         string
+	SiteKey        string
+	AllowedOrigins []string
+	ConsentMode    string
+	RetentionDays  int32
+	IpHandling     string
+	Status         string
+	LastEventAt    *time.Time
+	DeletedAt      *time.Time
+}
+
+type VisitorIntelligenceVisitor struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	SiteID          uuid.UUID
+	AnonymousIDHash []byte
+	FirstSeenAt     time.Time
+	LastSeenAt      time.Time
+	ContactID       *uuid.UUID
 }

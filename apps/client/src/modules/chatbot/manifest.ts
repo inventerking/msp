@@ -1,9 +1,10 @@
 import { MessageCircle } from "lucide-react";
 import type { ModuleManifest } from "../types";
+import { basePath } from "./paths";
 
 export const manifest: ModuleManifest = {
   key: "chatbot",
-  path: "chatbot",
+  path: basePath,
   group: "engage",
   icon: MessageCircle,
   permission: "chatbot.read",

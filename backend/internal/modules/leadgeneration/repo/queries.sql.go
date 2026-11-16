@@ -1352,6 +1352,39 @@ func (q *Queries) LatestScore(ctx context.Context, arg LatestScoreParams) (Lates
 	return i, err
 }
 
+const listContactIDs = `-- name: ListContactIDs :many
+SELECT DISTINCT pc.contact_id FROM lead_generation.prospect_list_members m
+JOIN lead_generation.prospects p ON p.tenant_id = m.tenant_id AND p.id = m.prospect_id AND p.deleted_at IS NULL
+JOIN lead_generation.prospect_contacts pc ON pc.tenant_id = m.tenant_id AND pc.prospect_id = m.prospect_id
+JOIN lead_generation.prospect_lists l ON l.tenant_id = m.tenant_id AND l.id = m.list_id AND l.deleted_at IS NULL
+WHERE m.tenant_id = $1 AND m.list_id = $2
+`
+
+type ListContactIDsParams struct {
+	TenantID uuid.UUID
+	ListID   uuid.UUID
+}
+
+func (q *Queries) ListContactIDs(ctx context.Context, arg ListContactIDsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listContactIDs, arg.TenantID, arg.ListID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var contact_id uuid.UUID
+		if err := rows.Scan(&contact_id); err != nil {
+			return nil, err
+		}
+		items = append(items, contact_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEnrichmentRuns = `-- name: ListEnrichmentRuns :many
 SELECT id, kind, provider_key, status, credits_used, error_code, created_at, finished_at FROM lead_generation.enrichment_runs
 WHERE tenant_id = $1 AND prospect_id = $2 ORDER BY id DESC LIMIT 20

@@ -1,6 +1,6 @@
 # MSP Growth Engine: planning documentation
 
-**Status: Phases 1 to 4 are approved. Phase 5 is in progress.** See [phase-4-status](implementation/phase-4-status.md) for what exists, what needs review, and what is left.
+**Status: Phases 1 to 4 are approved. Phase 5 is built and waiting for its gate.** See [phase-5-status](implementation/phase-5-status.md) for what exists, what needs review, and what is left.
 
 Documents still marked "pending approval" follow the approved decisions in [open-decisions](implementation/open-decisions.md), which also lists the follow-up work those decisions still need.
 
@@ -29,7 +29,7 @@ Documents still marked "pending approval" follow the approved decisions in [open
 
 **Security:** [security-architecture](security/security-architecture.md) · [authentication-and-authorization](security/authentication-and-authorization.md) · [tenant-isolation](security/tenant-isolation.md) · [privacy-and-compliance](security/privacy-and-compliance.md) · [threat-model](security/threat-model.md)
 
-**Implementation:** [open-decisions](implementation/open-decisions.md) · [phase-1-status](implementation/phase-1-status.md) · [phase-2-status](implementation/phase-2-status.md) · [phase-3-status](implementation/phase-3-status.md) · [phase-4-status](implementation/phase-4-status.md) · [tooling-decisions](implementation/tooling-decisions.md) · [implementation-roadmap](implementation/implementation-roadmap.md) · [dependency-matrix](implementation/dependency-matrix.md) · [testing-strategy](implementation/testing-strategy.md) · [acceptance-criteria](implementation/acceptance-criteria.md) · [risk-register](implementation/risk-register.md)
+**Implementation:** [open-decisions](implementation/open-decisions.md) · [phase-1-status](implementation/phase-1-status.md) · [phase-2-status](implementation/phase-2-status.md) · [phase-3-status](implementation/phase-3-status.md) · [phase-4-status](implementation/phase-4-status.md) · [phase-5-status](implementation/phase-5-status.md) · [tooling-decisions](implementation/tooling-decisions.md) · [implementation-roadmap](implementation/implementation-roadmap.md) · [dependency-matrix](implementation/dependency-matrix.md) · [testing-strategy](implementation/testing-strategy.md) · [acceptance-criteria](implementation/acceptance-criteria.md) · [risk-register](implementation/risk-register.md)
 
 ## Conventions
 

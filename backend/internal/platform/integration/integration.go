@@ -92,6 +92,48 @@ type Service struct {
 	verifiers map[string]Verifier
 	handlers  map[string]WebhookHandler
 	companies []CompanyData
+	email     map[string]EmailSender
+}
+
+// RegisterEmailSender adds an outbound email adapter.
+func (s *Service) RegisterEmailSender(e EmailSender) {
+	if s.email == nil {
+		s.email = map[string]EmailSender{}
+	}
+	s.email[e.Key()] = e
+}
+
+// EmailSender returns the adapter for a provider, if it is registered and enabled.
+func (s *Service) EmailSender(ctx context.Context, key string) (EmailSender, uuid.UUID, error) {
+	e, ok := s.email[key]
+	if !ok {
+		return nil, uuid.Nil, ErrNoProvider
+	}
+	var row repo.GetProviderByKeyRow
+	err := pgx.BeginFunc(ctx, s.pools.App, func(tx pgx.Tx) error {
+		var err error
+		row, err = repo.New(tx).GetProviderByKey(ctx, key)
+		return err
+	})
+	if err != nil || row.Status != "enabled" {
+		return nil, uuid.Nil, ErrNoProvider
+	}
+	return e, row.ID, nil
+}
+
+// Connect records a tenant's connection to a provider, such as a sending account.
+func (s *Service) Connect(ctx context.Context, tenantID uuid.UUID, actor *uuid.UUID, providerKey, displayName string, accountRef *string) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := db.TenantTx(ctx, s.pools.App, tenantID, uuid.Nil, func(tx pgx.Tx) error {
+		q := repo.New(tx)
+		p, err := q.GetProviderByKey(ctx, providerKey)
+		if err != nil || p.Status != "enabled" {
+			return ErrNoProvider
+		}
+		id, err = q.InsertConnection(ctx, repo.InsertConnectionParams{TenantID: tenantID, ProviderID: p.ID, DisplayName: displayName, AccountRef: accountRef, CreatedBy: actor})
+		return err
+	})
+	return id, err
 }
 
 // ErrNoProvider means no enabled provider offers the capability.

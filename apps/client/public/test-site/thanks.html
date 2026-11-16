@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex">
+  <title>Local test site</title>
+  <style>body{font:16px system-ui,sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem}code{background:#eee;padding:0 .25rem}</style>
+</head>
+<body>
+  <h1>Thank you</h1>
+  <p>A page for trying the tracker and chat widget locally. It is never deployed as a customer site.</p>
+  <p>Open it as <code>/test-site/?site=vi_KEY&amp;mode=opt_in&amp;bot=cb_KEY</code>. Add <code>http://localhost:5180</code> to the site's and bot's allowed origins first.</p>
+  <p>
+    <button type="button" id="accept">Accept analytics</button>
+    <button type="button" id="decline">Decline analytics</button>
+    <button type="button" id="demo">Book a demo (custom event)</button>
+    <a href="index.html">Back</a>
+  </p>
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search);
+      function add(src, attrs) {
+        var s = document.createElement("script");
+        s.src = src;
+        for (var k in attrs) s.setAttribute(k, attrs[k]);
+        document.body.appendChild(s);
+      }
+      if (q.get("site")) {
+        sessionStorage.setItem("test_site", q.get("site"));
+        sessionStorage.setItem("test_mode", q.get("mode") || "opt_in");
+      }
+      if (q.get("bot")) sessionStorage.setItem("test_bot", q.get("bot"));
+      var site = sessionStorage.getItem("test_site"), bot = sessionStorage.getItem("test_bot");
+      if (site) add("/t.js", { "data-site": site, "data-mode": sessionStorage.getItem("test_mode") });
+      if (bot) add("/chat.js", { "data-bot": bot });
+      document.getElementById("accept").onclick = function () { window.mspTrack && mspTrack.consent("granted"); };
+      document.getElementById("decline").onclick = function () { window.mspTrack && mspTrack.consent("denied"); };
+      document.getElementById("demo").onclick = function () { window.mspTrack && mspTrack.event("demo_booked"); };
+    })();
+  </script>
+</body>
+</html>

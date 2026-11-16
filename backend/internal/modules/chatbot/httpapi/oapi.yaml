@@ -1,0 +1,3 @@
+package: httpapi
+output: internal/modules/chatbot/httpapi/gen.go
+generate: {chi-server: true, models: true, embedded-spec: true}

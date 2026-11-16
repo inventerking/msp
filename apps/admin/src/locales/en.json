@@ -20,7 +20,8 @@
     "account": "Your account",
     "integrations": "Integrations",
     "operations": "Jobs",
-    "ai": "AI"
+    "ai": "AI",
+    "outreachPolicy": "Outreach rules"
   },
   "login": {
     "title": "Administrator sign-in",
@@ -313,5 +314,33 @@
       "human_approval_required": "Needs human approval",
       "prohibited_without_authorization": "Needs authorization"
     }
+  },
+  "outreachPolicy": {
+    "title": "Outreach rules",
+    "subtitle": "Which countries may receive outreach email, and addresses no workspace may email.",
+    "defaultBlocked": "A country with no rule is blocked: no workspace can email people there. Set rules only from legal advice.",
+    "country": "Country code",
+    "rule": "Rule",
+    "note": "Note or source of advice",
+    "updated": "Updated",
+    "save": "Save rule",
+    "remove": "Remove",
+    "rules": {
+      "opt_out_allowed": "Allowed unless they opt out",
+      "consent_required": "Needs recorded consent",
+      "blocked": "Blocked"
+    },
+    "globalTitle": "Do not email anyone, anywhere",
+    "globalHelp_one": "{{count}} address is suppressed for every workspace. Only fingerprints are stored, so addresses cannot be listed.",
+    "globalHelp_other": "{{count}} addresses are suppressed for every workspace. Only fingerprints are stored, so addresses cannot be listed.",
+    "email": "Email address",
+    "reason": "Reason",
+    "reasons": {
+      "legal_request": "Legal request",
+      "abuse": "Abuse",
+      "complaint": "Complaint"
+    },
+    "addGlobal": "Suppress everywhere",
+    "added": "Suppressed for every workspace."
   }
 }

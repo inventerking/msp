@@ -6,3 +6,6 @@ export type { paths as CompetitorPaths, components as CompetitorComponents } fro
 export type { paths as CrmPaths, components as CrmComponents } from "./crm.gen";
 export type { paths as ProposalPaths, components as ProposalComponents } from "./proposals.gen";
 export type { paths as AssessmentPaths, components as AssessmentComponents } from "./assessment.gen";
+export type { paths as OutreachPaths, components as OutreachComponents } from "./outreach.gen";
+export type { paths as VisitorPaths, components as VisitorComponents } from "./visitors.gen";
+export type { paths as ChatbotPaths, components as ChatbotComponents } from "./chatbot.gen";

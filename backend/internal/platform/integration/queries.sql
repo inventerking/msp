@@ -98,3 +98,7 @@ INSERT INTO integration.prompt_versions (template_id, version, system_text, user
 UPDATE integration.prompt_versions AS target
 SET status = CASE WHEN target.id = sqlc.arg(version_id)::uuid THEN 'active' WHEN target.status = 'active' THEN 'retired' ELSE target.status END
 WHERE target.template_id = (SELECT v.template_id FROM integration.prompt_versions v WHERE v.id = sqlc.arg(version_id)::uuid);
+
+-- name: InsertConnection :one
+INSERT INTO integration.connections (tenant_id, provider_id, display_name, account_ref, status, created_by)
+VALUES (@tenant_id, @provider_id, @display_name, sqlc.narg(account_ref), 'connected', sqlc.narg(created_by)) RETURNING id;

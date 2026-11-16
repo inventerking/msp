@@ -1,0 +1,233 @@
+openapi: 3.0.3
+info: {title: Visitor Intelligence API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /visitor-intelligence/sites:
+    get:
+      operationId: listSites
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SiteList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createSite
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.configure
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SiteInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Site"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /visitor-intelligence/sites/{id}:
+    get:
+      operationId: getSite
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Site"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateSite
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SitePatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Site"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteSite
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /visitor-intelligence/sites/{id}/goals:
+    get:
+      operationId: listGoals
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/GoalList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createGoal
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/GoalInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /visitor-intelligence/goals/{id}:
+    delete:
+      operationId: deleteGoal
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.configure
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /visitor-intelligence/sites/{id}/report:
+    get:
+      operationId: getSiteReport
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.read
+      parameters: [{$ref: "#/components/parameters/Id"}, {$ref: "#/components/parameters/Days"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Report"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /visitor-intelligence/companies/{id}/send-to-crm:
+    post:
+      operationId: sendCompanyToCrm
+      x-access: tenant
+      x-module: visitor_intelligence
+      x-permission: visitor.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/collect:
+    post:
+      operationId: collect
+      x-access: public
+      security: []
+      x-raw-body: true
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    Days: {name: days, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 366, default: 30}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    Ref:
+      type: object
+      required: [id]
+      properties: {id: {type: string, format: uuid}}
+    SiteInput:
+      type: object
+      required: [domain]
+      additionalProperties: false
+      properties:
+        domain: {type: string, minLength: 3, maxLength: 253}
+        allowed_origins: {type: array, maxItems: 20, items: {type: string, maxLength: 300}}
+        consent_mode: {type: string, enum: [opt_in, opt_out, cookieless_only]}
+        retention_days: {type: integer, minimum: 1, maximum: 730}
+        ip_handling: {type: string, enum: [discard, truncate_then_discard]}
+    SitePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        allowed_origins: {type: array, maxItems: 20, items: {type: string, maxLength: 300}}
+        consent_mode: {type: string, enum: [opt_in, opt_out, cookieless_only]}
+        retention_days: {type: integer, minimum: 1, maximum: 730}
+        ip_handling: {type: string, enum: [discard, truncate_then_discard]}
+        status: {type: string, enum: [active, paused]}
+    Site:
+      type: object
+      required: [id, domain, site_key, allowed_origins, consent_mode, retention_days, ip_handling, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        domain: {type: string}
+        site_key: {type: string}
+        allowed_origins: {type: array, items: {type: string}}
+        consent_mode: {type: string}
+        retention_days: {type: integer}
+        ip_handling: {type: string}
+        status: {type: string}
+        last_event_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    SiteList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Site"}}}
+    GoalInput:
+      type: object
+      required: [name, kind, value]
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        kind: {type: string, enum: [url_match, custom_event]}
+        value: {type: string, minLength: 1, maxLength: 300}
+    Goal:
+      type: object
+      required: [id, name, kind, value, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        kind: {type: string}
+        value: {type: string}
+        created_at: {type: string, format: date-time}
+    GoalList:
+      type: object
+      required: [data]
+      properties: {data: {type: array, items: {$ref: "#/components/schemas/Goal"}}}
+    Report:
+      type: object
+      required: [sessions, visitors, page_views, conversions, pages, sources, daily, companies]
+      properties:
+        sessions: {type: integer}
+        visitors: {type: integer}
+        page_views: {type: integer}
+        conversions: {type: integer}
+        pages: {type: array, items: {$ref: "#/components/schemas/PageCount"}}
+        sources: {type: array, items: {$ref: "#/components/schemas/SourceCount"}}
+        daily: {type: array, items: {$ref: "#/components/schemas/DayCount"}}
+        companies: {type: array, items: {$ref: "#/components/schemas/CompanyVisit"}}
+    PageCount:
+      type: object
+      required: [url, views]
+      properties: {url: {type: string}, views: {type: integer}}
+    SourceCount:
+      type: object
+      required: [source, sessions]
+      properties: {source: {type: string}, sessions: {type: integer}}
+    DayCount:
+      type: object
+      required: [day, sessions]
+      properties: {day: {type: string, format: date}, sessions: {type: integer}}
+    CompanyVisit:
+      type: object
+      required: [company_id, domain, name, visits, last_seen, confidence]
+      properties:
+        company_id: {type: string, format: uuid}
+        domain: {type: string}
+        name: {type: string}
+        visits: {type: integer}
+        last_seen: {type: string, format: date-time}
+        confidence: {type: number, format: double}

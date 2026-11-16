@@ -1,10 +1,11 @@
 import { unwrap } from "@msp/api-client";
-import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, SkeletonRows, Table } from "@msp/ui";
+import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, Select, SkeletonRows, Table } from "@msp/ui";
+import { useQuery } from "@tanstack/react-query";
 import { Building2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
-import { crmApi, useMe } from "../../../app/api";
+import { api, crmApi, tenantKey, useMe } from "../../../app/api";
 import { errorText } from "../../../app/errors";
 import { Timeline } from "../components/Timeline";
 import { crmPath } from "../paths";
@@ -64,7 +65,8 @@ export function CompanyDetail() {
   const company = useCompany(id);
   const contacts = useContacts(id);
   const deals = useDeals({ crm_company_id: id });
-  const [person, setPerson] = useState({ full_name: "", email: "", job_title: "" });
+  const reference = useQuery({ queryKey: tenantKey(me, "reference"), queryFn: () => unwrap(api.GET("/reference")), staleTime: 3_600_000 });
+  const [person, setPerson] = useState({ full_name: "", email: "", job_title: "", country_code: "" });
   const addPerson = useCrmMutation(() => unwrap(crmApi.POST("/crm/contacts", { body: { crm_company_id: id, ...Object.fromEntries(Object.entries(person).filter(([, v]) => v.trim())) } })));
   if (company.isPending) return <SkeletonRows label={t("common.loading")} />;
   if (company.isError) return <ErrorState title={errorText(t, company.error)} />;
@@ -86,10 +88,11 @@ export function CompanyDetail() {
             ))}
           </ul>
           {canWrite ? (
-            <form className="mt-3 grid gap-2 sm:grid-cols-3" onSubmit={(e) => { e.preventDefault(); addPerson.mutate(undefined, { onSuccess: () => setPerson({ full_name: "", email: "", job_title: "" }) }); }}>
+            <form className="mt-3 grid gap-2 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); addPerson.mutate(undefined, { onSuccess: () => setPerson({ full_name: "", email: "", job_title: "", country_code: "" }) }); }}>
               <Field label={t("crm.fullName")}>{(ids) => <Input {...ids} value={person.full_name} onChange={(e) => setPerson({ ...person, full_name: e.target.value })} />}</Field>
               <Field label={t("crm.email")}>{(ids) => <Input {...ids} type="email" value={person.email} onChange={(e) => setPerson({ ...person, email: e.target.value })} />}</Field>
               <Field label={t("crm.jobTitle")}>{(ids) => <Input {...ids} value={person.job_title} onChange={(e) => setPerson({ ...person, job_title: e.target.value })} />}</Field>
+              <Field label={t("crm.country")}>{(ids) => <Select {...ids} value={person.country_code} onChange={(e) => setPerson({ ...person, country_code: e.target.value })}><option value="">{t("crm.countryUnknown")}</option>{(reference.data?.countries ?? []).map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}</Select>}</Field>
               <div><Button type="submit" size="sm" disabled={addPerson.isPending || (!person.full_name.trim() && !person.email.trim())}>{t("crm.addPerson")}</Button></div>
               {addPerson.isError ? <p className="text-xs text-danger sm:col-span-3">{errorText(t, addPerson.error)}</p> : null}
             </form>

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -257,6 +258,8 @@ type ContactInput struct {
 	Email     string
 	FullName  string
 	JobTitle  string
+	// CountryCode is where the person is, which decides the outreach rules that apply to them.
+	CountryCode string
 	CompanyID *uuid.UUID
 	SourceKey string
 	SourceRef string
@@ -280,11 +283,20 @@ func (s *Service) ResolveOrCreateContact(ctx context.Context, tenantID uuid.UUID
 	err := db.TenantTx(ctx, s.pools.App, tenantID, uuid.Nil, func(tx pgx.Tx) error {
 		q := repo.New(tx)
 		var err error
+		if in.CountryCode != "" {
+			var known bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM shared.countries WHERE code = $1)`, strings.ToUpper(in.CountryCode)).Scan(&known); err != nil {
+				return err
+			}
+			if !known {
+				return apperr.Validation(apperr.FieldError{Field: "country_code", Code: "unknown_country"})
+			}
+		}
 		if email := NormalizeEmail(in.Email); email != "" {
 			id, err = q.UpsertContact(ctx, repo.UpsertContactParams{TenantID: tenantID, CompanyID: in.CompanyID, FullName: optional(in.FullName), JobTitle: optional(in.JobTitle),
-				Email: &email, EmailHash: s.keys.HMACValue("contact-email:"+tenantID.String(), email), CreatedBy: in.CreatedBy})
+				Email: &email, EmailHash: s.keys.HMACValue("contact-email:"+tenantID.String(), email), CountryCode: optional(strings.ToUpper(in.CountryCode)), CreatedBy: in.CreatedBy})
 		} else {
-			id, err = q.InsertContactNoEmail(ctx, repo.InsertContactNoEmailParams{TenantID: tenantID, CompanyID: in.CompanyID, FullName: optional(in.FullName), JobTitle: optional(in.JobTitle), CreatedBy: in.CreatedBy})
+			id, err = q.InsertContactNoEmail(ctx, repo.InsertContactNoEmailParams{TenantID: tenantID, CompanyID: in.CompanyID, FullName: optional(in.FullName), JobTitle: optional(in.JobTitle), CountryCode: optional(strings.ToUpper(in.CountryCode)), CreatedBy: in.CreatedBy})
 		}
 		if err != nil {
 			return err
@@ -508,7 +520,8 @@ type ContactView struct {
 	ID                        uuid.UUID
 	CompanyID                 *uuid.UUID
 	FullName, JobTitle, Email *string
-	Phone                     *string
+	FirstName, Phone          *string
+	CountryCode               *string
 	Erased                    bool
 }
 
@@ -526,11 +539,36 @@ func (s *Service) ContactsByID(ctx context.Context, tenantID uuid.UUID, ids []uu
 		for _, r := range rows {
 			v := ContactView{ID: r.ID, CompanyID: r.CompanyID, Erased: r.ErasedAt != nil}
 			if !v.Erased {
-				v.FullName, v.JobTitle, v.Email, v.Phone = r.FullName, r.JobTitle, r.Email, r.Phone
+				v.FullName, v.JobTitle, v.Email, v.Phone, v.FirstName = r.FullName, r.JobTitle, r.Email, r.Phone, r.FirstName
+				if r.CountryCode != "" {
+					v.CountryCode = &r.CountryCode
+				}
 			}
 			out[r.ID] = v
 		}
 		return nil
 	})
 	return out, err
+}
+
+// HasConsent reports whether a contact has a current, granted consent for a purpose.
+func (s *Service) HasConsent(ctx context.Context, tenantID, contactID uuid.UUID, purpose string) (bool, error) {
+	var out bool
+	err := db.TenantTx(ctx, s.pools.App, tenantID, uuid.Nil, func(tx pgx.Tx) error {
+		var err error
+		out, err = repo.New(tx).HasConsent(ctx, repo.HasConsentParams{TenantID: tenantID, ContactID: contactID, Purpose: purpose})
+		return err
+	})
+	return out, err
+}
+
+// EmailKey is the tenant-scoped keyed hash of an email address, used for suppressions.
+func (s *Service) EmailKey(tenantID uuid.UUID, email string) []byte {
+	return s.keys.HMACValue("suppression:"+tenantID.String(), NormalizeEmail(email))
+}
+
+// GlobalEmailKey is the platform-wide keyed hash used for the narrow global suppression list (D-09).
+// It is a different key from any tenant's, so it links no tenant's records.
+func (s *Service) GlobalEmailKey(email string) []byte {
+	return s.keys.HMACValue("global-suppression", NormalizeEmail(email))
 }

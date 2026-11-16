@@ -24,8 +24,9 @@ func (q *Queries) CompanyActive(ctx context.Context, id uuid.UUID) (int32, error
 }
 
 const contactsByIDs = `-- name: ContactsByIDs :many
-SELECT id, company_id, full_name, job_title, email, phone, status, erased_at FROM shared.contacts
-WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+SELECT c.id, c.company_id, c.full_name, c.first_name, c.job_title, c.email, c.phone, coalesce(c.country_code, co.country_code, '')::text AS country_code, c.status, c.erased_at
+FROM shared.contacts c LEFT JOIN shared.companies co ON co.id = c.company_id
+WHERE c.tenant_id = $1 AND c.id = ANY($2::uuid[])
 `
 
 type ContactsByIDsParams struct {
@@ -34,16 +35,19 @@ type ContactsByIDsParams struct {
 }
 
 type ContactsByIDsRow struct {
-	ID        uuid.UUID
-	CompanyID *uuid.UUID
-	FullName  *string
-	JobTitle  *string
-	Email     *string
-	Phone     *string
-	Status    string
-	ErasedAt  *time.Time
+	ID          uuid.UUID
+	CompanyID   *uuid.UUID
+	FullName    *string
+	FirstName   *string
+	JobTitle    *string
+	Email       *string
+	Phone       *string
+	CountryCode string
+	Status      string
+	ErasedAt    *time.Time
 }
 
+// A contact without a country takes their company's, so jurisdiction rules can apply.
 func (q *Queries) ContactsByIDs(ctx context.Context, arg ContactsByIDsParams) ([]ContactsByIDsRow, error) {
 	rows, err := q.db.Query(ctx, contactsByIDs, arg.TenantID, arg.Ids)
 	if err != nil {
@@ -57,9 +61,11 @@ func (q *Queries) ContactsByIDs(ctx context.Context, arg ContactsByIDsParams) ([
 			&i.ID,
 			&i.CompanyID,
 			&i.FullName,
+			&i.FirstName,
 			&i.JobTitle,
 			&i.Email,
 			&i.Phone,
+			&i.CountryCode,
 			&i.Status,
 			&i.ErasedAt,
 		); err != nil {
@@ -248,6 +254,23 @@ func (q *Queries) GetRate(ctx context.Context, arg GetRateParams) (float64, erro
 	var rate float64
 	err := row.Scan(&rate)
 	return rate, err
+}
+
+const hasConsent = `-- name: HasConsent :one
+SELECT EXISTS (SELECT 1 FROM shared.contact_consents WHERE tenant_id = $1 AND contact_id = $2 AND purpose = $3 AND status = 'granted' AND withdrawn_at IS NULL)
+`
+
+type HasConsentParams struct {
+	TenantID  uuid.UUID
+	ContactID uuid.UUID
+	Purpose   string
+}
+
+func (q *Queries) HasConsent(ctx context.Context, arg HasConsentParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasConsent, arg.TenantID, arg.ContactID, arg.Purpose)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const insertCompany = `-- name: InsertCompany :one
@@ -684,7 +707,8 @@ const upsertContact = `-- name: UpsertContact :one
 INSERT INTO shared.contacts (tenant_id, company_id, full_name, first_name, last_name, job_title, email, email_hash, phone, social_url, country_code, status, created_by)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active', $12)
 ON CONFLICT (tenant_id, email) WHERE email IS NOT NULL
-DO UPDATE SET full_name = COALESCE(shared.contacts.full_name, EXCLUDED.full_name), job_title = COALESCE(shared.contacts.job_title, EXCLUDED.job_title), company_id = COALESCE(shared.contacts.company_id, EXCLUDED.company_id)
+DO UPDATE SET full_name = COALESCE(shared.contacts.full_name, EXCLUDED.full_name), job_title = COALESCE(shared.contacts.job_title, EXCLUDED.job_title), company_id = COALESCE(shared.contacts.company_id, EXCLUDED.company_id),
+  country_code = COALESCE(shared.contacts.country_code, EXCLUDED.country_code)
 RETURNING id
 `
 

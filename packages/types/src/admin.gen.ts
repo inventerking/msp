@@ -676,10 +676,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/outreach/jurisdiction-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listJurisdictionRules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/outreach/jurisdiction-rules/{countryCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["setJurisdictionRule"];
+        post?: never;
+        delete: operations["deleteJurisdictionRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/outreach/global-suppressions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGlobalSuppressionCount"];
+        put?: never;
+        post: operations["addGlobalSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        JurisdictionRule: {
+            country_code: string;
+            /** @enum {string} */
+            rule: "opt_out_allowed" | "consent_required" | "blocked";
+            note?: string;
+            /** Format: uuid */
+            updated_by?: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        JurisdictionRuleList: {
+            data: components["schemas"]["JurisdictionRule"][];
+        };
+        JurisdictionRuleInput: {
+            /** @enum {string} */
+            rule: "opt_out_allowed" | "consent_required" | "blocked";
+            note?: string;
+        };
+        GlobalSuppressionInput: {
+            /** Format: email */
+            email: string;
+            /** @enum {string} */
+            reason: "legal_request" | "abuse" | "complaint";
+        };
+        GlobalSuppressionCount: {
+            count: number;
+        };
         Problem: {
             type: string;
             title: string;
@@ -1090,6 +1165,7 @@ export interface components {
         Id: string;
         Limit: number;
         Cursor: string;
+        CountryCode: string;
     };
     requestBodies: never;
     headers: never;
@@ -2176,6 +2252,117 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listJurisdictionRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JurisdictionRuleList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    setJurisdictionRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                countryCode: components["parameters"]["CountryCode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JurisdictionRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteJurisdictionRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                countryCode: components["parameters"]["CountryCode"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getGlobalSuppressionCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalSuppressionCount"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addGlobalSuppression: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlobalSuppressionInput"];
+            };
+        };
         responses: {
             /** @description Done */
             204: {

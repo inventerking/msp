@@ -59,6 +59,8 @@ type Deps struct {
 	Ops        *jobs.Ops
 	// Modules replaces the skeleton of any module with the same key.
 	Modules []modulekit.Module
+	// OutreachPolicy manages the platform's outreach rules. Nil returns 503 for those routes.
+	OutreachPolicy OutreachPolicy
 }
 
 // Server holds handler dependencies.
@@ -127,7 +129,7 @@ func New(d Deps) (http.Handler, error) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(s.requestMeta, recoverer, requestLog, securityHeaders(!d.Config.IsLocal()), s.originCheck, s.rateLimit)
+	r.Use(s.requestMeta, recoverer, requestLog, securityHeaders(!d.Config.IsLocal()), embedCORS, s.originCheck, s.rateLimit)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, 200, map[string]string{"status": "ok"}) })
 	r.Get("/readyz", s.ready)
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) { writeError(w, r, apperr.NotFound()) })
@@ -307,10 +309,47 @@ func securityHeaders(hsts bool) func(http.Handler) http.Handler {
 	}
 }
 
+// embedPaths are public endpoints called from customers' own websites: the tracker and the chat
+// widget. They carry no session, check the origin against the site's or bot's own list, and answer
+// cross-origin requests without credentials.
+var embedPaths = []string{"/api/v1/public/collect", "/api/v1/public/chat/"}
+
+func isEmbedPath(p string) bool {
+	for _, e := range embedPaths {
+		if p == e || (strings.HasSuffix(e, "/") && strings.HasPrefix(p, e)) {
+			return true
+		}
+	}
+	return false
+}
+
+// embedCORS lets customers' pages call the embed endpoints. Credentials are never allowed, so a
+// page cannot act with anyone's session; the handlers decide which origins may use each site or bot.
+func embedCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isEmbedPath(r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if o := r.Header.Get("Origin"); o != "" {
+			w.Header().Set("Access-Control-Allow-Origin", o)
+			w.Header().Add("Vary", "Origin")
+		}
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Max-Age", "600")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // originCheck rejects state-changing requests from origins that are not ours.
 func (s *Server) originCheck(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if unsafeMethod(r.Method) {
+		if unsafeMethod(r.Method) && !isEmbedPath(r.URL.Path) {
 			if o := r.Header.Get("Origin"); o != "" && !slices.Contains(s.Config.AllowedOrigins, o) {
 				writeError(w, r, apperr.New(http.StatusForbidden, "csrf_failed", "This request came from an unrecognized site"))
 				return

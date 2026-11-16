@@ -10,4 +10,10 @@ CREATE ROLE msp_system   LOGIN PASSWORD :'sys'      NOBYPASSRLS;
 CREATE ROLE msp_ingest   NOLOGIN NOBYPASSRLS;
 CREATE ROLE msp_readonly NOLOGIN NOBYPASSRLS;
 CREATE DATABASE msp_engine OWNER msp_owner;
+-- The API switches to msp_ingest for public visitor tracking. Without INHERIT, msp_app does not
+-- otherwise gain msp_ingest's privileges or policies.
+GRANT msp_ingest TO msp_app WITH INHERIT FALSE, SET TRUE;
+-- Extensions that need a superuser. Migrations then only check they exist.
+\connect msp_engine
+CREATE EXTENSION IF NOT EXISTS vector;
 SQL

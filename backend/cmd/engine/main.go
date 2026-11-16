@@ -131,7 +131,7 @@ func runAPI(ctx context.Context, c config.Config) error {
 		return err
 	}
 	handler, err := api.New(api.Deps{Config: c, Identity: g.Identity, Commercial: g.Commercial, Keys: g.Keys, Limiter: ratelimit.New(rdb), Hub: g.Hub, DB: pools.App, Redis: rdb,
-		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops, Modules: g.Modules})
+		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops, Modules: g.Modules, OutreachPolicy: g.Outreach})
 	if err != nil {
 		return err
 	}

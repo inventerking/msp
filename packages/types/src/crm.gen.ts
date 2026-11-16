@@ -450,6 +450,7 @@ export interface components {
             job_title?: string;
             email?: string;
             phone?: string;
+            country_code?: string;
             erased: boolean;
         };
         ContactList: {
@@ -460,6 +461,7 @@ export interface components {
             /** Format: email */
             email?: string;
             job_title?: string;
+            country_code?: string;
             /** Format: uuid */
             crm_company_id?: string;
             is_primary?: boolean;

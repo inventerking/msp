@@ -1,9 +1,10 @@
 import { Globe } from "lucide-react";
 import type { ModuleManifest } from "../types";
+import { basePath } from "./paths";
 
 export const manifest: ModuleManifest = {
   key: "visitor_intelligence",
-  path: "visitors",
+  path: basePath,
   group: "engage",
   icon: Globe,
   permission: "visitor.read",

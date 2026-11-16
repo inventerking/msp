@@ -399,6 +399,32 @@ func (q *Queries) InsertCallLog(ctx context.Context, arg InsertCallLogParams) er
 	return err
 }
 
+const insertConnection = `-- name: InsertConnection :one
+INSERT INTO integration.connections (tenant_id, provider_id, display_name, account_ref, status, created_by)
+VALUES ($1, $2, $3, $4, 'connected', $5) RETURNING id
+`
+
+type InsertConnectionParams struct {
+	TenantID    uuid.UUID
+	ProviderID  uuid.UUID
+	DisplayName string
+	AccountRef  *string
+	CreatedBy   *uuid.UUID
+}
+
+func (q *Queries) InsertConnection(ctx context.Context, arg InsertConnectionParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertConnection,
+		arg.TenantID,
+		arg.ProviderID,
+		arg.DisplayName,
+		arg.AccountRef,
+		arg.CreatedBy,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const insertPromptVersion = `-- name: InsertPromptVersion :one
 INSERT INTO integration.prompt_versions (template_id, version, system_text, user_text, status) VALUES ($1, $2, $3, $4, 'draft') RETURNING id
 `

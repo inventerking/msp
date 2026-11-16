@@ -49,6 +49,23 @@ func (f *FakeProvider) Complete(_ context.Context, r ProviderRequest) (ProviderR
 		}
 	case "proposals.draft_section":
 		out = map[string]string{"heading": "Draft section", "body": "Placeholder text from the fake AI provider. Replace it with your own words before sending."}
+	case "outreach.draft_template":
+		out = map[string]string{"subject": "A quick question about IT support at {{company}}",
+			"body": "Hi {{first_name}},\n\nPlaceholder text from the fake AI provider. Replace it with your own words before sending.\n\n{{sender_name}}"}
+	case "chatbot.answer":
+		// Answers only from the knowledge given, as the prompt requires, and asks for a person otherwise.
+		var kept []string
+		for _, l := range strings.Split(between(r.User, "Knowledge:", "\nVisitor:"), "\n") {
+			if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "<untrusted-") && !strings.HasPrefix(l, "</untrusted-") {
+				kept = append(kept, l)
+			}
+		}
+		knowledge := strings.Join(kept, "\n")
+		if strings.TrimSpace(knowledge) == "" || strings.Contains(knowledge, "(none)") {
+			out = map[string]any{"answer": "I don't have that information. I can pass your question to the team.", "needs_human": true}
+		} else {
+			out = map[string]any{"answer": "From our information: " + firstLine(strings.TrimSpace(knowledge)), "needs_human": false}
+		}
 	default:
 		out = map[string]string{"summary": "Fake summary. No AI provider is connected."}
 	}
@@ -57,6 +74,15 @@ func (f *FakeProvider) Complete(_ context.Context, r ProviderRequest) (ProviderR
 		return ProviderResponse{}, fmt.Errorf("fake reply: %w", err)
 	}
 	return ProviderResponse{Text: string(b), InputTokens: int32(len(r.User) / 4), OutputTokens: int32(len(b) / 4)}, nil //nolint:gosec // Test data.
+}
+
+func between(s, start, end string) string {
+	_, after, ok := strings.Cut(s, start)
+	if !ok {
+		return ""
+	}
+	before, _, _ := strings.Cut(after, end)
+	return before
 }
 
 func firstLine(s string) string {

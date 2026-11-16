@@ -42,7 +42,8 @@ INSERT INTO shared.company_merges (source_company_id, target_company_id, reason,
 INSERT INTO shared.contacts (tenant_id, company_id, full_name, first_name, last_name, job_title, email, email_hash, phone, social_url, country_code, status, created_by)
 VALUES (@tenant_id, sqlc.narg(company_id), sqlc.narg(full_name), sqlc.narg(first_name), sqlc.narg(last_name), sqlc.narg(job_title), sqlc.narg(email), sqlc.narg(email_hash), sqlc.narg(phone), sqlc.narg(social_url), sqlc.narg(country_code), 'active', sqlc.narg(created_by))
 ON CONFLICT (tenant_id, email) WHERE email IS NOT NULL
-DO UPDATE SET full_name = COALESCE(shared.contacts.full_name, EXCLUDED.full_name), job_title = COALESCE(shared.contacts.job_title, EXCLUDED.job_title), company_id = COALESCE(shared.contacts.company_id, EXCLUDED.company_id)
+DO UPDATE SET full_name = COALESCE(shared.contacts.full_name, EXCLUDED.full_name), job_title = COALESCE(shared.contacts.job_title, EXCLUDED.job_title), company_id = COALESCE(shared.contacts.company_id, EXCLUDED.company_id),
+  country_code = COALESCE(shared.contacts.country_code, EXCLUDED.country_code)
 RETURNING id;
 
 -- name: InsertContactNoEmail :one
@@ -93,5 +94,10 @@ SELECT code, name FROM shared.countries ORDER BY name;
 SELECT id, code, name FROM shared.industries ORDER BY name;
 
 -- name: ContactsByIDs :many
-SELECT id, company_id, full_name, job_title, email, phone, status, erased_at FROM shared.contacts
-WHERE tenant_id = @tenant_id AND id = ANY(@ids::uuid[]);
+-- A contact without a country takes their company's, so jurisdiction rules can apply.
+SELECT c.id, c.company_id, c.full_name, c.first_name, c.job_title, c.email, c.phone, coalesce(c.country_code, co.country_code, '')::text AS country_code, c.status, c.erased_at
+FROM shared.contacts c LEFT JOIN shared.companies co ON co.id = c.company_id
+WHERE c.tenant_id = @tenant_id AND c.id = ANY(@ids::uuid[]);
+
+-- name: HasConsent :one
+SELECT EXISTS (SELECT 1 FROM shared.contact_consents WHERE tenant_id = @tenant_id AND contact_id = @contact_id AND purpose = @purpose AND status = 'granted' AND withdrawn_at IS NULL);

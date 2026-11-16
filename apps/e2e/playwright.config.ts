@@ -21,7 +21,8 @@ export default defineConfig({
   timeout: 90_000,
   workers: 1,
   reporter: [["list"]],
-  use: { screenshot: "only-on-failure", trace: "retain-on-failure", ignoreHTTPSErrors: deployed },
+  // A step that cannot happen fails within 30 seconds and names itself, instead of using up the whole test.
+  use: { screenshot: "only-on-failure", trace: "retain-on-failure", ignoreHTTPSErrors: deployed, actionTimeout: 30_000 },
   webServer: deployed ? [] : [
     { command: "go run ./cmd/engine api", cwd: resolve(import.meta.dirname, "../../backend"), env, url: "http://127.0.0.1:8088/healthz", reuseExistingServer: true, timeout: 120_000, stdout: "ignore" },
     { command: "pnpm --filter @msp/client dev", cwd: resolve(import.meta.dirname, "../.."), url: "http://localhost:5180", reuseExistingServer: true },

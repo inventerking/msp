@@ -66,6 +66,7 @@ func (s *Service) Consumers() []events.Consumer {
 		{Name: "crm.timeline", Class: events.Active, Module: Module, Handler: s.onModuleEvent, Types: []string{
 			"proposals.version.issued", "proposals.proposal.viewed", "proposals.proposal.signed", "proposals.proposal.declined",
 			"it_assessment.assessment.completed",
+			"outreach.message.sent", "outreach.reply.received", "chatbot.lead.captured", "visitor_intelligence.company.sent",
 		}},
 	}
 }
@@ -90,6 +91,8 @@ type moduleEvent struct {
 	DealID       *uuid.UUID `json:"deal_id"`
 	Title        string     `json:"title"`
 	Score        *int       `json:"score"`
+	// ContactID is a shared contact, used by modules that know a person but not their CRM company.
+	ContactID *uuid.UUID `json:"contact_id"`
 }
 
 // timeline says how each event appears, and which stage it suggests.
@@ -101,6 +104,10 @@ var timeline = map[string]struct {
 	"proposals.proposal.signed":          {"proposal", "Proposal signed. Review the deal and mark it won", "negotiation"},
 	"proposals.proposal.declined":        {"proposal", "Proposal declined", ""},
 	"it_assessment.assessment.completed": {"assessment", "IT assessment completed", "assessment_completed"},
+	"outreach.message.sent":              {"email_sent", "Outreach email sent", "contacted"},
+	"outreach.reply.received":            {"email_replied", "Reply received to outreach", ""},
+	"chatbot.lead.captured":              {"chat", "Lead captured by chatbot", ""},
+	"visitor_intelligence.company.sent":  {"visit", "Website visits from this company", ""},
 }
 
 // onModuleEvent records another module's event on the timeline, once, and applies its stage
@@ -115,6 +122,20 @@ func (s *Service) onModuleEvent(ctx context.Context, tx pgx.Tx, e events.Event) 
 	}
 	t := timeline[e.Type]
 	q := repo.New(tx)
+	var crmContact *uuid.UUID
+	if p.ContactID != nil {
+		c, err := q.FindContactCompany(ctx, repo.FindContactCompanyParams{TenantID: *e.TenantID, ContactID: *p.ContactID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil // The person is not in CRM, so there is no timeline to add to.
+		}
+		if err != nil {
+			return err
+		}
+		crmContact = &c.ID
+		if p.CRMCompanyID == nil {
+			p.CRMCompanyID = c.CrmCompanyID
+		}
+	}
 	summary := t.summary
 	if p.Title != "" {
 		summary += ": " + p.Title
@@ -123,7 +144,7 @@ func (s *Service) onModuleEvent(ctx context.Context, tx pgx.Tx, e events.Event) 
 		summary += fmt.Sprintf(" (score %d)", *p.Score)
 	}
 	id := e.ID
-	if _, err := q.InsertActivity(ctx, repo.InsertActivityParams{TenantID: *e.TenantID, ActivityType: t.kind, CrmCompanyID: p.CRMCompanyID, DealID: p.DealID, Summary: summary, OccurredAt: &e.OccurredAt, SourceModule: &e.SourceModule, SourceEventID: &id}); err != nil {
+	if _, err := q.InsertActivity(ctx, repo.InsertActivityParams{TenantID: *e.TenantID, ActivityType: t.kind, CrmCompanyID: p.CRMCompanyID, ContactID: crmContact, DealID: p.DealID, Summary: summary, OccurredAt: &e.OccurredAt, SourceModule: &e.SourceModule, SourceEventID: &id}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil // Already recorded: a replayed event has no second effect.
 		}

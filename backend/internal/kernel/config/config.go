@@ -37,6 +37,8 @@ type Config struct {
 	// AssessmentProbe is "fake" (invented results) or "live" (real DNS and the authorized domain's
 	// own web host, through the Egress Guard).
 	AssessmentProbe string
+	// SendingDomainCheck is "fake" (reserved domains pass, nothing is looked up) or "live" (real DNS).
+	SendingDomainCheck string
 	// FileScanner is clamav, or allow-all, which is refused outside local development.
 	FileScanner string
 	// TrustForwarded uses X-Forwarded-For. Enable only behind a trusted proxy such as Traefik.
@@ -49,30 +51,31 @@ func (c Config) IsLocal() bool { return c.Env == "local" || c.Env == "test" }
 // Load reads the environment and fails if a required value is missing or invalid.
 func Load() (Config, error) {
 	c := Config{
-		Env:               get("APP_ENV", "local"),
-		HTTPAddr:          get("HTTP_ADDR", "127.0.0.1:8088"),
-		DBHost:            get("DB_HOST", "127.0.0.1"),
-		DBPort:            get("DB_PORT", "55432"),
-		DBName:            get("DB_NAME", "msp_engine"),
-		DBOwnerPassword:   os.Getenv("DB_OWNER_PASSWORD"),
-		DBAppPassword:     os.Getenv("DB_APP_PASSWORD"),
-		DBPlatformPass:    os.Getenv("DB_PLATFORM_PASSWORD"),
-		DBSystemPassword:  os.Getenv("DB_SYSTEM_PASSWORD"),
-		RedisAddr:         get("REDIS_ADDR", "127.0.0.1:56379"),
-		SMTPAddr:          get("SMTP_ADDR", "127.0.0.1:51025"),
-		MailFrom:          get("MAIL_FROM", "no-reply@msp-engine.test"),
-		AppBaseURL:        strings.TrimRight(get("APP_BASE_URL", "http://localhost:5180"), "/"),
-		AuthRatePerMinute: authRate(),
-		TrustForwarded:    os.Getenv("TRUST_FORWARDED") == "true",
-		S3Endpoint:        os.Getenv("S3_ENDPOINT"),
-		S3Bucket:          get("S3_BUCKET", "msp-files"),
-		S3AccessKey:       os.Getenv("S3_ACCESS_KEY"),
-		S3SecretKey:       os.Getenv("S3_SECRET_KEY"),
-		GotenbergURL:      os.Getenv("GOTENBERG_URL"),
-		ClamAVAddr:        os.Getenv("CLAMAV_ADDR"),
-		ResearchFetcher:   get("RESEARCH_FETCHER", "fake"),
-		AssessmentProbe:   get("ASSESSMENT_PROBE", "fake"),
-		FileScanner:       get("FILE_SCANNER", "clamav"),
+		Env:                get("APP_ENV", "local"),
+		HTTPAddr:           get("HTTP_ADDR", "127.0.0.1:8088"),
+		DBHost:             get("DB_HOST", "127.0.0.1"),
+		DBPort:             get("DB_PORT", "55432"),
+		DBName:             get("DB_NAME", "msp_engine"),
+		DBOwnerPassword:    os.Getenv("DB_OWNER_PASSWORD"),
+		DBAppPassword:      os.Getenv("DB_APP_PASSWORD"),
+		DBPlatformPass:     os.Getenv("DB_PLATFORM_PASSWORD"),
+		DBSystemPassword:   os.Getenv("DB_SYSTEM_PASSWORD"),
+		RedisAddr:          get("REDIS_ADDR", "127.0.0.1:56379"),
+		SMTPAddr:           get("SMTP_ADDR", "127.0.0.1:51025"),
+		MailFrom:           get("MAIL_FROM", "no-reply@msp-engine.test"),
+		AppBaseURL:         strings.TrimRight(get("APP_BASE_URL", "http://localhost:5180"), "/"),
+		AuthRatePerMinute:  authRate(),
+		TrustForwarded:     os.Getenv("TRUST_FORWARDED") == "true",
+		S3Endpoint:         os.Getenv("S3_ENDPOINT"),
+		S3Bucket:           get("S3_BUCKET", "msp-files"),
+		S3AccessKey:        os.Getenv("S3_ACCESS_KEY"),
+		S3SecretKey:        os.Getenv("S3_SECRET_KEY"),
+		GotenbergURL:       os.Getenv("GOTENBERG_URL"),
+		ClamAVAddr:         os.Getenv("CLAMAV_ADDR"),
+		ResearchFetcher:    get("RESEARCH_FETCHER", "fake"),
+		AssessmentProbe:    get("ASSESSMENT_PROBE", "fake"),
+		SendingDomainCheck: get("SENDING_DOMAIN_CHECK", "fake"),
+		FileScanner:        get("FILE_SCANNER", "clamav"),
 	}
 	for _, o := range strings.Split(get("ALLOWED_ORIGINS", "http://localhost:5180,http://localhost:5181"), ",") {
 		if o = strings.TrimSpace(o); o != "" {

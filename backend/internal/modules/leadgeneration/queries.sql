@@ -288,3 +288,10 @@ UPDATE lead_generation.search_jobs SET status = 'failed', updated_at = now() WHE
 -- name: FailEnrichmentIfOpen :exec
 UPDATE lead_generation.enrichment_runs SET status = 'failed', error_code = 'job_failed', finished_at = now(), updated_at = now()
 WHERE tenant_id = @tenant_id AND id = @id AND status IN ('queued', 'running');
+
+-- name: ListContactIDs :many
+SELECT DISTINCT pc.contact_id FROM lead_generation.prospect_list_members m
+JOIN lead_generation.prospects p ON p.tenant_id = m.tenant_id AND p.id = m.prospect_id AND p.deleted_at IS NULL
+JOIN lead_generation.prospect_contacts pc ON pc.tenant_id = m.tenant_id AND pc.prospect_id = m.prospect_id
+JOIN lead_generation.prospect_lists l ON l.tenant_id = m.tenant_id AND l.id = m.list_id AND l.deleted_at IS NULL
+WHERE m.tenant_id = @tenant_id AND m.list_id = @list_id;

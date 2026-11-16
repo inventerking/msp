@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/platform/integration"
 )
 
@@ -135,4 +136,27 @@ func (f *Calendar) CancelEvent(_ context.Context, _, id string) error {
 	defer f.mu.Unlock()
 	delete(f.events, id)
 	return nil
+}
+
+// SinkEmail sends through the platform mailer, which is the Mailpit sink outside production, so
+// outreach can be seen end to end while reaching no real inbox.
+type SinkEmail struct {
+	Mailer interface {
+		Send(ctx context.Context, m mailer.Message) error
+	}
+}
+
+// Key names the provider.
+func (*SinkEmail) Key() string { return "sink_email" }
+
+// Send delivers to the sink and returns a message ID derived from the idempotency key.
+func (s *SinkEmail) Send(ctx context.Context, m integration.OutboundEmail) (string, error) {
+	headers := map[string]string{"Message-ID": "<" + m.IdempotencyKey + "@sink.local>"}
+	for k, v := range m.Headers {
+		headers[k] = v
+	}
+	if err := s.Mailer.Send(ctx, mailer.Message{To: m.To, From: m.From, Subject: m.Subject, Body: m.Body, Headers: headers}); err != nil {
+		return "", err
+	}
+	return "sink-" + m.IdempotencyKey, nil
 }

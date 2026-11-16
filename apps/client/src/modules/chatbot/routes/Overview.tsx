@@ -1,19 +1,27 @@
-import { Card, EmptyState, ErrorState, PageHeader, SkeletonRows } from "@msp/ui";
-import { MessageCircle } from "lucide-react";
+import { PageHeader } from "@msp/ui";
 import { useTranslation } from "react-i18next";
-import { useStatus } from "../api/status";
+import { Route, Routes } from "react-router";
+import { NotFound } from "../../../shell/StatusPages";
+import { Tabs } from "../components/Tabs";
+import { chatPath } from "../paths";
+import { BotDetail } from "./BotDetail";
+import { Bots } from "./Bots";
+import { ConversationDetail, Conversations } from "./Conversations";
 
+/** Chatbot: website chat answered from the workspace's own knowledge, with a person a click away. */
 export function Overview() {
   const { t } = useTranslation();
-  const status = useStatus();
   return (
     <>
       <PageHeader title={t("modules.chatbot.name")} description={t("modules.chatbot.description")} />
-      <Card>
-        {status.isPending ? <SkeletonRows label={t("common.loading")} /> : null}
-        {status.isError ? <div className="p-4"><ErrorState title={t("errors.internal_error")} onRetry={() => void status.refetch()} retryLabel={t("common.retry")} /></div> : null}
-        {status.isSuccess ? <EmptyState icon={MessageCircle} title={t("modules.placeholderTitle")} description={t("modules.placeholderPhase", { phase: 5 })} /> : null}
-      </Card>
+      <Tabs items={[{ to: chatPath(), label: t("chat.tabs.bots"), end: true }, { to: chatPath("conversations"), label: t("chat.tabs.conversations") }]} />
+      <Routes>
+        <Route index element={<Bots />} />
+        <Route path="bots/:id" element={<BotDetail />} />
+        <Route path="conversations" element={<Conversations />} />
+        <Route path="conversations/:id" element={<ConversationDetail />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </>
   );
 }

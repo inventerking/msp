@@ -72,6 +72,9 @@ UPDATE crm.activities SET contact_id = NULL WHERE tenant_id = @tenant_id AND con
 -- name: ClearDealContact :exec
 UPDATE crm.deals SET primary_contact_id = NULL WHERE tenant_id = @tenant_id AND primary_contact_id = ANY(@ids::uuid[]);
 
+-- name: FindContactCompany :one
+SELECT id, crm_company_id FROM crm.contacts WHERE tenant_id = @tenant_id AND contact_id = @contact_id AND deleted_at IS NULL ORDER BY is_primary DESC, created_at LIMIT 1;
+
 -- name: CrmContactIDsFor :many
 SELECT id FROM crm.contacts WHERE tenant_id = @tenant_id AND contact_id = @contact_id;
 

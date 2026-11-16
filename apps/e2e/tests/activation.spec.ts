@@ -25,10 +25,10 @@ test("an admin activates a module and the workspace updates, then suspension blo
   await customer.getByRole("button", { name: "Create workspace" }).click();
   await expect(customer.getByRole("heading", { name: "Welcome, Erin Owner" })).toBeVisible();
 
-  // Outreach is not active: the page explains why, and the API itself refuses.
-  await customer.getByRole("navigation").getByRole("link", { name: "Outreach" }).click();
+  // Sales Intelligence, still a placeholder until Phase 6, is not active: the page explains why, and the API itself refuses.
+  await customer.getByRole("navigation").getByRole("link", { name: "Sales Intelligence" }).click();
   await expect(customer.getByText("This module is not part of your workspace yet")).toBeVisible();
-  const before = await customer.evaluate(async () => (await fetch("/api/v1/outreach/status")).status);
+  const before = await customer.evaluate(async () => (await fetch("/api/v1/sales-intelligence/status")).status);
   expect(before).toBe(403);
 
   // An admin signs in and must enrol in MFA before anything else works.
@@ -43,10 +43,10 @@ test("an admin activates a module and the workspace updates, then suspension blo
   await console_.getByRole("button", { name: "Verify" }).click();
   await expect(console_.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
-  // The admin activates Outreach for this tenant, giving a reason.
+  // The admin activates Sales Intelligence for this tenant, giving a reason.
   await console_.getByRole("navigation").getByRole("link", { name: "Tenants" }).click();
   await console_.getByRole("link", { name: tenantName }).click();
-  const moduleRow = console_.locator('tr[data-module="outreach"]');
+  const moduleRow = console_.locator('tr[data-module="sales_intelligence"]');
   await moduleRow.getByRole("button", { name: "Activate" }).click();
   await console_.getByRole("dialog").getByLabel("Reason").fill("E2E activation");
   await console_.getByRole("dialog").getByRole("button", { name: "Activate" }).click();
@@ -54,7 +54,7 @@ test("an admin activates a module and the workspace updates, then suspension blo
 
   // The customer's open page updates by itself, with no reload.
   await expect(customer.getByText("This module is active")).toBeVisible({ timeout: 15_000 });
-  const during = await customer.evaluate(async () => (await fetch("/api/v1/outreach/status")).status);
+  const during = await customer.evaluate(async () => (await fetch("/api/v1/sales-intelligence/status")).status);
   expect(during).toBe(200);
 
   // Suspension stops access at the backend, and the page says so.
@@ -64,7 +64,7 @@ test("an admin activates a module and the workspace updates, then suspension blo
   await expect(moduleRow.getByText("Suspended", { exact: true })).toBeVisible();
   await expect(customer.getByText("This module is suspended")).toBeVisible({ timeout: 15_000 });
   const after = await customer.evaluate(async () => {
-    const r = await fetch("/api/v1/outreach/status");
+    const r = await fetch("/api/v1/sales-intelligence/status");
     return { status: r.status, body: (await r.json()) as { code: string; module_status: string } };
   });
   expect(after.status).toBe(403);
