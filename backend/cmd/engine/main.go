@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"mspengine/db/migrations"
 	"mspengine/internal/api"
 	"mspengine/internal/app"
+	"mspengine/internal/kernel/apperr"
 	"mspengine/internal/kernel/config"
 	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
@@ -82,8 +84,35 @@ func usage() {
 }
 
 func fatal(err error) {
+	// Name the fields that failed, so an operator running create-admin sees what to fix.
+	var ae *apperr.Error
+	if errors.As(err, &ae) && len(ae.Fields) > 0 {
+		slog.Error("fatal", "error", err, "fields", ae.Fields)
+		if hint := fieldHints(ae.Fields); hint != "" {
+			fmt.Fprintln(os.Stderr, hint)
+		}
+		os.Exit(1)
+	}
 	slog.Error("fatal", "error", err)
 	os.Exit(1)
+}
+
+// fieldHints turns validation codes from the admin commands into plain sentences.
+func fieldHints(fields []apperr.FieldError) string {
+	hints := map[string]string{
+		"invalid_email":       "The email address is not valid.",
+		"password_length":     "The password must be 12 to 256 characters long.",
+		"password_too_common": "The password is too common or easy to guess. Choose a different one.",
+	}
+	var out []string
+	for _, f := range fields {
+		if h, ok := hints[f.Code]; ok {
+			out = append(out, h)
+		} else {
+			out = append(out, f.Field+": "+f.Code)
+		}
+	}
+	return strings.Join(out, "\n")
 }
 
 func openPools(ctx context.Context, c config.Config) (*db.Pools, error) {

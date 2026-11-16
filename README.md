@@ -35,6 +35,23 @@ make web                   # client app and admin app
 
 These ports avoid the defaults on purpose: PostgreSQL is on 55432 and Redis on 56379.
 
+## Run everything in Docker
+
+Only Docker is needed: no Go or Node on the machine. It builds the same images as the testing server, but with local settings: development passwords, fake providers, no malware scanning and plain HTTP. Use it only on your own machine.
+
+```sh
+make docker-up                                              # builds and starts everything; creates deploy/docker-local/.env with fresh keys
+make docker-admin EMAIL=you@example.test NAME="Your Name"   # creates a Super Admin; asks for a password
+```
+
+| Open | For |
+|---|---|
+| http://localhost:8180 | Client app (the local test page is at `/test-site/index.html`) |
+| http://localhost:8181 | Platform admin app |
+| http://localhost:8025 | Mailpit |
+
+It has its own data and ports, so it can run beside `make up`. `make docker-logs` follows the API and worker logs, `make docker-down` stops it and keeps the data, and `make docker-reset` deletes the data. After changing code, run `make docker-up` again to rebuild. Change the ports with `CLIENT_PORT`, `ADMIN_PORT` and `MAILPIT_PORT` in `deploy/docker-local/.env`.
+
 ## Common commands
 
 | Command | Does |
