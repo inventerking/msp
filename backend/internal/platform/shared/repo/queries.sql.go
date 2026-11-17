@@ -256,6 +256,40 @@ func (q *Queries) GetRate(ctx context.Context, arg GetRateParams) (float64, erro
 	return rate, err
 }
 
+const getTenantService = `-- name: GetTenantService :one
+SELECT s.id, s.name, s.description, s.status, c.key AS category_key, s.created_at
+FROM shared.tenant_services s LEFT JOIN shared.service_categories c ON c.id = s.category_id
+WHERE s.tenant_id = $1 AND s.id = $2 AND s.deleted_at IS NULL
+`
+
+type GetTenantServiceParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+type GetTenantServiceRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description *string
+	Status      string
+	CategoryKey *string
+	CreatedAt   time.Time
+}
+
+func (q *Queries) GetTenantService(ctx context.Context, arg GetTenantServiceParams) (GetTenantServiceRow, error) {
+	row := q.db.QueryRow(ctx, getTenantService, arg.TenantID, arg.ID)
+	var i GetTenantServiceRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Status,
+		&i.CategoryKey,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const hasConsent = `-- name: HasConsent :one
 SELECT EXISTS (SELECT 1 FROM shared.contact_consents WHERE tenant_id = $1 AND contact_id = $2 AND purpose = $3 AND status = 'granted' AND withdrawn_at IS NULL)
 `
@@ -454,6 +488,31 @@ func (q *Queries) InsertMerge(ctx context.Context, arg InsertMergeParams) error 
 	return err
 }
 
+const insertTenantService = `-- name: InsertTenantService :one
+INSERT INTO shared.tenant_services (tenant_id, category_id, name, description, status)
+VALUES ($1, (SELECT c.id FROM shared.service_categories c WHERE c.key = $2), $3, $4, 'active')
+RETURNING id
+`
+
+type InsertTenantServiceParams struct {
+	TenantID    uuid.UUID
+	CategoryKey *string
+	Name        string
+	Description *string
+}
+
+func (q *Queries) InsertTenantService(ctx context.Context, arg InsertTenantServiceParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertTenantService,
+		arg.TenantID,
+		arg.CategoryKey,
+		arg.Name,
+		arg.Description,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const listConsents = `-- name: ListConsents :many
 SELECT purpose, status, basis, jurisdiction, captured_at, withdrawn_at FROM shared.contact_consents WHERE tenant_id = $1 AND contact_id = $2 ORDER BY captured_at
 `
@@ -599,6 +658,78 @@ func (q *Queries) ListIndustries(ctx context.Context) ([]ListIndustriesRow, erro
 	return items, nil
 }
 
+const listServiceCategories = `-- name: ListServiceCategories :many
+SELECT id, key, name FROM shared.service_categories ORDER BY name
+`
+
+type ListServiceCategoriesRow struct {
+	ID   uuid.UUID
+	Key  string
+	Name string
+}
+
+func (q *Queries) ListServiceCategories(ctx context.Context) ([]ListServiceCategoriesRow, error) {
+	rows, err := q.db.Query(ctx, listServiceCategories)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListServiceCategoriesRow
+	for rows.Next() {
+		var i ListServiceCategoriesRow
+		if err := rows.Scan(&i.ID, &i.Key, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTenantServices = `-- name: ListTenantServices :many
+SELECT s.id, s.name, s.description, s.status, c.key AS category_key, s.created_at
+FROM shared.tenant_services s LEFT JOIN shared.service_categories c ON c.id = s.category_id
+WHERE s.tenant_id = $1 AND s.deleted_at IS NULL ORDER BY s.name
+`
+
+type ListTenantServicesRow struct {
+	ID          uuid.UUID
+	Name        string
+	Description *string
+	Status      string
+	CategoryKey *string
+	CreatedAt   time.Time
+}
+
+func (q *Queries) ListTenantServices(ctx context.Context, tenantID uuid.UUID) ([]ListTenantServicesRow, error) {
+	rows, err := q.db.Query(ctx, listTenantServices, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTenantServicesRow
+	for rows.Next() {
+		var i ListTenantServicesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Status,
+			&i.CategoryKey,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const mergeMoveFacts = `-- name: MergeMoveFacts :exec
 UPDATE shared.company_source_facts SET company_id = $1 WHERE company_id = $2
 `
@@ -701,6 +832,54 @@ func (q *Queries) SearchCompanies(ctx context.Context, arg SearchCompaniesParams
 		return nil, err
 	}
 	return items, nil
+}
+
+const serviceCategoryExists = `-- name: ServiceCategoryExists :one
+SELECT EXISTS (SELECT 1 FROM shared.service_categories WHERE key = $1)
+`
+
+func (q *Queries) ServiceCategoryExists(ctx context.Context, key string) (bool, error) {
+	row := q.db.QueryRow(ctx, serviceCategoryExists, key)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const updateTenantService = `-- name: UpdateTenantService :execrows
+UPDATE shared.tenant_services t SET
+  name = COALESCE($1, t.name),
+  description = CASE WHEN $2::boolean THEN $3 ELSE t.description END,
+  category_id = CASE WHEN $4::boolean THEN (SELECT c.id FROM shared.service_categories c WHERE c.key = $5) ELSE t.category_id END,
+  status = COALESCE($6, t.status)
+WHERE t.tenant_id = $7 AND t.id = $8 AND t.deleted_at IS NULL
+`
+
+type UpdateTenantServiceParams struct {
+	Name           *string
+	SetDescription bool
+	Description    *string
+	SetCategory    bool
+	CategoryKey    *string
+	Status         *string
+	TenantID       uuid.UUID
+	ID             uuid.UUID
+}
+
+func (q *Queries) UpdateTenantService(ctx context.Context, arg UpdateTenantServiceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateTenantService,
+		arg.Name,
+		arg.SetDescription,
+		arg.Description,
+		arg.SetCategory,
+		arg.CategoryKey,
+		arg.Status,
+		arg.TenantID,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const upsertContact = `-- name: UpsertContact :one

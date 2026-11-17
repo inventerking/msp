@@ -7,40 +7,15 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"mspengine/internal/kernel/csvx"
 )
 
-// SafeCell stops a spreadsheet from treating exported text as a formula. A cell starting with one
-// of these characters could run commands when someone opens the file.
-func SafeCell(s string) string {
-	if s == "" {
-		return s
-	}
-	switch s[0] {
-	case '=', '+', '-', '@', '\t', '\r', '|', '%':
-		return "'" + s
-	}
-	return s
-}
+// SafeCell stops a spreadsheet from treating exported text as a formula.
+func SafeCell(s string) string { return csvx.SafeCell(s) }
 
 // WriteCSV writes rows with every cell made safe.
-func WriteCSV(header []string, rows [][]string) ([]byte, error) {
-	var b bytes.Buffer
-	w := csv.NewWriter(&b)
-	if err := w.Write(header); err != nil {
-		return nil, err
-	}
-	for _, r := range rows {
-		safe := make([]string, len(r))
-		for i, c := range r {
-			safe[i] = SafeCell(c)
-		}
-		if err := w.Write(safe); err != nil {
-			return nil, err
-		}
-	}
-	w.Flush()
-	return b.Bytes(), w.Error()
-}
+func WriteCSV(header []string, rows [][]string) ([]byte, error) { return csvx.Write(header, rows) }
 
 // MaxImportRows bounds one import.
 const MaxImportRows = 10000

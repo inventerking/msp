@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -24,6 +25,7 @@ import (
 	"mspengine/internal/modules/crm"
 	crmapp "mspengine/internal/modules/crm/app"
 	"mspengine/internal/modules/customerexpansion"
+	ceapp "mspengine/internal/modules/customerexpansion/app"
 	"mspengine/internal/modules/itassessment"
 	itaapp "mspengine/internal/modules/itassessment/app"
 	"mspengine/internal/modules/leadgeneration"
@@ -32,6 +34,8 @@ import (
 	outapp "mspengine/internal/modules/outreach/app"
 	"mspengine/internal/modules/proposals"
 	propapp "mspengine/internal/modules/proposals/app"
+	"mspengine/internal/modules/salesintel"
+	siapp "mspengine/internal/modules/salesintel/app"
 	"mspengine/internal/modules/visitorintel"
 	viapp "mspengine/internal/modules/visitorintel/app"
 	"mspengine/internal/platform/commercial"
@@ -69,6 +73,8 @@ type Graph struct {
 	Outreach    *outapp.Service
 	Visitors    *viapp.Service
 	Chatbot     *cbapp.Service
+	Expansion   *ceapp.Service
+	SalesIntel  *siapp.Service
 	// Modules are the built business modules. The others are served as skeletons.
 	Modules []modulekit.Module
 }
@@ -91,6 +97,8 @@ type Options struct {
 	Prober itaapp.Prober
 	// DomainChecker reads sending domains' DNS. Nil means the fake checker, which looks nothing up.
 	DomainChecker outapp.DomainChecker
+	// RollupDelay gathers analytics events into one metrics rollup. Zero rolls up after every event.
+	RollupDelay time.Duration
 }
 
 // Build assembles the services. Only fake providers exist until D-05 selects real ones, so no
@@ -121,14 +129,19 @@ func Build(pools *db.Pools, keys crypto.Keys, o Options) (*Graph, error) {
 	crmMod, crmSvc := crm.New(crmapp.Deps{Pools: pools, Identity: ids, Shared: g.Shared, Files: g.Files, Notify: g.Notify})
 	leads, leadSvc := leadgeneration.New(leadapp.Deps{Pools: pools, Identity: ids, Commercial: com, Shared: g.Shared, Integration: ints, Files: g.Files, AI: gw, Competitors: compSvc, CRM: crmSvc})
 	g.Leads, g.Competitors, g.CRM = leadSvc, compSvc, crmSvc
-	expansion, _ := customerexpansion.New(pools, crmSvc)
+	expansion, expSvc := customerexpansion.New(ceapp.Deps{Pools: pools, Registry: crmSvc, Deals: crmSvc, Shared: g.Shared, Commercial: com, Files: g.Files,
+		AI: gw, Notify: g.Notify, Currency: ids.ReportingCurrency})
+	g.Expansion = expSvc
+	intel, intelSvc := salesintel.New(siapp.Deps{Pools: pools, ModuleStatus: com.ModuleStatus, Rates: g.Shared.Rate, Currency: ids.ReportingCurrency, AI: gw, Files: g.Files,
+		RollupDelay: o.RollupDelay})
+	g.SalesIntel = intelSvc
 	props, propSvc := proposals.New(propapp.Deps{Pools: pools, Keys: keys, Registry: crmSvc, Deals: crmSvc, Files: g.Files, PDF: o.PDF, AI: gw, Mailer: o.Mailer, Integration: ints, BaseURL: o.BaseURL})
 	assess, assessSvc := itassessment.New(itaapp.Deps{Pools: pools, Registry: crmSvc, Shared: g.Shared, Files: g.Files, PDF: o.PDF, Prober: o.Prober})
 	out, outSvc := outreach.New(outapp.Deps{Pools: pools, Keys: keys, Commercial: com, Shared: g.Shared, Integration: ints, AI: gw, Lists: leadSvc, BaseURL: o.BaseURL, Checker: o.DomainChecker})
 	vis, visSvc := visitorintel.New(viapp.Deps{Pools: pools, Keys: keys, Commercial: com, Shared: g.Shared, Registry: crmSvc})
 	chat, chatSvc := chatbot.New(cbapp.Deps{Pools: pools, Keys: keys, Commercial: com, Shared: g.Shared, AI: gw, Registry: crmSvc})
 	g.Proposals, g.Assessments, g.Outreach, g.Visitors, g.Chatbot = propSvc, assessSvc, outSvc, visSvc, chatSvc
-	g.Modules = []modulekit.Module{leads, comps, crmMod, expansion, props, assess, out, vis, chat}
+	g.Modules = []modulekit.Module{leads, comps, crmMod, expansion, props, assess, out, vis, chat, intel}
 	return g, nil
 }
 
@@ -269,7 +282,7 @@ func BuildFromConfig(ctx context.Context, c config.Config, pools *db.Pools, rdb 
 	}
 	return Build(pools, crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}, Options{
 		Mailer: mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, Store: store, Scanner: scanner, Bucket: c.S3Bucket, BaseURL: c.AppBaseURL, Redis: rdb, FakeProviders: fakes,
-		PDF: renderer, Fetcher: fetcher, Prober: prober, DomainChecker: checker,
+		PDF: renderer, Fetcher: fetcher, Prober: prober, DomainChecker: checker, RollupDelay: siapp.DefaultRollupDelay,
 	})
 }
 

@@ -9,3 +9,5 @@ export type { paths as AssessmentPaths, components as AssessmentComponents } fro
 export type { paths as OutreachPaths, components as OutreachComponents } from "./outreach.gen";
 export type { paths as VisitorPaths, components as VisitorComponents } from "./visitors.gen";
 export type { paths as ChatbotPaths, components as ChatbotComponents } from "./chatbot.gen";
+export type { paths as ExpansionPaths, components as ExpansionComponents } from "./expansion.gen";
+export type { paths as SalesIntelPaths, components as SalesIntelComponents } from "./salesintel.gen";

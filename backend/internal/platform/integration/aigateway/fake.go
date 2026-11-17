@@ -66,6 +66,14 @@ func (f *FakeProvider) Complete(_ context.Context, r ProviderRequest) (ProviderR
 		} else {
 			out = map[string]any{"answer": "From our information: " + firstLine(strings.TrimSpace(knowledge)), "needs_human": false}
 		}
+	case "customer_expansion.word_recommendation":
+		// Keeps the rule wording's facts, as the module requires; it only adds a lead-in.
+		out = map[string]string{"rationale": "Suggested: " + unfence(between(r.User, "Recommendation:", "\nFacts:"))}
+	case "sales_intelligence.commentary":
+		// Cites the first metric and repeats its text, so every number is one it was given.
+		line := firstLine(strings.TrimSpace(after(r.User, "Metrics:")))
+		id, text, _ := strings.Cut(strings.TrimPrefix(line, "id="), " | ")
+		out = map[string]any{"commentary": "Fake commentary. " + strings.TrimSpace(text) + ".", "cited_metric_ids": []string{strings.TrimSpace(id)}}
 	default:
 		out = map[string]string{"summary": "Fake summary. No AI provider is connected."}
 	}
@@ -83,6 +91,22 @@ func between(s, start, end string) string {
 	}
 	before, _, _ := strings.Cut(after, end)
 	return before
+}
+
+// unfence drops the gateway's untrusted-content markers, keeping the content.
+func unfence(s string) string {
+	var kept []string
+	for _, l := range strings.Split(s, "\n") {
+		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "<untrusted-") && !strings.HasPrefix(l, "</untrusted-") {
+			kept = append(kept, l)
+		}
+	}
+	return strings.Join(kept, " ")
+}
+
+func after(s, start string) string {
+	_, rest, _ := strings.Cut(s, start)
+	return rest
 }
 
 func firstLine(s string) string {

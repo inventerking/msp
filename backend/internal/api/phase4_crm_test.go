@@ -320,7 +320,9 @@ func TestWonDealRecordsContract(t *testing.T) {
 	}
 	c.must(200, http.MethodPost, "/api/v1/crm/deals/"+id+"/reopen", nil)
 	dispatch(t)
-	if got := status(); !strings.HasPrefix(got, "cancelled") {
+	// A reopened deal returns its contract to draft for review (Customer Expansion spec), so it no
+	// longer counts as MRR, and winning again reactivates the same contract.
+	if got := status(); !strings.HasPrefix(got, "draft") {
 		t.Fatalf("after reopening: %s", got)
 	}
 	_ = won

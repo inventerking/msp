@@ -15,10 +15,12 @@ import (
 	"mspengine/internal/kernel/apperr"
 	"mspengine/internal/kernel/authctx"
 	"mspengine/internal/kernel/db"
+	"mspengine/internal/kernel/httpx"
 	"mspengine/internal/kernel/jobs"
 	"mspengine/internal/platform/files"
 	"mspengine/internal/platform/identity"
 	"mspengine/internal/platform/integration"
+	"mspengine/internal/platform/shared"
 )
 
 func (h tenantHandlers) GetUsage(w http.ResponseWriter, r *http.Request) {
@@ -324,7 +326,15 @@ func (h tenantHandlers) GetReference(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	out := tenantapi.Reference{Countries: []tenantapi.CodeName{}, Industries: []tenantapi.CodeName{}}
+	cats, err := h.Shared.ServiceCategories(r.Context())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	out := tenantapi.Reference{Countries: []tenantapi.CodeName{}, Industries: []tenantapi.CodeName{}, ServiceCategories: []tenantapi.CodeName{}}
+	for _, c := range cats {
+		out.ServiceCategories = append(out.ServiceCategories, tenantapi.CodeName{Code: c.Key, Name: c.Name})
+	}
 	for _, c := range cs {
 		out.Countries = append(out.Countries, tenantapi.CodeName{Code: c.Code, Name: c.Name})
 	}
@@ -332,4 +342,53 @@ func (h tenantHandlers) GetReference(w http.ResponseWriter, r *http.Request) {
 		out.Industries = append(out.Industries, tenantapi.CodeName{Code: i.Code, Name: i.Name})
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func serviceOut(s shared.TenantService) tenantapi.TenantService {
+	return tenantapi.TenantService{Id: s.ID, Name: s.Name, Description: s.Description, Status: tenantapi.TenantServiceStatus(s.Status), CategoryKey: s.CategoryKey, CreatedAt: s.CreatedAt}
+}
+
+func (h tenantHandlers) ListTenantServices(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.Shared.TenantServices(r.Context(), authctx.PrincipalFrom(r.Context()).TenantID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	out := tenantapi.TenantServiceList{Data: []tenantapi.TenantService{}}
+	for _, s := range rows {
+		out.Data = append(out.Data, serviceOut(s))
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (h tenantHandlers) CreateTenantService(w http.ResponseWriter, r *http.Request) {
+	var b tenantapi.TenantServiceInput
+	if !httpx.Decode(w, r, &b) {
+		return
+	}
+	s, err := h.Shared.CreateTenantService(r.Context(), authctx.PrincipalFrom(r.Context()), shared.ServiceInput{Name: &b.Name, Description: b.Description, CategoryKey: b.CategoryKey})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, serviceOut(s))
+}
+
+func (h tenantHandlers) UpdateTenantService(w http.ResponseWriter, r *http.Request, id tenantapi.Id) {
+	var b tenantapi.TenantServicePatch
+	keys, good := httpx.DecodePatch(w, r, &b)
+	if !good {
+		return
+	}
+	in := shared.ServiceInput{Name: b.Name, Description: b.Description, SetDesc: keys["description"], CategoryKey: b.CategoryKey, SetCategory: keys["category_key"]}
+	if b.Status != nil {
+		st := string(*b.Status)
+		in.Status = &st
+	}
+	s, err := h.Shared.UpdateTenantService(r.Context(), authctx.PrincipalFrom(r.Context()), id, in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, serviceOut(s))
 }

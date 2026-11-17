@@ -1,0 +1,518 @@
+openapi: 3.0.3
+info: {title: Customer Expansion API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /customer-expansion/customers:
+    get:
+      operationId: listCustomers
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      parameters:
+        - {name: health, in: query, required: false, schema: {type: string, enum: [unknown, healthy, watch, at_risk]}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CustomerList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: addCustomer
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CustomerInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Customer"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/customers/import:
+    post:
+      operationId: importCustomers
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ImportInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ImportResult"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/customers/{id}:
+    get:
+      operationId: getCustomer
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Customer"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateCustomer
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CustomerPatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Customer"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/customers/{id}/contracts:
+    get:
+      operationId: listContracts
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ContractList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createContract
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ContractInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Ref"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/contracts/{id}:
+    patch:
+      operationId: updateContract
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ContractPatch"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/customers/{id}/services:
+    get:
+      operationId: getCoverage
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CoverageList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    put:
+      operationId: setCoverage
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CoverageInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CoverageList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/customers/{id}/analyze:
+    post:
+      operationId: analyzeCustomer
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.analyze
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Analysis"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/renewals:
+    get:
+      operationId: listRenewals
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      parameters:
+        - {name: status, in: query, required: false, schema: {type: string, enum: [open, acknowledged, resolved]}}
+        - {name: within_days, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 365, default: 120}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/RenewalList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/renewal-alerts/{id}/acknowledge:
+    post:
+      operationId: acknowledgeRenewal
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/recommendations:
+    get:
+      operationId: listRecommendations
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      parameters:
+        - {name: status, in: query, required: false, schema: {type: string, enum: [open, accepted, dismissed, converted, expired]}}
+        - {name: customer_id, in: query, required: false, schema: {type: string, format: uuid}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/RecommendationList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/recommendations/{id}:
+    get:
+      operationId: getRecommendation
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Recommendation"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/recommendations/{id}/accept:
+    post:
+      operationId: acceptRecommendation
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 128}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AcceptInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AcceptResult"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/recommendations/{id}/dismiss:
+    post:
+      operationId: dismissRecommendation
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.write
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/opportunities:
+    get:
+      operationId: listOpportunities
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      parameters:
+        - {name: status, in: query, required: false, schema: {type: string, enum: [open, in_deal, won, lost]}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/OpportunityList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /customer-expansion/opportunities/summary:
+    get:
+      operationId: opportunitySummary
+      x-access: tenant
+      x-module: customer_expansion
+      x-permission: expansion.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/OpportunitySummary"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    Ref:
+      type: object
+      required: [id]
+      properties: {id: {type: string, format: uuid}}
+    CompanyRef:
+      type: object
+      required: [id, name, lifecycle]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        domain: {type: string}
+        lifecycle: {type: string}
+    CoverageSummary:
+      type: object
+      required: [active, absent, declined, unknown]
+      properties:
+        active: {type: integer}
+        absent: {type: integer}
+        declined: {type: integer}
+        unknown: {type: integer}
+    Customer:
+      type: object
+      required: [id, crm_company, health_status, health_source, active_mrr_minor, mixed_currency, coverage_summary, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        crm_company: {$ref: "#/components/schemas/CompanyRef"}
+        health_status: {type: string, enum: [unknown, healthy, watch, at_risk]}
+        health_source: {type: string, enum: [computed, manual]}
+        health_as_of: {type: string, format: date-time}
+        last_analyzed_at: {type: string, format: date-time}
+        active_mrr_minor: {type: integer, format: int64, description: "Actual MRR from active contracts"}
+        currency: {type: string}
+        mixed_currency:
+          type: boolean
+          description: "Contracts are in more than one currency, so active_mrr_minor is not a single amount and is not shown"
+        renewal_next_date: {type: string, format: date}
+        coverage_summary: {$ref: "#/components/schemas/CoverageSummary"}
+        created_at: {type: string, format: date-time}
+    CustomerList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Customer"}}
+    CustomerInput:
+      type: object
+      additionalProperties: false
+      description: "Either crm_company_id, or a name (and optional domain) to find or create through the customer registry"
+      properties:
+        crm_company_id: {type: string, format: uuid}
+        name: {type: string, minLength: 1, maxLength: 200}
+        domain: {type: string, maxLength: 253}
+    CustomerPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        health_status:
+          type: string
+          nullable: true
+          enum: [unknown, healthy, watch, at_risk, null]
+          description: "A manual status, kept until cleared with null"
+    ImportInput:
+      type: object
+      required: [file_id]
+      additionalProperties: false
+      properties:
+        file_id: {type: string, format: uuid, description: "A scanned upload with purpose csv_import. Columns: name, domain, and optionally mrr_minor, currency, start_date, end_date"}
+    ImportResult:
+      type: object
+      required: [created, contracts, errors]
+      properties:
+        created: {type: integer}
+        contracts: {type: integer}
+        errors: {type: array, items: {type: string}}
+    Contract:
+      type: object
+      required: [id, status, start_date, currency, mrr_minor, setup_minor, source, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        proposal_version_id: {type: string, format: uuid}
+        status: {type: string, enum: [draft, active, renewing, ended, cancelled]}
+        start_date: {type: string, format: date}
+        end_date: {type: string, format: date}
+        term_months: {type: integer}
+        auto_renew: {type: boolean}
+        notice_days: {type: integer}
+        currency: {type: string}
+        mrr_minor: {type: integer, format: int64}
+        setup_minor: {type: integer, format: int64}
+        source: {type: string, enum: [won_deal, signed_proposal, manual, csv_import]}
+        review_reason: {type: string, enum: [proposal_deal_mismatch, deal_reopened]}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    ContractList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Contract"}}
+    ContractInput:
+      type: object
+      required: [start_date, currency, mrr_minor]
+      additionalProperties: false
+      properties:
+        status: {type: string, enum: [active, draft], default: active}
+        start_date: {type: string, format: date}
+        end_date: {type: string, format: date}
+        term_months: {type: integer, minimum: 1, maximum: 120}
+        auto_renew: {type: boolean}
+        notice_days: {type: integer, minimum: 0, maximum: 365}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        mrr_minor: {type: integer, format: int64, minimum: 0}
+        setup_minor: {type: integer, format: int64, minimum: 0}
+        proposal_version_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+    ContractPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        status: {type: string, enum: [draft, active, renewing, ended, cancelled]}
+        start_date: {type: string, format: date}
+        end_date: {type: string, format: date, nullable: true}
+        term_months: {type: integer, minimum: 1, maximum: 120, nullable: true}
+        auto_renew: {type: boolean}
+        notice_days: {type: integer, minimum: 0, maximum: 365, nullable: true}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        mrr_minor: {type: integer, format: int64, minimum: 0}
+        setup_minor: {type: integer, format: int64, minimum: 0}
+        clear_review: {type: boolean, description: "Mark a flagged disagreement as reviewed"}
+    CoverageLine:
+      type: object
+      required: [tenant_service_id, service_name, service_status, coverage]
+      properties:
+        tenant_service_id: {type: string, format: uuid}
+        service_name: {type: string}
+        service_status: {type: string, enum: [active, retired]}
+        category_key: {type: string}
+        coverage: {type: string, enum: [active, absent, declined, unknown]}
+        quantity: {type: integer}
+        mrr_minor: {type: integer, format: int64}
+        currency: {type: string}
+        updated_at: {type: string, format: date-time}
+    CoverageList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/CoverageLine"}}
+    CoverageItem:
+      type: object
+      required: [tenant_service_id, coverage]
+      additionalProperties: false
+      properties:
+        tenant_service_id: {type: string, format: uuid}
+        coverage: {type: string, enum: [active, absent, declined, unknown]}
+        quantity: {type: integer, minimum: 0, maximum: 1000000}
+        mrr_minor: {type: integer, format: int64, minimum: 0}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+    CoverageInput:
+      type: object
+      required: [items]
+      additionalProperties: false
+      properties:
+        items: {type: array, maxItems: 500, items: {$ref: "#/components/schemas/CoverageItem"}}
+    Indicator:
+      type: object
+      required: [key, polarity, value]
+      properties:
+        key: {type: string, enum: [active_mrr, renewal_proximity, coverage_breadth, assessment_risk]}
+        polarity: {type: string, enum: [positive, neutral, negative, unknown]}
+        value: {type: object, additionalProperties: true}
+    Analysis:
+      type: object
+      required: [health_status, created, refreshed, expired, indicators]
+      properties:
+        health_status: {type: string, enum: [unknown, healthy, watch, at_risk]}
+        created: {type: integer}
+        refreshed: {type: integer}
+        expired: {type: integer}
+        indicators: {type: array, items: {$ref: "#/components/schemas/Indicator"}}
+    Renewal:
+      type: object
+      required: [id, contract_id, customer_id, customer_name, kind, window_days, due_date, status, mrr_minor, currency]
+      properties:
+        id: {type: string, format: uuid}
+        contract_id: {type: string, format: uuid}
+        customer_id: {type: string, format: uuid}
+        customer_name: {type: string}
+        kind: {type: string, enum: [contract_end, notice_deadline]}
+        window_days: {type: integer}
+        due_date: {type: string, format: date}
+        status: {type: string, enum: [open, acknowledged, resolved]}
+        mrr_minor: {type: integer, format: int64}
+        currency: {type: string}
+        auto_renew: {type: boolean}
+        acknowledged_at: {type: string, format: date-time}
+    RenewalList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Renewal"}}
+    EvidenceRef:
+      type: object
+      required: [type, id]
+      properties:
+        type: {type: string}
+        id: {type: string, format: uuid}
+    Evidence:
+      type: object
+      required: [kind, detail]
+      properties:
+        kind: {type: string, enum: [service_absent, coverage_unknown, contract_ending, notice_deadline, assessment_risk, peer_price]}
+        detail: {type: object, additionalProperties: true}
+        reference: {$ref: "#/components/schemas/EvidenceRef"}
+    NamedRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+    Recommendation:
+      type: object
+      required: [id, customer, kind, rationale, ai_worded, evidence, evidence_class, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        customer: {$ref: "#/components/schemas/NamedRef"}
+        kind: {type: string, enum: [upsell, cross_sell, renewal, confirm_coverage]}
+        service: {$ref: "#/components/schemas/NamedRef"}
+        contract_id: {type: string, format: uuid}
+        rationale: {type: string}
+        ai_worded: {type: boolean, description: "The rationale was reworded by AI from the rule-based text, keeping its facts"}
+        evidence: {type: array, minItems: 1, items: {$ref: "#/components/schemas/Evidence"}}
+        estimated_mrr_minor: {type: integer, format: int64, description: "An estimate, never counted as revenue"}
+        currency: {type: string}
+        evidence_class: {type: string, enum: [observed, inferred, ai_estimate]}
+        status: {type: string, enum: [open, accepted, dismissed, converted, expired]}
+        created_at: {type: string, format: date-time}
+        decided_at: {type: string, format: date-time}
+    RecommendationList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Recommendation"}}
+    AcceptInput:
+      type: object
+      required: [create_deal]
+      additionalProperties: false
+      properties:
+        create_deal: {type: boolean}
+        deal_title: {type: string, minLength: 1, maxLength: 200}
+    AcceptResult:
+      type: object
+      required: [opportunity_id, deal_pending]
+      properties:
+        opportunity_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        deal_pending: {type: boolean, description: "A deal was asked for but CRM did not answer; it is retried"}
+        deal_skipped: {type: string, enum: [crm_not_active, nothing_to_sell_yet]}
+    Opportunity:
+      type: object
+      required: [id, recommendation_id, customer, kind, status, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        recommendation_id: {type: string, format: uuid}
+        customer: {$ref: "#/components/schemas/NamedRef"}
+        kind: {type: string}
+        deal_id: {type: string, format: uuid}
+        estimated_mrr_minor: {type: integer, format: int64}
+        realised_mrr_minor: {type: integer, format: int64}
+        currency: {type: string}
+        status: {type: string, enum: [open, in_deal, won, lost]}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    OpportunityList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Opportunity"}}
+    SummaryRow:
+      type: object
+      required: [status, count, estimated_mrr_minor, realised_mrr_minor]
+      properties:
+        status: {type: string, enum: [open, in_deal, won, lost]}
+        currency: {type: string}
+        count: {type: integer}
+        estimated_mrr_minor: {type: integer, format: int64, description: "Estimated, not revenue"}
+        realised_mrr_minor: {type: integer, format: int64, description: "Actual, from won deals"}
+    OpportunitySummary:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/SummaryRow"}}

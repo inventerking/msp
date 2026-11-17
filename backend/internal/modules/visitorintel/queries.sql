@@ -32,9 +32,11 @@ SELECT id, site_id, name, kind, rule, created_at FROM visitor_intelligence.conve
 -- name: DeleteGoal :execrows
 UPDATE visitor_intelligence.conversion_goals SET deleted_at = now() WHERE tenant_id = @tenant_id AND id = @id AND deleted_at IS NULL;
 
--- name: InsertConversion :execrows
+-- name: InsertConversion :many
+-- Returns the new row's ID, or nothing when the same conversion was already recorded.
 INSERT INTO visitor_intelligence.conversions (tenant_id, site_id, goal_id, session_id, visitor_id, attribution, dedupe_key)
-VALUES (@tenant_id, @site_id, @goal_id, sqlc.narg(session_id), sqlc.narg(visitor_id), @attribution, @dedupe_key) ON CONFLICT (tenant_id, dedupe_key) DO NOTHING;
+VALUES (@tenant_id, @site_id, @goal_id, sqlc.narg(session_id), sqlc.narg(visitor_id), @attribution, @dedupe_key) ON CONFLICT (tenant_id, dedupe_key) DO NOTHING
+RETURNING id;
 
 -- name: InsertIdentification :exec
 INSERT INTO visitor_intelligence.business_identifications (tenant_id, site_id, session_id, company_id, provider_key, confidence, observed_at)

@@ -618,7 +618,7 @@ func (s *Service) HandleRun(ctx context.Context, j jobs.Job) (err error) {
 		}
 		payload := map[string]any{"assessment_id": a.ID, "crm_company_id": a.CrmCompanyID, "domain": a.Domain}
 		if scored {
-			payload["score"] = score
+			payload["score"], payload["risk_level"] = score, risk
 		}
 		return events.Append(ctx, tx, events.Event{Type: "it_assessment.assessment.completed", TenantID: &tenant, SourceModule: Module, AggregateType: "assessment", AggregateID: a.ID}, payload)
 	})

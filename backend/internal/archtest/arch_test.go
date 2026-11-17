@@ -66,6 +66,11 @@ func violations(g map[string][]string) []string {
 			case strings.HasPrefix(pkg, "modules/") && strings.Contains(dep, "/repo"):
 				bad = append(bad, pkg+" -> "+dep+": repositories are private to their owner")
 			}
+			// Sales Intelligence is read-only towards the rest of the system: it takes facts from
+			// events and may not reach any module, not even a contract, nor billing.
+			if strings.HasPrefix(pkg, "modules/salesintel") && (strings.HasPrefix(dep, "modules/") && !strings.HasPrefix(dep, "modules/salesintel") || dep == "platform/commercial") {
+				bad = append(bad, pkg+" -> "+dep+": sales intelligence has no write path into other modules or billing")
+			}
 		}
 	}
 	sort.Strings(bad)
@@ -145,6 +150,12 @@ func TestRulesCatchPlantedFaults(t *testing.T) {
 			t.Errorf("not caught: %s", name)
 		}
 	}
+	if len(violations(map[string][]string{"modules/salesintel/app": {"modules/crm/contract"}})) == 0 {
+		t.Error("not caught: sales intelligence importing a CRM contract")
+	}
+	if len(violations(map[string][]string{"modules/salesintel/app": {"platform/commercial"}})) == 0 {
+		t.Error("not caught: sales intelligence importing billing")
+	}
 	if moduleCycles(map[string][]string{"modules/a": {"modules/b/contract"}, "modules/b": {"modules/a/contract"}}) == nil {
 		t.Error("not caught: contract-level module cycle")
 	}
@@ -192,6 +203,7 @@ func TestSQLStaysInOwnSchema(t *testing.T) {
 		"../modules/outreach/queries.sql":          "outreach",
 		"../modules/visitorintel/queries.sql":      "visitor_intelligence",
 		"../modules/chatbot/queries.sql":           "chatbot",
+		"../modules/salesintel/queries.sql":        "sales_intelligence",
 	}
 	for path, schema := range owners {
 		b, err := os.ReadFile(path)

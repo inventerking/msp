@@ -455,3 +455,15 @@ func UserEmail(ctx context.Context, tx pgx.Tx, userID uuid.UUID) (string, error)
 	u, err := repo.New(tx).GetUserByID(ctx, userID)
 	return u.Email, err
 }
+
+// ReportingCurrency is the currency a tenant reports in. Modules use it to convert amounts and
+// to label totals; they never read the tenants table themselves.
+func (s *Service) ReportingCurrency(ctx context.Context, tenantID uuid.UUID) (string, error) {
+	var cur string
+	err := db.TenantTx(ctx, s.pools.App, tenantID, uuid.Nil, func(tx pgx.Tx) error {
+		t, err := repo.New(tx).GetTenant(ctx, tenantID)
+		cur = t.ReportingCurrency
+		return err
+	})
+	return cur, err
+}

@@ -209,9 +209,10 @@ func (q *Queries) InsertConsentRecord(ctx context.Context, arg InsertConsentReco
 	return err
 }
 
-const insertConversion = `-- name: InsertConversion :execrows
+const insertConversion = `-- name: InsertConversion :many
 INSERT INTO visitor_intelligence.conversions (tenant_id, site_id, goal_id, session_id, visitor_id, attribution, dedupe_key)
 VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (tenant_id, dedupe_key) DO NOTHING
+RETURNING id
 `
 
 type InsertConversionParams struct {
@@ -224,8 +225,9 @@ type InsertConversionParams struct {
 	DedupeKey   string
 }
 
-func (q *Queries) InsertConversion(ctx context.Context, arg InsertConversionParams) (int64, error) {
-	result, err := q.db.Exec(ctx, insertConversion,
+// Returns the new row's ID, or nothing when the same conversion was already recorded.
+func (q *Queries) InsertConversion(ctx context.Context, arg InsertConversionParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, insertConversion,
 		arg.TenantID,
 		arg.SiteID,
 		arg.GoalID,
@@ -235,9 +237,21 @@ func (q *Queries) InsertConversion(ctx context.Context, arg InsertConversionPara
 		arg.DedupeKey,
 	)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return result.RowsAffected(), nil
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertEvent = `-- name: InsertEvent :exec

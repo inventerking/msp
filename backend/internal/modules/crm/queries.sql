@@ -143,6 +143,16 @@ JOIN crm.companies c ON c.tenant_id = d.tenant_id AND c.id = d.crm_company_id
 JOIN crm.pipeline_stages s ON s.tenant_id = d.tenant_id AND s.id = d.stage_id
 WHERE d.tenant_id = @tenant_id AND d.id = @id AND d.deleted_at IS NULL;
 
+-- name: DealFacts :one
+-- What every deal event carries, so a consumer can rebuild a deal's current state from the latest
+-- event alone, whatever order events arrive in. IDs and amounts only: never the title or notes.
+SELECT d.id, d.crm_company_id, c.company_id, d.pipeline_id, s.key AS stage_key, d.status, d.owner_user_id, d.currency,
+  d.contract_value_minor, d.expected_mrr_minor, d.probability, d.expected_close_date, d.source_module, d.source_ref, d.row_version
+FROM crm.deals d
+JOIN crm.companies c ON c.tenant_id = d.tenant_id AND c.id = d.crm_company_id
+JOIN crm.pipeline_stages s ON s.tenant_id = d.tenant_id AND s.id = d.stage_id
+WHERE d.tenant_id = @tenant_id AND d.id = @id;
+
 -- name: ListDeals :many
 SELECT d.id, d.pipeline_id, d.stage_id, d.crm_company_id, d.title, d.owner_user_id, d.currency, d.contract_value_minor, d.expected_mrr_minor,
   d.probability, d.expected_close_date, d.status, d.row_version, d.updated_at, c.name AS company_name, s.name AS stage_name
@@ -328,3 +338,13 @@ SELECT pg_advisory_xact_lock(hashtextextended(@key::text, 0))::text AS locked;
 
 -- name: OpenDealsForCompany :many
 SELECT id FROM crm.deals WHERE tenant_id = @tenant_id AND crm_company_id = @crm_company_id AND status = 'open' AND deleted_at IS NULL;
+
+-- name: CompaniesByIDs :many
+SELECT id, company_id, name, domain, lifecycle FROM crm.companies
+WHERE tenant_id = @tenant_id AND id = ANY(@ids::uuid[]) AND deleted_at IS NULL;
+
+-- name: FindDealBySource :one
+-- Another module's deal for one of its records, so asking twice opens one deal.
+SELECT id FROM crm.deals
+WHERE tenant_id = @tenant_id AND source_module = @source_module AND source_ref = @source_ref AND deleted_at IS NULL
+ORDER BY created_at LIMIT 1;

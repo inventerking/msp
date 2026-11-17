@@ -101,3 +101,32 @@ WHERE c.tenant_id = @tenant_id AND c.id = ANY(@ids::uuid[]);
 
 -- name: HasConsent :one
 SELECT EXISTS (SELECT 1 FROM shared.contact_consents WHERE tenant_id = @tenant_id AND contact_id = @contact_id AND purpose = @purpose AND status = 'granted' AND withdrawn_at IS NULL);
+
+-- name: ListServiceCategories :many
+SELECT id, key, name FROM shared.service_categories ORDER BY name;
+
+-- name: ListTenantServices :many
+SELECT s.id, s.name, s.description, s.status, c.key AS category_key, s.created_at
+FROM shared.tenant_services s LEFT JOIN shared.service_categories c ON c.id = s.category_id
+WHERE s.tenant_id = @tenant_id AND s.deleted_at IS NULL ORDER BY s.name;
+
+-- name: GetTenantService :one
+SELECT s.id, s.name, s.description, s.status, c.key AS category_key, s.created_at
+FROM shared.tenant_services s LEFT JOIN shared.service_categories c ON c.id = s.category_id
+WHERE s.tenant_id = @tenant_id AND s.id = @id AND s.deleted_at IS NULL;
+
+-- name: InsertTenantService :one
+INSERT INTO shared.tenant_services (tenant_id, category_id, name, description, status)
+VALUES (@tenant_id, (SELECT c.id FROM shared.service_categories c WHERE c.key = sqlc.narg(category_key)), @name, sqlc.narg(description), 'active')
+RETURNING id;
+
+-- name: UpdateTenantService :execrows
+UPDATE shared.tenant_services t SET
+  name = COALESCE(sqlc.narg(name), t.name),
+  description = CASE WHEN @set_description::boolean THEN sqlc.narg(description) ELSE t.description END,
+  category_id = CASE WHEN @set_category::boolean THEN (SELECT c.id FROM shared.service_categories c WHERE c.key = sqlc.narg(category_key)) ELSE t.category_id END,
+  status = COALESCE(sqlc.narg(status), t.status)
+WHERE t.tenant_id = @tenant_id AND t.id = @id AND t.deleted_at IS NULL;
+
+-- name: ServiceCategoryExists :one
+SELECT EXISTS (SELECT 1 FROM shared.service_categories WHERE key = @key);

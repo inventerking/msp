@@ -202,6 +202,32 @@ paths:
       responses:
         "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Reference"}}}}
         default: {$ref: "#/components/responses/Problem"}
+  /tenant/services:
+    get:
+      operationId: listTenantServices
+      x-access: tenant
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantServiceList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createTenantService
+      x-access: tenant
+      x-permission: settings.manage
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TenantServiceInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantService"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /tenant/services/{id}:
+    patch:
+      operationId: updateTenantService
+      x-access: tenant
+      x-permission: settings.manage
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TenantServicePatch"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantService"}}}}
+        default: {$ref: "#/components/responses/Problem"}
   /tenant/roles:
     get:
       operationId: listRoles
@@ -501,10 +527,42 @@ components:
         version: {type: integer}
     Reference:
       type: object
-      required: [countries, industries]
+      required: [countries, industries, service_categories]
       properties:
         countries: {type: array, items: {$ref: "#/components/schemas/CodeName"}}
         industries: {type: array, items: {$ref: "#/components/schemas/CodeName"}}
+        service_categories: {type: array, items: {$ref: "#/components/schemas/CodeName"}}
+    TenantService:
+      type: object
+      required: [id, name, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        description: {type: string}
+        status: {type: string, enum: [active, retired]}
+        category_key: {type: string}
+        created_at: {type: string, format: date-time}
+    TenantServiceList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/TenantService"}}
+    TenantServiceInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        description: {type: string, maxLength: 1000}
+        category_key: {type: string, maxLength: 64}
+    TenantServicePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        description: {type: string, maxLength: 1000, nullable: true}
+        category_key: {type: string, maxLength: 64, nullable: true}
+        status: {type: string, enum: [active, retired]}
     CodeName:
       type: object
       required: [code, name]

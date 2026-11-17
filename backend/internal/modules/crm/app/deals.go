@@ -307,7 +307,7 @@ func createDeal(ctx context.Context, q *repo.Queries, tx pgx.Tx, tenant uuid.UUI
 	if err := q.InsertStageHistory(ctx, repo.InsertStageHistoryParams{TenantID: tenant, DealID: id, ToStageID: stage.ID, ChangedBy: actor}); err != nil {
 		return uuid.Nil, err
 	}
-	return id, emit(ctx, tx, tenant, "deal.created", "deal", id, map[string]any{"deal_id": id, "crm_company_id": in.CRMCompanyID, "stage_key": stage.Key})
+	return id, emitDeal(ctx, q, tx, tenant, "deal.created", id, nil)
 }
 
 // DealView is a deal with its stage history.
@@ -408,6 +408,9 @@ func (s *Service) UpdateDeal(ctx context.Context, p authctx.Principal, id uuid.U
 		if err != nil {
 			return err
 		}
+		if err := emitDeal(ctx, q, tx, p.TenantID, "deal.updated", id, nil); err != nil {
+			return err
+		}
 		return audit.Record(ctx, tx, userAudit(p, "crm.deal_updated", "deal", &id, map[string]any{
 			"before": map[string]any{"contract_value_minor": before.ContractValueMinor, "expected_mrr_minor": before.ExpectedMrrMinor, "owner_user_id": before.OwnerUserID},
 			"title":  in.Title, "contract_value_minor": in.ContractValue, "expected_mrr_minor": in.ExpectedMRR, "owner_changed": in.SetOwner}))
@@ -458,7 +461,7 @@ func (s *Service) MoveDeal(ctx context.Context, p authctx.Principal, id, stageID
 		if err := stageActivity(ctx, q, p.TenantID, d, uid(p), "Moved to "+target.Name); err != nil {
 			return err
 		}
-		if err := emit(ctx, tx, p.TenantID, "deal.stage_changed", "deal", id, map[string]any{"deal_id": id, "from_stage_id": d.StageID, "to_stage_id": stageID, "to_stage_key": target.Key}); err != nil {
+		if err := emitDeal(ctx, q, tx, p.TenantID, "deal.stage_changed", id, map[string]any{"from_stage_id": d.StageID, "to_stage_id": stageID, "to_stage_key": target.Key}); err != nil {
 			return err
 		}
 		return audit.Record(ctx, tx, userAudit(p, "crm.deal_moved", "deal", &id, map[string]any{"from": d.StageName, "to": target.Name, "reason": reason}))
@@ -541,12 +544,8 @@ func (s *Service) CloseDeal(ctx context.Context, p authctx.Principal, id uuid.UU
 				return err
 			}
 		}
-		payload := map[string]any{"deal_id": id, "crm_company_id": d.CrmCompanyID, "currency": d.Currency, "contract_value_minor": d.ContractValueMinor,
-			"expected_mrr_minor": d.ExpectedMrrMinor, "closed_on": time.Now().UTC().Format(time.DateOnly)}
-		if !won {
-			payload = map[string]any{"deal_id": id, "crm_company_id": d.CrmCompanyID}
-		}
-		if err := emit(ctx, tx, p.TenantID, "deal."+kind, "deal", id, payload); err != nil {
+		// Loss reasons are free text, so they stay in CRM and never enter an event.
+		if err := emitDeal(ctx, q, tx, p.TenantID, "deal."+kind, id, map[string]any{"closed_on": time.Now().UTC().Format(time.DateOnly)}); err != nil {
 			return err
 		}
 		return audit.Record(ctx, tx, userAudit(p, "crm.deal_"+kind, "deal", &id, map[string]any{"loss_reason": lossReason, "contract_value_minor": d.ContractValueMinor, "expected_mrr_minor": d.ExpectedMrrMinor}))
@@ -584,7 +583,7 @@ func (s *Service) ReopenDeal(ctx context.Context, p authctx.Principal, id uuid.U
 		if err := q.InsertStageHistory(ctx, repo.InsertStageHistoryParams{TenantID: p.TenantID, DealID: id, FromStageID: &d.StageID, ToStageID: stageID, ChangedBy: uid(p), Reason: ptr("reopened")}); err != nil {
 			return err
 		}
-		if err := emit(ctx, tx, p.TenantID, "deal.reopened", "deal", id, map[string]any{"deal_id": id, "previous_status": d.Status}); err != nil {
+		if err := emitDeal(ctx, q, tx, p.TenantID, "deal.reopened", id, map[string]any{"previous_status": d.Status}); err != nil {
 			return err
 		}
 		return audit.Record(ctx, tx, userAudit(p, "crm.deal_reopened", "deal", &id, map[string]any{"previous_status": d.Status}))
@@ -670,5 +669,39 @@ func requestStage(ctx context.Context, q *repo.Queries, tx pgx.Tx, tenantID, dea
 	if err := q.InsertStageHistory(ctx, repo.InsertStageHistoryParams{TenantID: tenantID, DealID: dealID, FromStageID: &d.StageID, ToStageID: target.ID, Reason: &reason}); err != nil {
 		return false, err
 	}
-	return true, emit(ctx, tx, tenantID, "deal.stage_changed", "deal", dealID, map[string]any{"deal_id": dealID, "from_stage_id": d.StageID, "to_stage_id": target.ID, "to_stage_key": target.Key, "requested": true})
+	return true, emitDeal(ctx, q, tx, tenantID, "deal.stage_changed", dealID, map[string]any{"from_stage_id": d.StageID, "to_stage_id": target.ID, "to_stage_key": target.Key, "requested": true})
+}
+
+// OpenDeal creates a deal on another module's behalf. It never closes or moves one.
+func (s *Service) OpenDeal(ctx context.Context, in contract.NewDeal) (uuid.UUID, error) {
+	if !domain.ValidCurrency(in.Currency) {
+		return uuid.Nil, apperr.Validation(apperr.FieldError{Field: "currency", Code: "invalid_currency"})
+	}
+	if strings.TrimSpace(in.Title) == "" || in.SourceModule == "" || in.SourceRef == uuid.Nil {
+		return uuid.Nil, apperr.Validation(apperr.FieldError{Field: "title", Code: "required"})
+	}
+	var id uuid.UUID
+	err := s.systemTx(ctx, in.TenantID, func(q *repo.Queries, tx pgx.Tx) error {
+		src := in.SourceModule
+		existing, err := q.FindDealBySource(ctx, repo.FindDealBySourceParams{TenantID: in.TenantID, SourceModule: &src, SourceRef: &in.SourceRef})
+		if err == nil {
+			id = existing
+			return nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		if _, err := q.GetCompany(ctx, repo.GetCompanyParams{TenantID: in.TenantID, ID: in.CRMCompanyID}); err != nil {
+			return notFound(err)
+		}
+		company, ref := in.CRMCompanyID, in.SourceRef
+		id, err = createDeal(ctx, q, tx, in.TenantID, in.ActorID, DealInput{CRMCompanyID: &company, Title: in.Title, Currency: in.Currency,
+			ExpectedMRR: in.ExpectedMRR, SourceModule: in.SourceModule, SourceRef: &ref, OwnerUserID: in.ActorID})
+		if err != nil {
+			return err
+		}
+		return audit.Record(ctx, tx, audit.Event{TenantID: &in.TenantID, ActorType: "user", ActorID: in.ActorID, Action: "crm.deal_created", ResourceType: "deal", ResourceID: &id,
+			After: map[string]any{"source_module": in.SourceModule, "source_ref": in.SourceRef}})
+	})
+	return id, err
 }

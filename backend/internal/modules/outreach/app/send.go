@@ -217,7 +217,7 @@ func (s *Service) HandleSend(ctx context.Context, j jobs.Job) error {
 		if err := q.CountStat(ctx, repo.CountStatParams{TenantID: tenant, CampaignID: pr.campaign.ID, Sent: 1}); err != nil {
 			return err
 		}
-		if err := emit(ctx, tx, tenant, "message.sent", "message", msgID, map[string]any{"contact_id": pr.contact.ID, "campaign_id": pr.campaign.ID, "title": pr.campaign.Name}); err != nil {
+		if err := emit(ctx, tx, tenant, "message.sent", "message", msgID, map[string]any{"message_id": msgID, "contact_id": pr.contact.ID, "company_id": pr.contact.CompanyID, "campaign_id": pr.campaign.ID, "title": pr.campaign.Name}); err != nil {
 			return err
 		}
 		return s.advance(ctx, q, tenant, in.EnrollmentID, in.Step, pr)
@@ -426,9 +426,18 @@ func (s *Service) optOut(ctx context.Context, q *repo.Queries, tx pgx.Tx, tenant
 	if err != nil {
 		return err
 	}
+	added := int64(0)
 	if email != nil {
-		if err := q.Suppress(ctx, repo.SuppressParams{TenantID: tenant, EmailHash: s.Shared.EmailKey(tenant, *email), Reason: reason, Source: source}); err != nil {
+		if added, err = q.Suppress(ctx, repo.SuppressParams{TenantID: tenant, EmailHash: s.Shared.EmailKey(tenant, *email), Reason: reason, Source: source}); err != nil {
 			return err
+		}
+	}
+	// Recorded once per person: a repeated click on the link adds nothing.
+	if reason == "unsubscribe" && added > 0 && msg != nil {
+		if m, err := q.GetMessage(ctx, repo.GetMessageParams{TenantID: tenant, ID: *msg}); err == nil {
+			if err := emit(ctx, tx, tenant, "unsubscribe.recorded", "message", *msg, map[string]any{"message_id": *msg, "campaign_id": m.CampaignID, "contact_id": contact}); err != nil {
+				return err
+			}
 		}
 	}
 	if reason == "unsubscribe" && len(stopped) > 0 && msg != nil {
@@ -474,6 +483,7 @@ func (s *Service) HandleEmailWebhook(ctx context.Context, endpointTenant *uuid.U
 		return nil // A tenant's own endpoint cannot report on another tenant's messages.
 	}
 	var email *string
+	var company *uuid.UUID
 	var contact, campaign uuid.UUID
 	if err := s.systemTx(ctx, tenant, func(q *repo.Queries, _ pgx.Tx) error {
 		m, err := q.GetMessage(ctx, repo.GetMessageParams{TenantID: tenant, ID: found.ID})
@@ -483,7 +493,7 @@ func (s *Service) HandleEmailWebhook(ctx context.Context, endpointTenant *uuid.U
 		return err
 	}
 	if people, err := s.Shared.ContactsByID(ctx, tenant, []uuid.UUID{contact}); err == nil {
-		email = people[contact].Email
+		email, company = people[contact].Email, people[contact].CompanyID
 	} else {
 		return err
 	}
@@ -504,7 +514,7 @@ func (s *Service) HandleEmailWebhook(ctx context.Context, endpointTenant *uuid.U
 			if err := q.CountStat(ctx, repo.CountStatParams{TenantID: tenant, CampaignID: campaign, Replied: 1}); err != nil {
 				return err
 			}
-			return emit(ctx, tx, tenant, "reply.received", "message", found.ID, map[string]any{"contact_id": contact, "campaign_id": campaign})
+			return emit(ctx, tx, tenant, "reply.received", "message", found.ID, map[string]any{"message_id": found.ID, "contact_id": contact, "company_id": company, "campaign_id": campaign})
 		}
 		if !deliveryTypes[ev.Type] {
 			return nil
@@ -513,6 +523,11 @@ func (s *Service) HandleEmailWebhook(ctx context.Context, endpointTenant *uuid.U
 		n, err := q.InsertDeliveryEvent(ctx, repo.InsertDeliveryEventParams{TenantID: tenant, MessageID: &found.ID, ProviderKey: SenderProvider, ProviderEventID: ev.EventID, EventType: ev.Type, Detail: detail})
 		if err != nil || n == 0 {
 			return err // n == 0: a replay, already handled.
+		}
+		if ev.Type == "hard_bounce" || ev.Type == "soft_bounce" {
+			if err := emit(ctx, tx, tenant, "message.bounced", "message", found.ID, map[string]any{"message_id": found.ID, "campaign_id": campaign, "bounce_type": strings.TrimSuffix(ev.Type, "_bounce")}); err != nil {
+				return err
+			}
 		}
 		switch ev.Type {
 		case "delivered":

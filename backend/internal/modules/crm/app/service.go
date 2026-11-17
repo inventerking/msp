@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -78,6 +79,28 @@ func userAudit(p authctx.Principal, action, resource string, id *uuid.UUID, afte
 
 func emit(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, typ, aggregate string, id uuid.UUID, payload any) error {
 	return events.Append(ctx, tx, events.Event{Type: "crm." + typ, TenantID: &tenantID, SourceModule: Module, AggregateType: aggregate, AggregateID: id}, payload)
+}
+
+// emitDeal publishes a deal event carrying the deal's current facts (see DealFacts), merged under
+// the event's own fields. Read inside the same transaction, so it matches what was committed.
+func emitDeal(ctx context.Context, q *repo.Queries, tx pgx.Tx, tenantID uuid.UUID, typ string, id uuid.UUID, own map[string]any) error {
+	f, err := q.DealFacts(ctx, repo.DealFactsParams{TenantID: tenantID, ID: id})
+	if err != nil {
+		return err
+	}
+	var closeOn *string
+	if f.ExpectedCloseDate != nil {
+		v := f.ExpectedCloseDate.Format(time.DateOnly)
+		closeOn = &v
+	}
+	payload := map[string]any{"deal_id": f.ID, "crm_company_id": f.CrmCompanyID, "company_id": f.CompanyID, "pipeline_id": f.PipelineID,
+		"stage_key": f.StageKey, "status": f.Status, "owner_user_id": f.OwnerUserID, "currency": f.Currency,
+		"contract_value_minor": f.ContractValueMinor, "expected_mrr_minor": f.ExpectedMrrMinor, "probability": f.Probability,
+		"expected_close_date": closeOn, "source_module": f.SourceModule, "source_ref": f.SourceRef, "row_version": f.RowVersion}
+	for k, v := range own {
+		payload[k] = v
+	}
+	return emit(ctx, tx, tenantID, typ, "deal", id, payload)
 }
 
 func uid(p authctx.Principal) *uuid.UUID {
@@ -188,6 +211,22 @@ func (s *Service) GetCompanySummary(ctx context.Context, tenantID, crmCompanyID 
 		}
 		out = contract.CompanySummary{ID: c.ID, CompanyID: c.CompanyID, Name: c.Name, Domain: c.Domain, Lifecycle: c.Lifecycle}
 		return nil
+	})
+	return out, err
+}
+
+// CompanySummaries looks up several of the tenant's companies at once.
+func (s *Service) CompanySummaries(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]contract.CompanySummary, error) {
+	out := map[uuid.UUID]contract.CompanySummary{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	err := s.systemTx(ctx, tenantID, func(q *repo.Queries, _ pgx.Tx) error {
+		rows, err := q.CompaniesByIDs(ctx, repo.CompaniesByIDsParams{TenantID: tenantID, Ids: ids})
+		for _, c := range rows {
+			out[c.ID] = contract.CompanySummary{ID: c.ID, CompanyID: c.CompanyID, Name: c.Name, Domain: c.Domain, Lifecycle: c.Lifecycle}
+		}
+		return err
 	})
 	return out, err
 }

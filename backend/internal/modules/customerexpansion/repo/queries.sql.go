@@ -12,47 +12,179 @@ import (
 	"github.com/google/uuid"
 )
 
-const contractsForCompany = `-- name: ContractsForCompany :many
-SELECT c.id, c.deal_id, c.status, c.start_date, c.currency, c.mrr_minor, c.setup_minor, c.source
-FROM customer_expansion.contracts c JOIN customer_expansion.customer_profiles p ON p.tenant_id = c.tenant_id AND p.id = c.customer_profile_id
-WHERE c.tenant_id = $1 AND p.crm_company_id = $2 ORDER BY c.start_date DESC
+const acknowledgeAlert = `-- name: AcknowledgeAlert :execrows
+UPDATE customer_expansion.renewal_alerts SET status = 'acknowledged', acknowledged_by = $1, acknowledged_at = now()
+WHERE tenant_id = $2 AND id = $3 AND status = 'open'
 `
 
-type ContractsForCompanyParams struct {
+type AcknowledgeAlertParams struct {
+	UserID   *uuid.UUID
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+func (q *Queries) AcknowledgeAlert(ctx context.Context, arg AcknowledgeAlertParams) (int64, error) {
+	result, err := q.db.Exec(ctx, acknowledgeAlert, arg.UserID, arg.TenantID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const activateContract = `-- name: ActivateContract :exec
+UPDATE customer_expansion.contracts SET status = 'active', end_date = $1, start_date = $2, currency = $3, mrr_minor = $4,
+  setup_minor = $5, owner_user_id = COALESCE($6, owner_user_id), review_reason = $7
+WHERE tenant_id = $8 AND id = $9
+`
+
+type ActivateContractParams struct {
+	EndDate      *time.Time
+	StartDate    time.Time
+	Currency     string
+	MrrMinor     int64
+	SetupMinor   int64
+	OwnerUserID  *uuid.UUID
+	ReviewReason *string
 	TenantID     uuid.UUID
-	CrmCompanyID uuid.UUID
+	ID           uuid.UUID
 }
 
-type ContractsForCompanyRow struct {
-	ID         uuid.UUID
-	DealID     *uuid.UUID
-	Status     string
-	StartDate  time.Time
-	Currency   string
-	MrrMinor   int64
-	SetupMinor int64
-	Source     string
+func (q *Queries) ActivateContract(ctx context.Context, arg ActivateContractParams) error {
+	_, err := q.db.Exec(ctx, activateContract,
+		arg.EndDate,
+		arg.StartDate,
+		arg.Currency,
+		arg.MrrMinor,
+		arg.SetupMinor,
+		arg.OwnerUserID,
+		arg.ReviewReason,
+		arg.TenantID,
+		arg.ID,
+	)
+	return err
 }
 
-func (q *Queries) ContractsForCompany(ctx context.Context, arg ContractsForCompanyParams) ([]ContractsForCompanyRow, error) {
-	rows, err := q.db.Query(ctx, contractsForCompany, arg.TenantID, arg.CrmCompanyID)
+const applyProposal = `-- name: ApplyProposal :exec
+UPDATE customer_expansion.contracts SET proposal_version_id = $1, mrr_minor = $2, setup_minor = $3,
+  term_months = COALESCE($4, term_months), currency = $5, review_reason = $6
+WHERE tenant_id = $7 AND id = $8
+`
+
+type ApplyProposalParams struct {
+	ProposalVersionID *uuid.UUID
+	MrrMinor          int64
+	SetupMinor        int64
+	TermMonths        *int32
+	Currency          string
+	ReviewReason      *string
+	TenantID          uuid.UUID
+	ID                uuid.UUID
+}
+
+func (q *Queries) ApplyProposal(ctx context.Context, arg ApplyProposalParams) error {
+	_, err := q.db.Exec(ctx, applyProposal,
+		arg.ProposalVersionID,
+		arg.MrrMinor,
+		arg.SetupMinor,
+		arg.TermMonths,
+		arg.Currency,
+		arg.ReviewReason,
+		arg.TenantID,
+		arg.ID,
+	)
+	return err
+}
+
+const closeOpportunity = `-- name: CloseOpportunity :exec
+UPDATE customer_expansion.revenue_opportunities SET status = $1, realised_mrr_minor = $2,
+  currency = COALESCE($3, currency)
+WHERE tenant_id = $4 AND id = $5
+`
+
+type CloseOpportunityParams struct {
+	Status           string
+	RealisedMrrMinor *int64
+	Currency         *string
+	TenantID         uuid.UUID
+	ID               uuid.UUID
+}
+
+func (q *Queries) CloseOpportunity(ctx context.Context, arg CloseOpportunityParams) error {
+	_, err := q.db.Exec(ctx, closeOpportunity,
+		arg.Status,
+		arg.RealisedMrrMinor,
+		arg.Currency,
+		arg.TenantID,
+		arg.ID,
+	)
+	return err
+}
+
+const contractByDealForUpdate = `-- name: ContractByDealForUpdate :one
+SELECT id, customer_profile_id, status, mrr_minor, currency, setup_minor, term_months, proposal_version_id, review_reason, end_date, auto_renew
+FROM customer_expansion.contracts WHERE tenant_id = $1 AND deal_id = $2 FOR UPDATE
+`
+
+type ContractByDealForUpdateParams struct {
+	TenantID uuid.UUID
+	DealID   *uuid.UUID
+}
+
+type ContractByDealForUpdateRow struct {
+	ID                uuid.UUID
+	CustomerProfileID uuid.UUID
+	Status            string
+	MrrMinor          int64
+	Currency          string
+	SetupMinor        int64
+	TermMonths        *int32
+	ProposalVersionID *uuid.UUID
+	ReviewReason      *string
+	EndDate           *time.Time
+	AutoRenew         *bool
+}
+
+func (q *Queries) ContractByDealForUpdate(ctx context.Context, arg ContractByDealForUpdateParams) (ContractByDealForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, contractByDealForUpdate, arg.TenantID, arg.DealID)
+	var i ContractByDealForUpdateRow
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerProfileID,
+		&i.Status,
+		&i.MrrMinor,
+		&i.Currency,
+		&i.SetupMinor,
+		&i.TermMonths,
+		&i.ProposalVersionID,
+		&i.ReviewReason,
+		&i.EndDate,
+		&i.AutoRenew,
+	)
+	return i, err
+}
+
+const contractsEndingSoon = `-- name: ContractsEndingSoon :many
+SELECT id, tenant_id FROM customer_expansion.contracts
+WHERE status IN ('active','renewing') AND end_date IS NOT NULL AND end_date BETWEEN current_date AND current_date + 120
+ORDER BY end_date LIMIT 2000
+`
+
+type ContractsEndingSoonRow struct {
+	ID       uuid.UUID
+	TenantID uuid.UUID
+}
+
+// Runs as the system role, which may only see active contracts with an end date, to find renewals.
+func (q *Queries) ContractsEndingSoon(ctx context.Context) ([]ContractsEndingSoonRow, error) {
+	rows, err := q.db.Query(ctx, contractsEndingSoon)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ContractsForCompanyRow
+	var items []ContractsEndingSoonRow
 	for rows.Next() {
-		var i ContractsForCompanyRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.DealID,
-			&i.Status,
-			&i.StartDate,
-			&i.Currency,
-			&i.MrrMinor,
-			&i.SetupMinor,
-			&i.Source,
-		); err != nil {
+		var i ContractsEndingSoonRow
+		if err := rows.Scan(&i.ID, &i.TenantID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -63,22 +195,125 @@ func (q *Queries) ContractsForCompany(ctx context.Context, arg ContractsForCompa
 	return items, nil
 }
 
-const endContractForDeal = `-- name: EndContractForDeal :execrows
-UPDATE customer_expansion.contracts SET status = 'cancelled', end_date = current_date
-WHERE tenant_id = $1 AND deal_id = $2 AND status = 'active'
+const countDealAttempt = `-- name: CountDealAttempt :one
+UPDATE customer_expansion.revenue_opportunities SET deal_attempts = deal_attempts + 1 WHERE tenant_id = $1 AND id = $2 RETURNING deal_attempts
 `
 
-type EndContractForDealParams struct {
+type CountDealAttemptParams struct {
 	TenantID uuid.UUID
-	DealID   *uuid.UUID
+	ID       uuid.UUID
 }
 
-func (q *Queries) EndContractForDeal(ctx context.Context, arg EndContractForDealParams) (int64, error) {
-	result, err := q.db.Exec(ctx, endContractForDeal, arg.TenantID, arg.DealID)
+func (q *Queries) CountDealAttempt(ctx context.Context, arg CountDealAttemptParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countDealAttempt, arg.TenantID, arg.ID)
+	var deal_attempts int32
+	err := row.Scan(&deal_attempts)
+	return deal_attempts, err
+}
+
+const customerCurrency = `-- name: CustomerCurrency :one
+SELECT currency::text FROM customer_expansion.contracts
+WHERE tenant_id = $1 AND customer_profile_id = $2 AND status IN ('active','renewing')
+ORDER BY mrr_minor DESC, start_date DESC LIMIT 1
+`
+
+type CustomerCurrencyParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+}
+
+// The currency the customer pays in now, for a deal opened without an estimate.
+func (q *Queries) CustomerCurrency(ctx context.Context, arg CustomerCurrencyParams) (string, error) {
+	row := q.db.QueryRow(ctx, customerCurrency, arg.TenantID, arg.CustomerProfileID)
+	var currency string
+	err := row.Scan(&currency)
+	return currency, err
+}
+
+const decideRecommendation = `-- name: DecideRecommendation :execrows
+UPDATE customer_expansion.recommendations SET status = $1, decided_by = $2, decided_at = now()
+WHERE tenant_id = $3 AND id = $4 AND status = 'open'
+`
+
+type DecideRecommendationParams struct {
+	Status    string
+	DecidedBy *uuid.UUID
+	TenantID  uuid.UUID
+	ID        uuid.UUID
+}
+
+func (q *Queries) DecideRecommendation(ctx context.Context, arg DecideRecommendationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, decideRecommendation,
+		arg.Status,
+		arg.DecidedBy,
+		arg.TenantID,
+		arg.ID,
+	)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const deleteCoverageExcept = `-- name: DeleteCoverageExcept :exec
+UPDATE customer_expansion.service_inventory SET deleted_at = now()
+WHERE tenant_id = $1 AND customer_profile_id = $2 AND deleted_at IS NULL AND NOT (tenant_service_id = ANY($3::uuid[]))
+`
+
+type DeleteCoverageExceptParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+	Keep              []uuid.UUID
+}
+
+func (q *Queries) DeleteCoverageExcept(ctx context.Context, arg DeleteCoverageExceptParams) error {
+	_, err := q.db.Exec(ctx, deleteCoverageExcept, arg.TenantID, arg.CustomerProfileID, arg.Keep)
+	return err
+}
+
+const deleteEvidence = `-- name: DeleteEvidence :exec
+DELETE FROM customer_expansion.recommendation_evidence WHERE tenant_id = $1 AND recommendation_id = $2
+`
+
+type DeleteEvidenceParams struct {
+	TenantID         uuid.UUID
+	RecommendationID uuid.UUID
+}
+
+func (q *Queries) DeleteEvidence(ctx context.Context, arg DeleteEvidenceParams) error {
+	_, err := q.db.Exec(ctx, deleteEvidence, arg.TenantID, arg.RecommendationID)
+	return err
+}
+
+const dismissedKeys = `-- name: DismissedKeys :many
+SELECT dedupe_key FROM customer_expansion.recommendations
+WHERE tenant_id = $1 AND customer_profile_id = $2 AND status = 'dismissed' AND decided_at > now() - interval '90 days'
+`
+
+type DismissedKeysParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+}
+
+// A dismissed suggestion stays dismissed for 90 days, so analysis does not repeat it at once.
+func (q *Queries) DismissedKeys(ctx context.Context, arg DismissedKeysParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, dismissedKeys, arg.TenantID, arg.CustomerProfileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var dedupe_key string
+		if err := rows.Scan(&dedupe_key); err != nil {
+			return nil, err
+		}
+		items = append(items, dedupe_key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const ensureProfile = `-- name: EnsureProfile :one
@@ -95,7 +330,7 @@ type EnsureProfileParams struct {
 	CompanyID    *uuid.UUID
 }
 
-// Customer Expansion queries. In Phase 4 only the contract record (D-03) is built.
+// Customer Expansion queries. Customer identity stays with CRM: a profile only overlays a CRM company.
 func (q *Queries) EnsureProfile(ctx context.Context, arg EnsureProfileParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, ensureProfile, arg.TenantID, arg.CrmCompanyID, arg.CompanyID)
 	var id uuid.UUID
@@ -103,36 +338,1521 @@ func (q *Queries) EnsureProfile(ctx context.Context, arg EnsureProfileParams) (u
 	return id, err
 }
 
-const insertContractFromDeal = `-- name: InsertContractFromDeal :execrows
-INSERT INTO customer_expansion.contracts (tenant_id, customer_profile_id, deal_id, status, start_date, currency, mrr_minor, setup_minor, source)
-VALUES ($1, $2, $3, 'active', $4, $5, $6, $7, 'won_deal')
-ON CONFLICT (tenant_id, deal_id) DO UPDATE SET status = 'active', end_date = NULL, start_date = EXCLUDED.start_date,
-  currency = EXCLUDED.currency, mrr_minor = EXCLUDED.mrr_minor, setup_minor = EXCLUDED.setup_minor
-WHERE customer_expansion.contracts.status <> 'active'
+const evidenceFor = `-- name: EvidenceFor :many
+SELECT recommendation_id, kind, reference_type, reference_id, detail FROM customer_expansion.recommendation_evidence
+WHERE tenant_id = $1 AND recommendation_id = ANY($2::uuid[]) ORDER BY created_at, id
 `
 
-type InsertContractFromDealParams struct {
+type EvidenceForParams struct {
+	TenantID uuid.UUID
+	Ids      []uuid.UUID
+}
+
+type EvidenceForRow struct {
+	RecommendationID uuid.UUID
+	Kind             string
+	ReferenceType    *string
+	ReferenceID      *uuid.UUID
+	Detail           []byte
+}
+
+func (q *Queries) EvidenceFor(ctx context.Context, arg EvidenceForParams) ([]EvidenceForRow, error) {
+	rows, err := q.db.Query(ctx, evidenceFor, arg.TenantID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EvidenceForRow
+	for rows.Next() {
+		var i EvidenceForRow
+		if err := rows.Scan(
+			&i.RecommendationID,
+			&i.Kind,
+			&i.ReferenceType,
+			&i.ReferenceID,
+			&i.Detail,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const expireRecommendations = `-- name: ExpireRecommendations :execrows
+UPDATE customer_expansion.recommendations SET status = 'expired'
+WHERE tenant_id = $1 AND customer_profile_id = $2 AND status = 'open' AND NOT (id = ANY($3::uuid[]))
+`
+
+type ExpireRecommendationsParams struct {
 	TenantID          uuid.UUID
 	CustomerProfileID uuid.UUID
+	Keep              []uuid.UUID
+}
+
+// Open suggestions the latest analysis no longer supports.
+func (q *Queries) ExpireRecommendations(ctx context.Context, arg ExpireRecommendationsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, expireRecommendations, arg.TenantID, arg.CustomerProfileID, arg.Keep)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const getAlert = `-- name: GetAlert :one
+SELECT id, contract_id, status FROM customer_expansion.renewal_alerts WHERE tenant_id = $1 AND id = $2
+`
+
+type GetAlertParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+type GetAlertRow struct {
+	ID         uuid.UUID
+	ContractID uuid.UUID
+	Status     string
+}
+
+func (q *Queries) GetAlert(ctx context.Context, arg GetAlertParams) (GetAlertRow, error) {
+	row := q.db.QueryRow(ctx, getAlert, arg.TenantID, arg.ID)
+	var i GetAlertRow
+	err := row.Scan(&i.ID, &i.ContractID, &i.Status)
+	return i, err
+}
+
+const getContractForUpdate = `-- name: GetContractForUpdate :one
+SELECT c.id, c.customer_profile_id, c.deal_id, c.proposal_version_id, c.status, c.start_date, c.end_date, c.term_months, c.auto_renew, c.notice_days,
+  c.currency, c.mrr_minor, c.setup_minor, c.source, c.owner_user_id, c.review_reason, p.crm_company_id
+FROM customer_expansion.contracts c JOIN customer_expansion.customer_profiles p ON p.tenant_id = c.tenant_id AND p.id = c.customer_profile_id
+WHERE c.tenant_id = $1 AND c.id = $2 FOR UPDATE OF c
+`
+
+type GetContractForUpdateParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+type GetContractForUpdateRow struct {
+	ID                uuid.UUID
+	CustomerProfileID uuid.UUID
 	DealID            *uuid.UUID
+	ProposalVersionID *uuid.UUID
+	Status            string
 	StartDate         time.Time
+	EndDate           *time.Time
+	TermMonths        *int32
+	AutoRenew         *bool
+	NoticeDays        *int32
 	Currency          string
 	MrrMinor          int64
 	SetupMinor        int64
+	Source            string
+	OwnerUserID       *uuid.UUID
+	ReviewReason      *string
+	CrmCompanyID      uuid.UUID
 }
 
-func (q *Queries) InsertContractFromDeal(ctx context.Context, arg InsertContractFromDealParams) (int64, error) {
-	result, err := q.db.Exec(ctx, insertContractFromDeal,
+func (q *Queries) GetContractForUpdate(ctx context.Context, arg GetContractForUpdateParams) (GetContractForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getContractForUpdate, arg.TenantID, arg.ID)
+	var i GetContractForUpdateRow
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerProfileID,
+		&i.DealID,
+		&i.ProposalVersionID,
+		&i.Status,
+		&i.StartDate,
+		&i.EndDate,
+		&i.TermMonths,
+		&i.AutoRenew,
+		&i.NoticeDays,
+		&i.Currency,
+		&i.MrrMinor,
+		&i.SetupMinor,
+		&i.Source,
+		&i.OwnerUserID,
+		&i.ReviewReason,
+		&i.CrmCompanyID,
+	)
+	return i, err
+}
+
+const getOpportunity = `-- name: GetOpportunity :one
+SELECT o.id, o.recommendation_id, o.deal_id, o.estimated_mrr_minor, o.realised_mrr_minor, o.currency, o.status, o.created_at, o.updated_at,
+  r.customer_profile_id, r.kind, r.tenant_service_id, p.crm_company_id
+FROM customer_expansion.revenue_opportunities o
+JOIN customer_expansion.recommendations r ON r.tenant_id = o.tenant_id AND r.id = o.recommendation_id
+JOIN customer_expansion.customer_profiles p ON p.tenant_id = r.tenant_id AND p.id = r.customer_profile_id
+WHERE o.tenant_id = $1 AND o.id = $2
+`
+
+type GetOpportunityParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+type GetOpportunityRow struct {
+	ID                uuid.UUID
+	RecommendationID  uuid.UUID
+	DealID            *uuid.UUID
+	EstimatedMrrMinor *int64
+	RealisedMrrMinor  *int64
+	Currency          *string
+	Status            string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CustomerProfileID uuid.UUID
+	Kind              string
+	TenantServiceID   *uuid.UUID
+	CrmCompanyID      uuid.UUID
+}
+
+func (q *Queries) GetOpportunity(ctx context.Context, arg GetOpportunityParams) (GetOpportunityRow, error) {
+	row := q.db.QueryRow(ctx, getOpportunity, arg.TenantID, arg.ID)
+	var i GetOpportunityRow
+	err := row.Scan(
+		&i.ID,
+		&i.RecommendationID,
+		&i.DealID,
+		&i.EstimatedMrrMinor,
+		&i.RealisedMrrMinor,
+		&i.Currency,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CustomerProfileID,
+		&i.Kind,
+		&i.TenantServiceID,
+		&i.CrmCompanyID,
+	)
+	return i, err
+}
+
+const getProfile = `-- name: GetProfile :one
+SELECT id, crm_company_id, company_id, health_status, health_as_of, health_source, last_analyzed_at, created_at
+FROM customer_expansion.customer_profiles WHERE tenant_id = $1 AND id = $2 AND deleted_at IS NULL
+`
+
+type GetProfileParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+type GetProfileRow struct {
+	ID             uuid.UUID
+	CrmCompanyID   uuid.UUID
+	CompanyID      *uuid.UUID
+	HealthStatus   string
+	HealthAsOf     *time.Time
+	HealthSource   string
+	LastAnalyzedAt *time.Time
+	CreatedAt      time.Time
+}
+
+func (q *Queries) GetProfile(ctx context.Context, arg GetProfileParams) (GetProfileRow, error) {
+	row := q.db.QueryRow(ctx, getProfile, arg.TenantID, arg.ID)
+	var i GetProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.CrmCompanyID,
+		&i.CompanyID,
+		&i.HealthStatus,
+		&i.HealthAsOf,
+		&i.HealthSource,
+		&i.LastAnalyzedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getRecommendation = `-- name: GetRecommendation :one
+SELECT r.id, r.customer_profile_id, r.tenant_service_id, r.contract_id, r.kind, r.rationale, r.rule_rationale, r.estimated_mrr_minor, r.currency,
+  r.evidence_class, r.status, r.ai_request_id, r.decided_by, r.decided_at, r.created_at, p.crm_company_id
+FROM customer_expansion.recommendations r
+JOIN customer_expansion.customer_profiles p ON p.tenant_id = r.tenant_id AND p.id = r.customer_profile_id
+WHERE r.tenant_id = $1 AND r.id = $2
+`
+
+type GetRecommendationParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+type GetRecommendationRow struct {
+	ID                uuid.UUID
+	CustomerProfileID uuid.UUID
+	TenantServiceID   *uuid.UUID
+	ContractID        *uuid.UUID
+	Kind              string
+	Rationale         string
+	RuleRationale     string
+	EstimatedMrrMinor *int64
+	Currency          *string
+	EvidenceClass     string
+	Status            string
+	AiRequestID       *uuid.UUID
+	DecidedBy         *uuid.UUID
+	DecidedAt         *time.Time
+	CreatedAt         time.Time
+	CrmCompanyID      uuid.UUID
+}
+
+func (q *Queries) GetRecommendation(ctx context.Context, arg GetRecommendationParams) (GetRecommendationRow, error) {
+	row := q.db.QueryRow(ctx, getRecommendation, arg.TenantID, arg.ID)
+	var i GetRecommendationRow
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerProfileID,
+		&i.TenantServiceID,
+		&i.ContractID,
+		&i.Kind,
+		&i.Rationale,
+		&i.RuleRationale,
+		&i.EstimatedMrrMinor,
+		&i.Currency,
+		&i.EvidenceClass,
+		&i.Status,
+		&i.AiRequestID,
+		&i.DecidedBy,
+		&i.DecidedAt,
+		&i.CreatedAt,
+		&i.CrmCompanyID,
+	)
+	return i, err
+}
+
+const hadRevenue = `-- name: HadRevenue :one
+SELECT EXISTS (SELECT 1 FROM customer_expansion.contracts WHERE tenant_id = $1 AND customer_profile_id = $2 AND id <> $3
+  AND status IN ('active','renewing','ended','cancelled') AND mrr_minor > 0)::boolean
+`
+
+type HadRevenueParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+	ExcludeID         uuid.UUID
+}
+
+func (q *Queries) HadRevenue(ctx context.Context, arg HadRevenueParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hadRevenue, arg.TenantID, arg.CustomerProfileID, arg.ExcludeID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const insertAlert = `-- name: InsertAlert :execrows
+INSERT INTO customer_expansion.renewal_alerts (tenant_id, contract_id, window_days, due_date, kind, status)
+VALUES ($1, $2, $3, $4, $5, 'open')
+ON CONFLICT (tenant_id, contract_id, due_date, window_days) DO NOTHING
+`
+
+type InsertAlertParams struct {
+	TenantID   uuid.UUID
+	ContractID uuid.UUID
+	WindowDays int32
+	DueDate    time.Time
+	Kind       string
+}
+
+func (q *Queries) InsertAlert(ctx context.Context, arg InsertAlertParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertAlert,
 		arg.TenantID,
-		arg.CustomerProfileID,
-		arg.DealID,
-		arg.StartDate,
-		arg.Currency,
-		arg.MrrMinor,
-		arg.SetupMinor,
+		arg.ContractID,
+		arg.WindowDays,
+		arg.DueDate,
+		arg.Kind,
 	)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const insertContract = `-- name: InsertContract :one
+INSERT INTO customer_expansion.contracts (tenant_id, customer_profile_id, deal_id, proposal_version_id, status, start_date, end_date, term_months, auto_renew,
+  notice_days, currency, mrr_minor, setup_minor, source, owner_user_id, review_reason)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+  $9, $10, $11, $12, $13, $14, $15, $16)
+RETURNING id
+`
+
+type InsertContractParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+	DealID            *uuid.UUID
+	ProposalVersionID *uuid.UUID
+	Status            string
+	StartDate         time.Time
+	EndDate           *time.Time
+	TermMonths        *int32
+	AutoRenew         *bool
+	NoticeDays        *int32
+	Currency          string
+	MrrMinor          int64
+	SetupMinor        int64
+	Source            string
+	OwnerUserID       *uuid.UUID
+	ReviewReason      *string
+}
+
+func (q *Queries) InsertContract(ctx context.Context, arg InsertContractParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertContract,
+		arg.TenantID,
+		arg.CustomerProfileID,
+		arg.DealID,
+		arg.ProposalVersionID,
+		arg.Status,
+		arg.StartDate,
+		arg.EndDate,
+		arg.TermMonths,
+		arg.AutoRenew,
+		arg.NoticeDays,
+		arg.Currency,
+		arg.MrrMinor,
+		arg.SetupMinor,
+		arg.Source,
+		arg.OwnerUserID,
+		arg.ReviewReason,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertEvidence = `-- name: InsertEvidence :exec
+INSERT INTO customer_expansion.recommendation_evidence (tenant_id, recommendation_id, kind, reference_type, reference_id, detail)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type InsertEvidenceParams struct {
+	TenantID         uuid.UUID
+	RecommendationID uuid.UUID
+	Kind             string
+	ReferenceType    *string
+	ReferenceID      *uuid.UUID
+	Detail           []byte
+}
+
+func (q *Queries) InsertEvidence(ctx context.Context, arg InsertEvidenceParams) error {
+	_, err := q.db.Exec(ctx, insertEvidence,
+		arg.TenantID,
+		arg.RecommendationID,
+		arg.Kind,
+		arg.ReferenceType,
+		arg.ReferenceID,
+		arg.Detail,
+	)
+	return err
+}
+
+const insertGap = `-- name: InsertGap :exec
+INSERT INTO customer_expansion.service_gaps (tenant_id, customer_profile_id, tenant_service_id, gap_state, analysis_run_id)
+VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING
+`
+
+type InsertGapParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+	TenantServiceID   uuid.UUID
+	GapState          string
+	AnalysisRunID     uuid.UUID
+}
+
+func (q *Queries) InsertGap(ctx context.Context, arg InsertGapParams) error {
+	_, err := q.db.Exec(ctx, insertGap,
+		arg.TenantID,
+		arg.CustomerProfileID,
+		arg.TenantServiceID,
+		arg.GapState,
+		arg.AnalysisRunID,
+	)
+	return err
+}
+
+const insertIndicator = `-- name: InsertIndicator :exec
+INSERT INTO customer_expansion.health_indicators (tenant_id, customer_profile_id, indicator_key, value, polarity, evidence, as_of)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type InsertIndicatorParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+	IndicatorKey      string
+	Value             []byte
+	Polarity          string
+	Evidence          []byte
+	AsOf              time.Time
+}
+
+func (q *Queries) InsertIndicator(ctx context.Context, arg InsertIndicatorParams) error {
+	_, err := q.db.Exec(ctx, insertIndicator,
+		arg.TenantID,
+		arg.CustomerProfileID,
+		arg.IndicatorKey,
+		arg.Value,
+		arg.Polarity,
+		arg.Evidence,
+		arg.AsOf,
+	)
+	return err
+}
+
+const insertOpportunity = `-- name: InsertOpportunity :one
+INSERT INTO customer_expansion.revenue_opportunities (tenant_id, recommendation_id, estimated_mrr_minor, currency, status)
+VALUES ($1, $2, $3, $4, 'open')
+ON CONFLICT (tenant_id, recommendation_id) DO UPDATE SET updated_at = now()
+RETURNING id, status, deal_id
+`
+
+type InsertOpportunityParams struct {
+	TenantID          uuid.UUID
+	RecommendationID  uuid.UUID
+	EstimatedMrrMinor *int64
+	Currency          *string
+}
+
+type InsertOpportunityRow struct {
+	ID     uuid.UUID
+	Status string
+	DealID *uuid.UUID
+}
+
+func (q *Queries) InsertOpportunity(ctx context.Context, arg InsertOpportunityParams) (InsertOpportunityRow, error) {
+	row := q.db.QueryRow(ctx, insertOpportunity,
+		arg.TenantID,
+		arg.RecommendationID,
+		arg.EstimatedMrrMinor,
+		arg.Currency,
+	)
+	var i InsertOpportunityRow
+	err := row.Scan(&i.ID, &i.Status, &i.DealID)
+	return i, err
+}
+
+const insertRecommendation = `-- name: InsertRecommendation :one
+INSERT INTO customer_expansion.recommendations (tenant_id, customer_profile_id, tenant_service_id, contract_id, kind, rationale, rule_rationale,
+  estimated_mrr_minor, currency, evidence_class, status, dedupe_key)
+VALUES ($1, $2, $3, $4, $5, $6, $6, $7,
+  $8, $9, 'open', $10)
+RETURNING id
+`
+
+type InsertRecommendationParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+	TenantServiceID   *uuid.UUID
+	ContractID        *uuid.UUID
+	Kind              string
+	Rationale         string
+	EstimatedMrrMinor *int64
+	Currency          *string
+	EvidenceClass     string
+	DedupeKey         string
+}
+
+func (q *Queries) InsertRecommendation(ctx context.Context, arg InsertRecommendationParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertRecommendation,
+		arg.TenantID,
+		arg.CustomerProfileID,
+		arg.TenantServiceID,
+		arg.ContractID,
+		arg.Kind,
+		arg.Rationale,
+		arg.EstimatedMrrMinor,
+		arg.Currency,
+		arg.EvidenceClass,
+		arg.DedupeKey,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const latestAssessment = `-- name: LatestAssessment :one
+SELECT value, evidence, as_of FROM customer_expansion.health_indicators
+WHERE tenant_id = $1 AND customer_profile_id = $2 AND indicator_key = 'assessment_risk' AND evidence ? 'assessment_id'
+ORDER BY as_of DESC, id DESC LIMIT 1
+`
+
+type LatestAssessmentParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+}
+
+type LatestAssessmentRow struct {
+	Value    []byte
+	Evidence []byte
+	AsOf     time.Time
+}
+
+func (q *Queries) LatestAssessment(ctx context.Context, arg LatestAssessmentParams) (LatestAssessmentRow, error) {
+	row := q.db.QueryRow(ctx, latestAssessment, arg.TenantID, arg.CustomerProfileID)
+	var i LatestAssessmentRow
+	err := row.Scan(&i.Value, &i.Evidence, &i.AsOf)
+	return i, err
+}
+
+const latestIndicators = `-- name: LatestIndicators :many
+SELECT DISTINCT ON (indicator_key) indicator_key, value, polarity, evidence, as_of
+FROM customer_expansion.health_indicators WHERE tenant_id = $1 AND customer_profile_id = $2
+ORDER BY indicator_key, as_of DESC, id DESC
+`
+
+type LatestIndicatorsParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+}
+
+type LatestIndicatorsRow struct {
+	IndicatorKey string
+	Value        []byte
+	Polarity     string
+	Evidence     []byte
+	AsOf         time.Time
+}
+
+func (q *Queries) LatestIndicators(ctx context.Context, arg LatestIndicatorsParams) ([]LatestIndicatorsRow, error) {
+	rows, err := q.db.Query(ctx, latestIndicators, arg.TenantID, arg.CustomerProfileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LatestIndicatorsRow
+	for rows.Next() {
+		var i LatestIndicatorsRow
+		if err := rows.Scan(
+			&i.IndicatorKey,
+			&i.Value,
+			&i.Polarity,
+			&i.Evidence,
+			&i.AsOf,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const linkOpportunityDeal = `-- name: LinkOpportunityDeal :exec
+UPDATE customer_expansion.revenue_opportunities SET deal_id = $1, status = 'in_deal' WHERE tenant_id = $2 AND id = $3 AND status = 'open'
+`
+
+type LinkOpportunityDealParams struct {
+	DealID   *uuid.UUID
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+func (q *Queries) LinkOpportunityDeal(ctx context.Context, arg LinkOpportunityDealParams) error {
+	_, err := q.db.Exec(ctx, linkOpportunityDeal, arg.DealID, arg.TenantID, arg.ID)
+	return err
+}
+
+const listAlerts = `-- name: ListAlerts :many
+SELECT a.id, a.contract_id, a.window_days, a.due_date, a.kind, a.status, a.acknowledged_by, a.acknowledged_at, a.created_at,
+  c.customer_profile_id, c.mrr_minor, c.currency, c.auto_renew, p.crm_company_id
+FROM customer_expansion.renewal_alerts a
+JOIN customer_expansion.contracts c ON c.tenant_id = a.tenant_id AND c.id = a.contract_id
+JOIN customer_expansion.customer_profiles p ON p.tenant_id = c.tenant_id AND p.id = c.customer_profile_id
+WHERE a.tenant_id = $1 AND ($2::text IS NULL OR a.status = $2)
+  AND a.due_date <= current_date + $3::int
+ORDER BY a.due_date, a.id LIMIT 500
+`
+
+type ListAlertsParams struct {
+	TenantID   uuid.UUID
+	Status     *string
+	WithinDays int32
+}
+
+type ListAlertsRow struct {
+	ID                uuid.UUID
+	ContractID        uuid.UUID
+	WindowDays        int32
+	DueDate           time.Time
+	Kind              string
+	Status            string
+	AcknowledgedBy    *uuid.UUID
+	AcknowledgedAt    *time.Time
+	CreatedAt         time.Time
+	CustomerProfileID uuid.UUID
+	MrrMinor          int64
+	Currency          string
+	AutoRenew         *bool
+	CrmCompanyID      uuid.UUID
+}
+
+func (q *Queries) ListAlerts(ctx context.Context, arg ListAlertsParams) ([]ListAlertsRow, error) {
+	rows, err := q.db.Query(ctx, listAlerts, arg.TenantID, arg.Status, arg.WithinDays)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAlertsRow
+	for rows.Next() {
+		var i ListAlertsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ContractID,
+			&i.WindowDays,
+			&i.DueDate,
+			&i.Kind,
+			&i.Status,
+			&i.AcknowledgedBy,
+			&i.AcknowledgedAt,
+			&i.CreatedAt,
+			&i.CustomerProfileID,
+			&i.MrrMinor,
+			&i.Currency,
+			&i.AutoRenew,
+			&i.CrmCompanyID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listContracts = `-- name: ListContracts :many
+SELECT id, customer_profile_id, deal_id, proposal_version_id, status, start_date, end_date, term_months, auto_renew, notice_days, currency, mrr_minor,
+  setup_minor, source, owner_user_id, review_reason, created_at, updated_at
+FROM customer_expansion.contracts WHERE tenant_id = $1 AND customer_profile_id = $2
+ORDER BY start_date DESC, id DESC
+`
+
+type ListContractsParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+}
+
+type ListContractsRow struct {
+	ID                uuid.UUID
+	CustomerProfileID uuid.UUID
+	DealID            *uuid.UUID
+	ProposalVersionID *uuid.UUID
+	Status            string
+	StartDate         time.Time
+	EndDate           *time.Time
+	TermMonths        *int32
+	AutoRenew         *bool
+	NoticeDays        *int32
+	Currency          string
+	MrrMinor          int64
+	SetupMinor        int64
+	Source            string
+	OwnerUserID       *uuid.UUID
+	ReviewReason      *string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+func (q *Queries) ListContracts(ctx context.Context, arg ListContractsParams) ([]ListContractsRow, error) {
+	rows, err := q.db.Query(ctx, listContracts, arg.TenantID, arg.CustomerProfileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListContractsRow
+	for rows.Next() {
+		var i ListContractsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerProfileID,
+			&i.DealID,
+			&i.ProposalVersionID,
+			&i.Status,
+			&i.StartDate,
+			&i.EndDate,
+			&i.TermMonths,
+			&i.AutoRenew,
+			&i.NoticeDays,
+			&i.Currency,
+			&i.MrrMinor,
+			&i.SetupMinor,
+			&i.Source,
+			&i.OwnerUserID,
+			&i.ReviewReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCoverage = `-- name: ListCoverage :many
+SELECT id, tenant_service_id, contract_id, coverage, quantity, mrr_minor, currency, source, updated_at
+FROM customer_expansion.service_inventory WHERE tenant_id = $1 AND customer_profile_id = $2 AND deleted_at IS NULL
+`
+
+type ListCoverageParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+}
+
+type ListCoverageRow struct {
+	ID              uuid.UUID
+	TenantServiceID uuid.UUID
+	ContractID      *uuid.UUID
+	Coverage        string
+	Quantity        *int32
+	MrrMinor        *int64
+	Currency        *string
+	Source          string
+	UpdatedAt       time.Time
+}
+
+func (q *Queries) ListCoverage(ctx context.Context, arg ListCoverageParams) ([]ListCoverageRow, error) {
+	rows, err := q.db.Query(ctx, listCoverage, arg.TenantID, arg.CustomerProfileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCoverageRow
+	for rows.Next() {
+		var i ListCoverageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantServiceID,
+			&i.ContractID,
+			&i.Coverage,
+			&i.Quantity,
+			&i.MrrMinor,
+			&i.Currency,
+			&i.Source,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOpportunities = `-- name: ListOpportunities :many
+SELECT o.id, o.recommendation_id, o.deal_id, o.estimated_mrr_minor, o.realised_mrr_minor, o.currency, o.status, o.created_at, o.updated_at,
+  r.customer_profile_id, r.kind, r.tenant_service_id, p.crm_company_id
+FROM customer_expansion.revenue_opportunities o
+JOIN customer_expansion.recommendations r ON r.tenant_id = o.tenant_id AND r.id = o.recommendation_id
+JOIN customer_expansion.customer_profiles p ON p.tenant_id = r.tenant_id AND p.id = r.customer_profile_id
+WHERE o.tenant_id = $1 AND ($2::text IS NULL OR o.status = $2)
+ORDER BY o.created_at DESC, o.id DESC LIMIT 500
+`
+
+type ListOpportunitiesParams struct {
+	TenantID uuid.UUID
+	Status   *string
+}
+
+type ListOpportunitiesRow struct {
+	ID                uuid.UUID
+	RecommendationID  uuid.UUID
+	DealID            *uuid.UUID
+	EstimatedMrrMinor *int64
+	RealisedMrrMinor  *int64
+	Currency          *string
+	Status            string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CustomerProfileID uuid.UUID
+	Kind              string
+	TenantServiceID   *uuid.UUID
+	CrmCompanyID      uuid.UUID
+}
+
+func (q *Queries) ListOpportunities(ctx context.Context, arg ListOpportunitiesParams) ([]ListOpportunitiesRow, error) {
+	rows, err := q.db.Query(ctx, listOpportunities, arg.TenantID, arg.Status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOpportunitiesRow
+	for rows.Next() {
+		var i ListOpportunitiesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RecommendationID,
+			&i.DealID,
+			&i.EstimatedMrrMinor,
+			&i.RealisedMrrMinor,
+			&i.Currency,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CustomerProfileID,
+			&i.Kind,
+			&i.TenantServiceID,
+			&i.CrmCompanyID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProfiles = `-- name: ListProfiles :many
+SELECT p.id, p.crm_company_id, p.company_id, p.health_status, p.health_as_of, p.health_source, p.last_analyzed_at, p.created_at,
+  COALESCE((SELECT sum(c.mrr_minor) FROM customer_expansion.contracts c
+            WHERE c.tenant_id = p.tenant_id AND c.customer_profile_id = p.id AND c.status IN ('active','renewing')), 0)::bigint AS active_mrr_minor,
+  COALESCE((SELECT min(c.currency) FROM customer_expansion.contracts c
+   WHERE c.tenant_id = p.tenant_id AND c.customer_profile_id = p.id AND c.status IN ('active','renewing')), '')::text AS mrr_currency,
+  (SELECT count(DISTINCT c.currency) FROM customer_expansion.contracts c
+   WHERE c.tenant_id = p.tenant_id AND c.customer_profile_id = p.id AND c.status IN ('active','renewing'))::int AS mrr_currencies,
+  COALESCE((SELECT to_char(min(c.end_date), 'YYYY-MM-DD') FROM customer_expansion.contracts c
+   WHERE c.tenant_id = p.tenant_id AND c.customer_profile_id = p.id AND c.status IN ('active','renewing') AND c.end_date >= current_date), '')::text AS renewal_next_date,
+  (SELECT count(*) FROM customer_expansion.service_inventory s WHERE s.tenant_id = p.tenant_id AND s.customer_profile_id = p.id AND s.deleted_at IS NULL AND s.coverage = 'active')::int AS covered_active,
+  (SELECT count(*) FROM customer_expansion.service_inventory s WHERE s.tenant_id = p.tenant_id AND s.customer_profile_id = p.id AND s.deleted_at IS NULL AND s.coverage = 'absent')::int AS covered_absent,
+  (SELECT count(*) FROM customer_expansion.service_inventory s WHERE s.tenant_id = p.tenant_id AND s.customer_profile_id = p.id AND s.deleted_at IS NULL AND s.coverage = 'declined')::int AS covered_declined
+FROM customer_expansion.customer_profiles p
+WHERE p.tenant_id = $1 AND p.deleted_at IS NULL
+  AND ($2::text IS NULL OR p.health_status = $2)
+  AND ($3::uuid IS NULL OR p.id = $3)
+ORDER BY p.created_at DESC, p.id DESC
+LIMIT 500
+`
+
+type ListProfilesParams struct {
+	TenantID uuid.UUID
+	Health   *string
+	OnlyID   *uuid.UUID
+}
+
+type ListProfilesRow struct {
+	ID              uuid.UUID
+	CrmCompanyID    uuid.UUID
+	CompanyID       *uuid.UUID
+	HealthStatus    string
+	HealthAsOf      *time.Time
+	HealthSource    string
+	LastAnalyzedAt  *time.Time
+	CreatedAt       time.Time
+	ActiveMrrMinor  int64
+	MrrCurrency     string
+	MrrCurrencies   int32
+	RenewalNextDate string
+	CoveredActive   int32
+	CoveredAbsent   int32
+	CoveredDeclined int32
+}
+
+func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]ListProfilesRow, error) {
+	rows, err := q.db.Query(ctx, listProfiles, arg.TenantID, arg.Health, arg.OnlyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProfilesRow
+	for rows.Next() {
+		var i ListProfilesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CrmCompanyID,
+			&i.CompanyID,
+			&i.HealthStatus,
+			&i.HealthAsOf,
+			&i.HealthSource,
+			&i.LastAnalyzedAt,
+			&i.CreatedAt,
+			&i.ActiveMrrMinor,
+			&i.MrrCurrency,
+			&i.MrrCurrencies,
+			&i.RenewalNextDate,
+			&i.CoveredActive,
+			&i.CoveredAbsent,
+			&i.CoveredDeclined,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecommendations = `-- name: ListRecommendations :many
+SELECT r.id, r.customer_profile_id, r.tenant_service_id, r.contract_id, r.kind, r.rationale, r.estimated_mrr_minor, r.currency, r.evidence_class,
+  r.status, r.ai_request_id, r.decided_by, r.decided_at, r.created_at, p.crm_company_id
+FROM customer_expansion.recommendations r
+JOIN customer_expansion.customer_profiles p ON p.tenant_id = r.tenant_id AND p.id = r.customer_profile_id
+WHERE r.tenant_id = $1 AND ($2::text IS NULL OR r.status = $2)
+  AND ($3::uuid IS NULL OR r.customer_profile_id = $3)
+ORDER BY r.created_at DESC, r.id DESC LIMIT 500
+`
+
+type ListRecommendationsParams struct {
+	TenantID          uuid.UUID
+	Status            *string
+	CustomerProfileID *uuid.UUID
+}
+
+type ListRecommendationsRow struct {
+	ID                uuid.UUID
+	CustomerProfileID uuid.UUID
+	TenantServiceID   *uuid.UUID
+	ContractID        *uuid.UUID
+	Kind              string
+	Rationale         string
+	EstimatedMrrMinor *int64
+	Currency          *string
+	EvidenceClass     string
+	Status            string
+	AiRequestID       *uuid.UUID
+	DecidedBy         *uuid.UUID
+	DecidedAt         *time.Time
+	CreatedAt         time.Time
+	CrmCompanyID      uuid.UUID
+}
+
+func (q *Queries) ListRecommendations(ctx context.Context, arg ListRecommendationsParams) ([]ListRecommendationsRow, error) {
+	rows, err := q.db.Query(ctx, listRecommendations, arg.TenantID, arg.Status, arg.CustomerProfileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRecommendationsRow
+	for rows.Next() {
+		var i ListRecommendationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerProfileID,
+			&i.TenantServiceID,
+			&i.ContractID,
+			&i.Kind,
+			&i.Rationale,
+			&i.EstimatedMrrMinor,
+			&i.Currency,
+			&i.EvidenceClass,
+			&i.Status,
+			&i.AiRequestID,
+			&i.DecidedBy,
+			&i.DecidedAt,
+			&i.CreatedAt,
+			&i.CrmCompanyID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const openRecommendationKeys = `-- name: OpenRecommendationKeys :many
+SELECT id, dedupe_key FROM customer_expansion.recommendations WHERE tenant_id = $1 AND customer_profile_id = $2 AND status = 'open'
+`
+
+type OpenRecommendationKeysParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+}
+
+type OpenRecommendationKeysRow struct {
+	ID        uuid.UUID
+	DedupeKey string
+}
+
+func (q *Queries) OpenRecommendationKeys(ctx context.Context, arg OpenRecommendationKeysParams) ([]OpenRecommendationKeysRow, error) {
+	rows, err := q.db.Query(ctx, openRecommendationKeys, arg.TenantID, arg.CustomerProfileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OpenRecommendationKeysRow
+	for rows.Next() {
+		var i OpenRecommendationKeysRow
+		if err := rows.Scan(&i.ID, &i.DedupeKey); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const opportunitiesNeedingDeal = `-- name: OpportunitiesNeedingDeal :many
+SELECT id FROM customer_expansion.revenue_opportunities WHERE tenant_id = $1 AND status = 'open' AND deal_id IS NULL AND deal_attempts < 10
+`
+
+func (q *Queries) OpportunitiesNeedingDeal(ctx context.Context, tenantID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, opportunitiesNeedingDeal, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const opportunityByDealForUpdate = `-- name: OpportunityByDealForUpdate :one
+SELECT id, recommendation_id, status, estimated_mrr_minor, currency FROM customer_expansion.revenue_opportunities
+WHERE tenant_id = $1 AND deal_id = $2 FOR UPDATE
+`
+
+type OpportunityByDealForUpdateParams struct {
+	TenantID uuid.UUID
+	DealID   *uuid.UUID
+}
+
+type OpportunityByDealForUpdateRow struct {
+	ID                uuid.UUID
+	RecommendationID  uuid.UUID
+	Status            string
+	EstimatedMrrMinor *int64
+	Currency          *string
+}
+
+func (q *Queries) OpportunityByDealForUpdate(ctx context.Context, arg OpportunityByDealForUpdateParams) (OpportunityByDealForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, opportunityByDealForUpdate, arg.TenantID, arg.DealID)
+	var i OpportunityByDealForUpdateRow
+	err := row.Scan(
+		&i.ID,
+		&i.RecommendationID,
+		&i.Status,
+		&i.EstimatedMrrMinor,
+		&i.Currency,
+	)
+	return i, err
+}
+
+const opportunitySummary = `-- name: OpportunitySummary :many
+SELECT status, COALESCE(currency, '')::text AS currency, count(*)::int AS count,
+  COALESCE(sum(estimated_mrr_minor), 0)::bigint AS estimated_mrr_minor, COALESCE(sum(realised_mrr_minor), 0)::bigint AS realised_mrr_minor
+FROM customer_expansion.revenue_opportunities WHERE tenant_id = $1
+GROUP BY status, currency ORDER BY status, currency
+`
+
+type OpportunitySummaryRow struct {
+	Status            string
+	Currency          string
+	Count             int32
+	EstimatedMrrMinor int64
+	RealisedMrrMinor  int64
+}
+
+// Estimated and realised amounts are kept apart: an estimate is never revenue.
+func (q *Queries) OpportunitySummary(ctx context.Context, tenantID uuid.UUID) ([]OpportunitySummaryRow, error) {
+	rows, err := q.db.Query(ctx, opportunitySummary, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OpportunitySummaryRow
+	for rows.Next() {
+		var i OpportunitySummaryRow
+		if err := rows.Scan(
+			&i.Status,
+			&i.Currency,
+			&i.Count,
+			&i.EstimatedMrrMinor,
+			&i.RealisedMrrMinor,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const otherActiveMRR = `-- name: OtherActiveMRR :one
+SELECT COALESCE(sum(mrr_minor), 0)::bigint FROM customer_expansion.contracts
+WHERE tenant_id = $1 AND customer_profile_id = $2 AND id <> $3 AND status IN ('active','renewing')
+`
+
+type OtherActiveMRRParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+	ExcludeID         uuid.UUID
+}
+
+// The customer's MRR from other active contracts in the same currency, which decides whether a
+// change is new revenue, expansion or churn.
+func (q *Queries) OtherActiveMRR(ctx context.Context, arg OtherActiveMRRParams) (int64, error) {
+	row := q.db.QueryRow(ctx, otherActiveMRR, arg.TenantID, arg.CustomerProfileID, arg.ExcludeID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const peerPrices = `-- name: PeerPrices :many
+SELECT tenant_service_id, currency::text AS currency, count(*)::int AS customers,
+  percentile_disc(0.5) WITHIN GROUP (ORDER BY mrr_minor)::bigint AS median_mrr_minor
+FROM customer_expansion.service_inventory
+WHERE tenant_id = $1 AND customer_profile_id <> $2 AND deleted_at IS NULL AND coverage = 'active' AND mrr_minor IS NOT NULL
+GROUP BY tenant_service_id, currency
+`
+
+type PeerPricesParams struct {
+	TenantID       uuid.UUID
+	ExcludeProfile uuid.UUID
+}
+
+type PeerPricesRow struct {
+	TenantServiceID uuid.UUID
+	Currency        string
+	Customers       int32
+	MedianMrrMinor  int64
+}
+
+// What the tenant's customers pay for each service, as the basis for estimates. Excludes one customer.
+func (q *Queries) PeerPrices(ctx context.Context, arg PeerPricesParams) ([]PeerPricesRow, error) {
+	rows, err := q.db.Query(ctx, peerPrices, arg.TenantID, arg.ExcludeProfile)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PeerPricesRow
+	for rows.Next() {
+		var i PeerPricesRow
+		if err := rows.Scan(
+			&i.TenantServiceID,
+			&i.Currency,
+			&i.Customers,
+			&i.MedianMrrMinor,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const profileByCompany = `-- name: ProfileByCompany :one
+SELECT id FROM customer_expansion.customer_profiles WHERE tenant_id = $1 AND crm_company_id = $2 AND deleted_at IS NULL
+`
+
+type ProfileByCompanyParams struct {
+	TenantID     uuid.UUID
+	CrmCompanyID uuid.UUID
+}
+
+func (q *Queries) ProfileByCompany(ctx context.Context, arg ProfileByCompanyParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, profileByCompany, arg.TenantID, arg.CrmCompanyID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const profilesForTenant = `-- name: ProfilesForTenant :many
+SELECT id FROM customer_expansion.customer_profiles WHERE tenant_id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) ProfilesForTenant(ctx context.Context, tenantID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, profilesForTenant, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const refreshRecommendation = `-- name: RefreshRecommendation :exec
+UPDATE customer_expansion.recommendations SET rationale = $1, rule_rationale = $1, estimated_mrr_minor = $2,
+  currency = $3, evidence_class = $4, ai_request_id = NULL
+WHERE tenant_id = $5 AND id = $6 AND status = 'open'
+`
+
+type RefreshRecommendationParams struct {
+	Rationale         string
+	EstimatedMrrMinor *int64
+	Currency          *string
+	EvidenceClass     string
+	TenantID          uuid.UUID
+	ID                uuid.UUID
+}
+
+// Same suggestion, fresh facts: the rule wording and estimate follow the data, and AI wording is redone.
+func (q *Queries) RefreshRecommendation(ctx context.Context, arg RefreshRecommendationParams) error {
+	_, err := q.db.Exec(ctx, refreshRecommendation,
+		arg.Rationale,
+		arg.EstimatedMrrMinor,
+		arg.Currency,
+		arg.EvidenceClass,
+		arg.TenantID,
+		arg.ID,
+	)
+	return err
+}
+
+const reopenOpportunity = `-- name: ReopenOpportunity :exec
+UPDATE customer_expansion.revenue_opportunities SET status = 'in_deal', realised_mrr_minor = NULL WHERE tenant_id = $1 AND id = $2
+`
+
+type ReopenOpportunityParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+func (q *Queries) ReopenOpportunity(ctx context.Context, arg ReopenOpportunityParams) error {
+	_, err := q.db.Exec(ctx, reopenOpportunity, arg.TenantID, arg.ID)
+	return err
+}
+
+const repointProfiles = `-- name: RepointProfiles :execrows
+UPDATE customer_expansion.customer_profiles SET company_id = $1 WHERE company_id = $2
+`
+
+type RepointProfilesParams struct {
+	Target *uuid.UUID
+	Source *uuid.UUID
+}
+
+// Runs as the system role for a platform-wide company merge.
+func (q *Queries) RepointProfiles(ctx context.Context, arg RepointProfilesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, repointProfiles, arg.Target, arg.Source)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const resolveAlertsForContract = `-- name: ResolveAlertsForContract :exec
+UPDATE customer_expansion.renewal_alerts SET status = 'resolved' WHERE tenant_id = $1 AND contract_id = $2 AND status <> 'resolved'
+`
+
+type ResolveAlertsForContractParams struct {
+	TenantID   uuid.UUID
+	ContractID uuid.UUID
+}
+
+// A contract that ends, renews or changes dates no longer needs its old alerts.
+func (q *Queries) ResolveAlertsForContract(ctx context.Context, arg ResolveAlertsForContractParams) error {
+	_, err := q.db.Exec(ctx, resolveAlertsForContract, arg.TenantID, arg.ContractID)
+	return err
+}
+
+const setAIWording = `-- name: SetAIWording :execrows
+UPDATE customer_expansion.recommendations SET rationale = $1, ai_request_id = $2
+WHERE tenant_id = $3 AND id = $4 AND status = 'open' AND rule_rationale = $5
+`
+
+type SetAIWordingParams struct {
+	Rationale     string
+	AiRequestID   *uuid.UUID
+	TenantID      uuid.UUID
+	ID            uuid.UUID
+	RuleRationale string
+}
+
+// Applies AI wording only if the rule wording has not changed since it was requested.
+func (q *Queries) SetAIWording(ctx context.Context, arg SetAIWordingParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setAIWording,
+		arg.Rationale,
+		arg.AiRequestID,
+		arg.TenantID,
+		arg.ID,
+		arg.RuleRationale,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setComputedHealth = `-- name: SetComputedHealth :exec
+UPDATE customer_expansion.customer_profiles SET
+  health_status = CASE WHEN health_source = 'manual' THEN health_status ELSE $1 END,
+  health_as_of = CASE WHEN health_source = 'manual' THEN health_as_of ELSE now() END,
+  last_analyzed_at = now()
+WHERE tenant_id = $2 AND id = $3
+`
+
+type SetComputedHealthParams struct {
+	HealthStatus string
+	TenantID     uuid.UUID
+	ID           uuid.UUID
+}
+
+// Analysis never overwrites a status someone set by hand.
+func (q *Queries) SetComputedHealth(ctx context.Context, arg SetComputedHealthParams) error {
+	_, err := q.db.Exec(ctx, setComputedHealth, arg.HealthStatus, arg.TenantID, arg.ID)
+	return err
+}
+
+const setContractStatus = `-- name: SetContractStatus :exec
+UPDATE customer_expansion.contracts SET status = $1, end_date = COALESCE($2, end_date), review_reason = COALESCE($3, review_reason)
+WHERE tenant_id = $4 AND id = $5
+`
+
+type SetContractStatusParams struct {
+	Status       string
+	EndDate      *time.Time
+	ReviewReason *string
+	TenantID     uuid.UUID
+	ID           uuid.UUID
+}
+
+func (q *Queries) SetContractStatus(ctx context.Context, arg SetContractStatusParams) error {
+	_, err := q.db.Exec(ctx, setContractStatus,
+		arg.Status,
+		arg.EndDate,
+		arg.ReviewReason,
+		arg.TenantID,
+		arg.ID,
+	)
+	return err
+}
+
+const setHealth = `-- name: SetHealth :exec
+UPDATE customer_expansion.customer_profiles SET health_status = $1, health_source = $2, health_as_of = now()
+WHERE tenant_id = $3 AND id = $4
+`
+
+type SetHealthParams struct {
+	HealthStatus string
+	HealthSource string
+	TenantID     uuid.UUID
+	ID           uuid.UUID
+}
+
+func (q *Queries) SetHealth(ctx context.Context, arg SetHealthParams) error {
+	_, err := q.db.Exec(ctx, setHealth,
+		arg.HealthStatus,
+		arg.HealthSource,
+		arg.TenantID,
+		arg.ID,
+	)
+	return err
+}
+
+const setRecommendationStatus = `-- name: SetRecommendationStatus :exec
+UPDATE customer_expansion.recommendations SET status = $1 WHERE tenant_id = $2 AND id = $3
+`
+
+type SetRecommendationStatusParams struct {
+	Status   string
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+func (q *Queries) SetRecommendationStatus(ctx context.Context, arg SetRecommendationStatusParams) error {
+	_, err := q.db.Exec(ctx, setRecommendationStatus, arg.Status, arg.TenantID, arg.ID)
+	return err
+}
+
+const updateContract = `-- name: UpdateContract :exec
+UPDATE customer_expansion.contracts SET status = $1, start_date = $2, end_date = $3, term_months = $4,
+  auto_renew = $5, notice_days = $6, currency = $7, mrr_minor = $8, setup_minor = $9,
+  review_reason = $10
+WHERE tenant_id = $11 AND id = $12
+`
+
+type UpdateContractParams struct {
+	Status       string
+	StartDate    time.Time
+	EndDate      *time.Time
+	TermMonths   *int32
+	AutoRenew    *bool
+	NoticeDays   *int32
+	Currency     string
+	MrrMinor     int64
+	SetupMinor   int64
+	ReviewReason *string
+	TenantID     uuid.UUID
+	ID           uuid.UUID
+}
+
+func (q *Queries) UpdateContract(ctx context.Context, arg UpdateContractParams) error {
+	_, err := q.db.Exec(ctx, updateContract,
+		arg.Status,
+		arg.StartDate,
+		arg.EndDate,
+		arg.TermMonths,
+		arg.AutoRenew,
+		arg.NoticeDays,
+		arg.Currency,
+		arg.MrrMinor,
+		arg.SetupMinor,
+		arg.ReviewReason,
+		arg.TenantID,
+		arg.ID,
+	)
+	return err
+}
+
+const upsertCoverage = `-- name: UpsertCoverage :exec
+INSERT INTO customer_expansion.service_inventory (tenant_id, customer_profile_id, tenant_service_id, coverage, quantity, mrr_minor, currency, source)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT (tenant_id, customer_profile_id, tenant_service_id) WHERE deleted_at IS NULL DO UPDATE SET
+  coverage = EXCLUDED.coverage, quantity = EXCLUDED.quantity, mrr_minor = EXCLUDED.mrr_minor, currency = EXCLUDED.currency, source = EXCLUDED.source
+`
+
+type UpsertCoverageParams struct {
+	TenantID          uuid.UUID
+	CustomerProfileID uuid.UUID
+	TenantServiceID   uuid.UUID
+	Coverage          string
+	Quantity          *int32
+	MrrMinor          *int64
+	Currency          *string
+	Source            string
+}
+
+func (q *Queries) UpsertCoverage(ctx context.Context, arg UpsertCoverageParams) error {
+	_, err := q.db.Exec(ctx, upsertCoverage,
+		arg.TenantID,
+		arg.CustomerProfileID,
+		arg.TenantServiceID,
+		arg.Coverage,
+		arg.Quantity,
+		arg.MrrMinor,
+		arg.Currency,
+		arg.Source,
+	)
+	return err
 }

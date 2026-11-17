@@ -25,7 +25,7 @@ test("an admin activates a module and the workspace updates, then suspension blo
   await customer.getByRole("button", { name: "Create workspace" }).click();
   await expect(customer.getByRole("heading", { name: "Welcome, Erin Owner" })).toBeVisible();
 
-  // Sales Intelligence, still a placeholder until Phase 6, is not active: the page explains why, and the API itself refuses.
+  // Sales Intelligence is not active: the page explains why, and the API itself refuses.
   await customer.getByRole("navigation").getByRole("link", { name: "Sales Intelligence" }).click();
   await expect(customer.getByText("This module is not part of your workspace yet")).toBeVisible();
   const before = await customer.evaluate(async () => (await fetch("/api/v1/sales-intelligence/status")).status);
@@ -53,7 +53,7 @@ test("an admin activates a module and the workspace updates, then suspension blo
   await expect(moduleRow.getByText("Active", { exact: true })).toBeVisible();
 
   // The customer's open page updates by itself, with no reload.
-  await expect(customer.getByText("This module is active")).toBeVisible({ timeout: 15_000 });
+  await expect(customer.getByRole("navigation", { name: "Sections" }).getByRole("link", { name: "Definitions" })).toBeVisible({ timeout: 15_000 });
   const during = await customer.evaluate(async () => (await fetch("/api/v1/sales-intelligence/status")).status);
   expect(during).toBe(200);
 

@@ -656,18 +656,122 @@ type CustomerExpansionContract struct {
 	MrrMinor          int64
 	SetupMinor        int64
 	Source            string
+	OwnerUserID       *uuid.UUID
+	ReviewReason      *string
 }
 
 type CustomerExpansionCustomerProfile struct {
-	ID           uuid.UUID
-	TenantID     uuid.UUID
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	CrmCompanyID uuid.UUID
-	CompanyID    *uuid.UUID
-	HealthStatus string
-	HealthAsOf   *time.Time
-	DeletedAt    *time.Time
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	CrmCompanyID   uuid.UUID
+	CompanyID      *uuid.UUID
+	HealthStatus   string
+	HealthAsOf     *time.Time
+	DeletedAt      *time.Time
+	HealthSource   string
+	LastAnalyzedAt *time.Time
+}
+
+type CustomerExpansionHealthIndicator struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	CustomerProfileID uuid.UUID
+	IndicatorKey      string
+	Value             []byte
+	Polarity          string
+	Evidence          []byte
+	AsOf              time.Time
+}
+
+type CustomerExpansionRecommendation struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CustomerProfileID uuid.UUID
+	TenantServiceID   *uuid.UUID
+	ContractID        *uuid.UUID
+	Kind              string
+	Rationale         string
+	RuleRationale     string
+	EstimatedMrrMinor *int64
+	Currency          *string
+	EvidenceClass     string
+	Status            string
+	DedupeKey         string
+	AiRequestID       *uuid.UUID
+	DecidedBy         *uuid.UUID
+	DecidedAt         *time.Time
+}
+
+type CustomerExpansionRecommendationEvidence struct {
+	ID               uuid.UUID
+	TenantID         uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	RecommendationID uuid.UUID
+	Kind             string
+	ReferenceType    *string
+	ReferenceID      *uuid.UUID
+	Detail           []byte
+}
+
+type CustomerExpansionRenewalAlert struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	ContractID     uuid.UUID
+	WindowDays     int32
+	DueDate        time.Time
+	Kind           string
+	Status         string
+	AcknowledgedBy *uuid.UUID
+	AcknowledgedAt *time.Time
+}
+
+type CustomerExpansionRevenueOpportunity struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	RecommendationID  uuid.UUID
+	DealID            *uuid.UUID
+	EstimatedMrrMinor *int64
+	RealisedMrrMinor  *int64
+	Currency          *string
+	Status            string
+	DealAttempts      int32
+}
+
+type CustomerExpansionServiceGap struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CustomerProfileID uuid.UUID
+	TenantServiceID   uuid.UUID
+	GapState          string
+	AnalysisRunID     uuid.UUID
+}
+
+type CustomerExpansionServiceInventory struct {
+	ID                uuid.UUID
+	TenantID          uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CustomerProfileID uuid.UUID
+	TenantServiceID   uuid.UUID
+	ContractID        *uuid.UUID
+	Coverage          string
+	Quantity          *int32
+	MrrMinor          *int64
+	Currency          *string
+	Source            string
+	DeletedAt         *time.Time
 }
 
 type FilesAccessGrant struct {
@@ -2279,6 +2383,193 @@ type ProposalsViewEvent struct {
 	ShareLinkID uuid.UUID
 	ViewedAt    time.Time
 	IpHash      []byte
+}
+
+type SalesIntelligenceAiInsight struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Scope          string
+	Content        []byte
+	CitedMetricIds []uuid.UUID
+	AiRequestID    *uuid.UUID
+	CreatedBy      *uuid.UUID
+}
+
+type SalesIntelligenceCostEntry struct {
+	ID          uuid.UUID
+	TenantID    uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	PeriodStart time.Time
+	PeriodEnd   time.Time
+	Category    string
+	CampaignRef *uuid.UUID
+	AmountMinor int64
+	Currency    string
+	Note        *string
+	CreatedBy   *uuid.UUID
+	DeletedAt   *time.Time
+}
+
+type SalesIntelligenceDimensionLabel struct {
+	ID        uuid.UUID
+	TenantID  uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Kind      string
+	Ref       uuid.UUID
+	Label     string
+}
+
+type SalesIntelligenceFactDealEvent struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	SourceEventID uuid.UUID
+	EventType     string
+	DealRef       *uuid.UUID
+	ProposalRef   *uuid.UUID
+	OwnerUserRef  *uuid.UUID
+	CrmCompanyRef *uuid.UUID
+	CompanyRef    *uuid.UUID
+	PipelineRef   *uuid.UUID
+	StageKey      *string
+	Status        *string
+	SourceModule  *string
+	AmountMinor   *int64
+	MrrMinor      *int64
+	Currency      *string
+	Probability   *int32
+	ExpectedClose *time.Time
+	OccurredAt    time.Time
+}
+
+type SalesIntelligenceFactLeadEvent struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	SourceEventID uuid.UUID
+	EventType     string
+	ProspectRef   *uuid.UUID
+	SourceKey     string
+	CrmCompanyRef *uuid.UUID
+	Score         *int32
+	OccurredAt    time.Time
+}
+
+type SalesIntelligenceFactOutreachEvent struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	SourceEventID uuid.UUID
+	EventType     string
+	CampaignRef   uuid.UUID
+	CompanyRef    *uuid.UUID
+	Subtype       *string
+	OccurredAt    time.Time
+}
+
+type SalesIntelligenceFactRevenueEvent struct {
+	ID                     uuid.UUID
+	TenantID               uuid.UUID
+	CreatedAt              time.Time
+	SourceEventID          uuid.UUID
+	Movement               string
+	ContractRef            uuid.UUID
+	CustomerRef            *uuid.UUID
+	MrrDeltaMinor          int64
+	ContractMrrMinor       int64
+	Currency               string
+	ReportingMrrDeltaMinor *int64
+	ReportingCurrency      string
+	FxRate                 *float64
+	ContractEndDate        *time.Time
+	AutoRenew              *bool
+	OccurredAt             time.Time
+}
+
+type SalesIntelligenceForecastPoint struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	RunID         uuid.UUID
+	PeriodStart   time.Time
+	ExpectedMinor int64
+	LowMinor      int64
+	HighMinor     int64
+	Currency      string
+}
+
+type SalesIntelligenceForecastRun struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Kind          string
+	MethodVersion string
+	HorizonMonths int32
+	Assumptions   []byte
+	Status        string
+	ErrorCode     *string
+	AsOf          time.Time
+	Currency      *string
+	JobID         *uuid.UUID
+	RequestedBy   *uuid.UUID
+	CompletedAt   *time.Time
+}
+
+type SalesIntelligenceMetricSnapshot struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	MetricKey      string
+	PeriodGrain    string
+	PeriodStart    time.Time
+	Dimension      string
+	DimensionValue string
+	Value          *float64
+	ValueKind      string
+	Currency       *string
+	Flags          []string
+	ComputedAt     time.Time
+}
+
+type SalesIntelligenceReportDefinition struct {
+	ID         uuid.UUID
+	TenantID   uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Name       string
+	Definition []byte
+	CreatedBy  *uuid.UUID
+	DeletedAt  *time.Time
+}
+
+type SalesIntelligenceReportExport struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DefinitionID *uuid.UUID
+	FileID       *uuid.UUID
+	Format       string
+	Status       string
+	ErrorCode    *string
+	CreatedBy    *uuid.UUID
+}
+
+type SalesIntelligenceRollupState struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DirtySince   *time.Time
+	LastRolledAt *time.Time
+	FactsAsOf    *time.Time
 }
 
 type SharedCompany struct {

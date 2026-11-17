@@ -14,6 +14,7 @@ import (
 
 	"mspengine/internal/kernel/apperr"
 	"mspengine/internal/kernel/db"
+	"mspengine/internal/kernel/events"
 	"mspengine/internal/modules/visitorintel/repo"
 	"mspengine/internal/platform/shared"
 )
@@ -147,7 +148,7 @@ func (s *Service) Collect(ctx context.Context, h Hit, m HitMeta) error {
 
 // afterHit records conversions for goals the hit meets.
 func (s *Service) afterHit(ctx context.Context, site repo.SiteByKeyRow, h Hit, pageURL string, session *uuid.UUID) error {
-	return s.systemTx(ctx, site.TenantID, func(q *repo.Queries, _ pgx.Tx) error {
+	return s.systemTx(ctx, site.TenantID, func(q *repo.Queries, tx pgx.Tx) error {
 		if err := q.TouchSite(ctx, repo.TouchSiteParams{TenantID: site.TenantID, ID: site.ID}); err != nil {
 			return err
 		}
@@ -168,8 +169,15 @@ func (s *Service) afterHit(ctx context.Context, site repo.SiteByKeyRow, h Hit, p
 				key = g.ID.String() + ":" + session.String() // Once per session.
 			}
 			attr, _ := json.Marshal(map[string]string{"url": pageURL})
-			if _, err := q.InsertConversion(ctx, repo.InsertConversionParams{TenantID: site.TenantID, SiteID: site.ID, GoalID: g.ID, SessionID: session, Attribution: attr, DedupeKey: key}); err != nil {
+			ids, err := q.InsertConversion(ctx, repo.InsertConversionParams{TenantID: site.TenantID, SiteID: site.ID, GoalID: g.ID, SessionID: session, Attribution: attr, DedupeKey: key})
+			if err != nil {
 				return err
+			}
+			for _, id := range ids { // Empty for a repeat within the session.
+				if err := events.Append(ctx, tx, events.Event{Type: "visitor_intelligence.conversion.recorded", TenantID: &site.TenantID, SourceModule: Module, AggregateType: "conversion", AggregateID: id},
+					map[string]any{"conversion_id": id, "site_id": site.ID, "goal_id": g.ID}); err != nil {
+					return err
+				}
 			}
 		}
 		return nil

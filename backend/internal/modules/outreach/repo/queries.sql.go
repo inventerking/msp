@@ -1888,7 +1888,7 @@ func (q *Queries) StopEnrollment(ctx context.Context, arg StopEnrollmentParams) 
 	return err
 }
 
-const suppress = `-- name: Suppress :exec
+const suppress = `-- name: Suppress :execrows
 INSERT INTO outreach.suppressions (tenant_id, email_hash, reason, source, created_by) VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (tenant_id, email_hash) DO NOTHING
 `
@@ -1901,15 +1901,18 @@ type SuppressParams struct {
 	CreatedBy *uuid.UUID
 }
 
-func (q *Queries) Suppress(ctx context.Context, arg SuppressParams) error {
-	_, err := q.db.Exec(ctx, suppress,
+func (q *Queries) Suppress(ctx context.Context, arg SuppressParams) (int64, error) {
+	result, err := q.db.Exec(ctx, suppress,
 		arg.TenantID,
 		arg.EmailHash,
 		arg.Reason,
 		arg.Source,
 		arg.CreatedBy,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateCampaign = `-- name: UpdateCampaign :execrows

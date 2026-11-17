@@ -403,7 +403,17 @@
     "origin_not_allowed": "This is not allowed from that website.",
     "conversation_closed": "This conversation has ended.",
     "conversation_limit": "This conversation has reached its limit.",
-    "module_unavailable": "This feature is not available."
+    "module_unavailable": "This feature is not available.",
+    "insufficient_history": "A revenue forecast needs at least 3 complete months of contract history.",
+    "ai_output_rejected": "The commentary used numbers that are not in your metrics, so it was not kept. Try again.",
+    "no_metrics": "There are no metrics to comment on yet.",
+    "recommendation_closed": "This recommendation was already decided.",
+    "invalid_transition": "A contract cannot move to that status from its current one.",
+    "deal_has_contract": "That deal already has a contract.",
+    "service_exists": "A service with this name already exists.",
+    "alert_changed": "This alert changed meanwhile. Reload to see it.",
+    "ai_unavailable": "AI commentary is not available.",
+    "file_quarantined": "The file failed the malware scan and was not imported."
   },
   "notifications": {
     "title": "Notifications",
@@ -1404,5 +1414,343 @@
     "yourReply": "Your reply",
     "sendReply": "Send reply",
     "close": "Close conversation"
+  },
+  "services": {
+    "title": "Services you sell",
+    "body": "Proposals price these, and Customer Expansion records which customers have them. Retiring a service keeps its history.",
+    "name": "Service",
+    "category": "Category",
+    "noCategory": "No category",
+    "add": "Add service",
+    "status": "Status",
+    "actions": "Actions",
+    "statuses": {
+      "active": "Active",
+      "retired": "Retired"
+    },
+    "retire": "Retire",
+    "restore": "Make active",
+    "empty": "No services yet",
+    "emptyHelp": "Add the services you sell, such as managed support or backup."
+  },
+  "intelKinds": {
+    "actual": "Actual",
+    "estimated": "Estimate",
+    "forecast": "Forecast"
+  },
+  "expansion": {
+    "tabs": {
+      "customers": "Customers",
+      "recommendations": "Recommendations",
+      "renewals": "Renewals",
+      "opportunities": "Opportunities"
+    },
+    "addCustomer": "Add a customer",
+    "addCustomerHelp": "Customers come from won deals automatically. Add one here if it was won elsewhere.",
+    "companyName": "Company name",
+    "domain": "Website domain",
+    "add": "Add customer",
+    "import": "Import customers",
+    "importHelp": "A CSV with name and domain columns, and optionally mrr_minor, currency, start_date and end_date for a contract. Files are scanned before they are read.",
+    "csvFile": "CSV file",
+    "importButton": "Import",
+    "importing": "Uploading and scanning…",
+    "imported": "Added {{created}} customers and {{contracts}} contracts.",
+    "health": "Health",
+    "allHealth": "Any health",
+    "healthStatus": {
+      "healthy": "Healthy",
+      "watch": "Watch",
+      "at_risk": "At risk",
+      "unknown": "Unknown"
+    },
+    "setByHand": "set by hand",
+    "setHealth": "Set health",
+    "computed": "From analysis",
+    "asOf": "as of {{when}}",
+    "noCustomers": "No customers yet",
+    "noCustomersHelp": "Win a deal or add a customer.",
+    "customer": "Customer",
+    "mrr": "MRR",
+    "nextRenewal": "Next renewal",
+    "coverage": "Coverage",
+    "mixedCurrency": "Several currencies",
+    "coverageSummary": "{{active}} active, {{absent}} absent, {{declined}} declined, {{unknown}} unknown",
+    "analyze": "Run analysis",
+    "analyzing": "Analysing…",
+    "analysisDone": "Analysis done: {{created}} new, {{refreshed}} updated, {{expired}} no longer supported.",
+    "indicators": {
+      "active_mrr": "Recurring revenue",
+      "renewal_proximity": "Renewal timing",
+      "coverage_breadth": "Coverage",
+      "assessment_risk": "IT assessment"
+    },
+    "polarity": {
+      "positive": "good",
+      "neutral": "watch",
+      "negative": "concern",
+      "unknown": "unknown"
+    },
+    "contracts": "Contracts",
+    "noContracts": "No contracts",
+    "noContractsHelp": "A won deal adds one. You can also add one by hand.",
+    "status": "Status",
+    "start": "Start",
+    "end": "End",
+    "source": "Source",
+    "actions": "Actions",
+    "openEnded": "Open-ended",
+    "autoRenews": "Renews automatically",
+    "contractStatus": {
+      "draft": "Draft",
+      "active": "Active",
+      "renewing": "Renewing",
+      "ended": "Ended",
+      "cancelled": "Cancelled"
+    },
+    "sources": {
+      "won_deal": "Won deal",
+      "signed_proposal": "Signed proposal",
+      "manual": "Added by hand",
+      "csv_import": "Imported"
+    },
+    "review": {
+      "proposal_deal_mismatch": "The signed proposal and the deal gave different MRR. The proposal's figure is used; please check it.",
+      "deal_reopened": "The deal was reopened, so this contract is back in draft."
+    },
+    "markReviewed": "Mark reviewed",
+    "activate": "Activate",
+    "endContract": "End",
+    "noticeDays": "Notice (days)",
+    "currency": "Currency",
+    "monthlyValue": "Monthly value",
+    "autoRenew": "Renews automatically",
+    "addContract": "Add contract",
+    "coverageTitle": "Service coverage",
+    "coverageHelp": "Unknown means not recorded. It is never treated as the customer not having a service.",
+    "noServices": "Add your services first",
+    "noServicesHelp": "Coverage is recorded against the services you sell.",
+    "openSettings": "Open settings",
+    "service": "Service",
+    "coverageFor": "Coverage of {{service}}",
+    "coverageStates": {
+      "active": "Has it",
+      "absent": "Does not have it",
+      "declined": "Declined",
+      "unknown": "Unknown"
+    },
+    "saveCoverage": "Save coverage",
+    "openRecommendations": "Open recommendations",
+    "noRecommendations": "No recommendations",
+    "runAnalysis": "Run analysis on a customer to see suggestions.",
+    "recommendationsHelp": "Each suggestion shows the facts behind it. Unknown coverage is a question, not a gap.",
+    "kinds": {
+      "cross_sell": "Cross-sell",
+      "upsell": "Upsell",
+      "renewal": "Renewal",
+      "confirm_coverage": "Confirm coverage"
+    },
+    "statuses": {
+      "open": "Open",
+      "accepted": "Accepted",
+      "dismissed": "Dismissed",
+      "converted": "Won",
+      "expired": "No longer supported"
+    },
+    "aiWorded": "Worded with AI from the facts below",
+    "estimate": "Estimate",
+    "perMonth": "a month",
+    "evidenceClass": {
+      "observed": "based on your records",
+      "inferred": "inferred",
+      "ai_estimate": "AI estimate"
+    },
+    "evidence_one": "{{count}} piece of evidence",
+    "evidence_other": "{{count}} pieces of evidence",
+    "evidenceKinds": {
+      "service_absent": "Your coverage records say they do not have {{service}}.",
+      "coverage_unknown": "Nothing is recorded for {{service}}.",
+      "contract_ending": "A contract ends on {{end_date}}, in {{days_left}} days.",
+      "notice_deadline": "Notice is due by {{deadline}} ({{notice_days}} days' notice).",
+      "assessment_risk": "Their IT assessment on {{assessed_at}} found {{risk_level}} risk.",
+      "peer_price": "{{customers}} of your customers pay a median of {{median}} a month."
+    },
+    "acceptWithDeal": "Accept and open a deal",
+    "acceptOnly": "Accept",
+    "willConfirm": "I'll confirm",
+    "dismiss": "Dismiss",
+    "dealSkipped": {
+      "crm_not_active": "Accepted. No deal was opened because CRM is not active.",
+      "nothing_to_sell_yet": "Accepted. Confirm the coverage first; there is nothing to sell yet."
+    },
+    "dealPending": "Accepted. The deal could not be opened yet and will be retried.",
+    "allStatuses": "All",
+    "alertKind": "Alert",
+    "due": "Due",
+    "inDays_one": "in {{count}} day",
+    "inDays_other": "in {{count}} days",
+    "acknowledge": "Acknowledge",
+    "alertKinds": {
+      "contract_end": "Contract ends",
+      "notice_deadline": "Notice deadline"
+    },
+    "alertStatus": {
+      "open": "Open",
+      "acknowledged": "Acknowledged",
+      "resolved": "Resolved"
+    },
+    "noRenewals": "No renewals in this window",
+    "summary": "Summary",
+    "count": "Count",
+    "estimatedMrr": "Estimated MRR",
+    "realisedMrr": "Realised MRR",
+    "kind": "Kind",
+    "deal": "Deal",
+    "openDeal": "Open deal",
+    "oppStatus": {
+      "open": "Open",
+      "in_deal": "In a deal",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "noOpportunities": "No opportunities"
+  },
+  "intel": {
+    "tabs": {
+      "dashboard": "Dashboard",
+      "revenue": "Revenue",
+      "leads": "Leads",
+      "campaigns": "Campaigns",
+      "funnel": "Funnel",
+      "forecasts": "Forecasts",
+      "team": "Team",
+      "reports": "Reports",
+      "definitions": "Definitions"
+    },
+    "from": "From",
+    "to": "To",
+    "month": "Month",
+    "value": "Value",
+    "kind": "Kind",
+    "metric": "Metric",
+    "metrics": "Metrics",
+    "definition": "How it is calculated",
+    "period": "Period",
+    "actions": "Actions",
+    "asOf": "Computed {{when}}",
+    "factsAsOf": "includes activity up to {{when}}",
+    "notComputedYet": "Not computed yet. Numbers appear shortly after activity.",
+    "unavailable": {
+      "module_not_active": "The modules that feed this section are not active, and there is no history yet.",
+      "insufficient_history": "Not enough history yet.",
+      "no_cost_data": "Add your costs to see this."
+    },
+    "flags": {
+      "fx_missing": "some amounts left out: no exchange rate",
+      "no_denominator": "nothing to divide by"
+    },
+    "sections": {
+      "revenue": "Revenue",
+      "leads": "Leads",
+      "campaigns": "Campaigns",
+      "funnel": "Pipeline",
+      "win_loss": "Wins and losses",
+      "costs": "Costs"
+    },
+    "emptyDashboard": "Data appears as activity happens.",
+    "previous": "previous month {{value}}",
+    "commentary": "Commentary",
+    "writeCommentary": "Write commentary",
+    "writing": "Writing…",
+    "commentaryHelp": "Written by AI from your metrics only. It must cite the metrics it uses, and every number in it is checked against them.",
+    "cites": "Cites",
+    "aiWritten": "AI-written {{when}}",
+    "noCommentary": "No commentary yet.",
+    "movements": "Monthly movements",
+    "movementsHelp": "Net new MRR is new + expansion + reactivation − contraction − churn.",
+    "bySource": "By source",
+    "sources": {
+      "chatbot": "Chatbot",
+      "website": "Website conversions",
+      "csv_import": "Import",
+      "search": "Search",
+      "manual": "Added by hand",
+      "unknown": "Unknown"
+    },
+    "unnamedCampaign": "Unnamed campaign",
+    "byCampaign": "By campaign, {{month}}",
+    "roi": "Campaign ROI",
+    "roiHelp": "For campaigns with costs. A won deal counts for a campaign when its company replied in the 90 days before the win. This is a model, so ROI is an estimate.",
+    "cac": "Customer acquisition cost",
+    "costs": "Costs",
+    "costsHelp": "Costs are the only figures you enter here. They are spread evenly over their dates.",
+    "periodStart": "Start",
+    "periodEnd": "End",
+    "category": "Category",
+    "amount": "Amount",
+    "currency": "Currency",
+    "note": "Note",
+    "addCost": "Add cost",
+    "delete": "Delete",
+    "noCosts": "No costs entered.",
+    "categories": {
+      "advertising": "Advertising",
+      "events": "Events",
+      "content": "Content",
+      "tools": "Tools",
+      "outreach": "Outreach",
+      "staff": "Staff",
+      "other": "Other"
+    },
+    "pipelineNow": "Open pipeline now",
+    "pipelineHelp": "Weighted pipeline is contract value × probability, an estimate.",
+    "stageReach": "Deals created in {{month}}, by stage reached",
+    "stages": {
+      "unknown": "Unknown"
+    },
+    "horizon": "Horizon",
+    "months_one": "{{count}} month",
+    "months_other": "{{count}} months",
+    "runRevenue": "Forecast revenue",
+    "runPipeline": "Forecast pipeline",
+    "noForecasts": "No forecasts yet",
+    "noForecastsHelp": "A revenue forecast needs 3 months of history.",
+    "forecastKinds": {
+      "revenue": "Revenue forecast (MRR)",
+      "pipeline": "Pipeline forecast (expected won value)"
+    },
+    "forecastStatus": {
+      "queued": "Queued",
+      "running": "Running",
+      "completed": "Ready",
+      "failed": "Not available"
+    },
+    "forecastAsOf": "As of {{date}}, method {{method}}",
+    "forecastErrors": {
+      "insufficient_history": "Needs 3 months of history.",
+      "forecast_failed": "This forecast could not be made."
+    },
+    "previousShown": "The previous forecast is still available below.",
+    "assumptions": "Assumptions",
+    "teamHelp": "Individual results. Only managers can see this, and each view is logged.",
+    "unassigned": "Unassigned",
+    "formerMember": "Former member",
+    "newReport": "New report",
+    "reportName": "Name",
+    "breakdown": "Breakdown",
+    "saveReport": "Save report",
+    "noReports": "No reports yet",
+    "exportCsv": "Export CSV",
+    "download": "Download",
+    "exportFailed": "Export failed",
+    "dimensions": {
+      "all": "Total",
+      "source": "Source",
+      "stage": "Stage",
+      "campaign": "Campaign",
+      "owner": "Team member"
+    },
+    "noData": "No data for this period.",
+    "definitionsHelp": "Metrics are defined once and calculated the same way everywhere. Campaign attribution looks back {{days}} days; ROI counts {{months}} months of won MRR. Actual, estimated and forecast values are never added together."
   }
 }

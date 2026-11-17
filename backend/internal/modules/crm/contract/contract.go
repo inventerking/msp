@@ -50,6 +50,8 @@ type Registry interface {
 	EnsureCompany(ctx context.Context, in CompanyInput) (uuid.UUID, error)
 	EnsureContact(ctx context.Context, tenantID, contactID uuid.UUID, crmCompanyID *uuid.UUID) (uuid.UUID, error)
 	GetCompanySummary(ctx context.Context, tenantID, crmCompanyID uuid.UUID) (CompanySummary, error)
+	// CompanySummaries looks up several companies at once. Unknown or deleted IDs are left out.
+	CompanySummaries(ctx context.Context, tenantID uuid.UUID, crmCompanyIDs []uuid.UUID) (map[uuid.UUID]CompanySummary, error)
 	SetLifecycle(ctx context.Context, tenantID, crmCompanyID uuid.UUID, lifecycle string) error
 }
 
@@ -68,4 +70,19 @@ type DealSummary struct {
 type Deals interface {
 	GetDealSummary(ctx context.Context, tenantID, dealID uuid.UUID) (DealSummary, error)
 	RequestStage(ctx context.Context, tenantID, dealID uuid.UUID, stageKey, reason string) (moved bool, err error)
+	// OpenDeal creates a deal for another module's record, in the default pipeline's first stage.
+	// It is idempotent per source: asking again for the same record returns the same deal.
+	OpenDeal(ctx context.Context, in NewDeal) (uuid.UUID, error)
+}
+
+// NewDeal is a deal another module asks CRM to open, such as from an accepted recommendation.
+type NewDeal struct {
+	TenantID     uuid.UUID
+	ActorID      *uuid.UUID
+	CRMCompanyID uuid.UUID
+	Title        string
+	Currency     string
+	ExpectedMRR  *int64
+	SourceModule string
+	SourceRef    uuid.UUID
 }

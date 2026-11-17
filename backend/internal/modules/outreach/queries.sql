@@ -204,7 +204,7 @@ WHERE r.tenant_id = @tenant_id ORDER BY r.received_at DESC LIMIT 500;
 -- name: ClassifyReply :execrows
 UPDATE outreach.replies SET classification = @classification WHERE tenant_id = @tenant_id AND id = @id;
 
--- name: Suppress :exec
+-- name: Suppress :execrows
 INSERT INTO outreach.suppressions (tenant_id, email_hash, reason, source, created_by) VALUES (@tenant_id, @email_hash, @reason, @source, sqlc.narg(created_by))
 ON CONFLICT (tenant_id, email_hash) DO NOTHING;
 

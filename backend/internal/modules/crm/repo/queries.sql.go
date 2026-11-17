@@ -154,6 +154,50 @@ func (q *Queries) CloseDeal(ctx context.Context, arg CloseDealParams) (int32, er
 	return row_version, err
 }
 
+const companiesByIDs = `-- name: CompaniesByIDs :many
+SELECT id, company_id, name, domain, lifecycle FROM crm.companies
+WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND deleted_at IS NULL
+`
+
+type CompaniesByIDsParams struct {
+	TenantID uuid.UUID
+	Ids      []uuid.UUID
+}
+
+type CompaniesByIDsRow struct {
+	ID        uuid.UUID
+	CompanyID *uuid.UUID
+	Name      string
+	Domain    *string
+	Lifecycle string
+}
+
+func (q *Queries) CompaniesByIDs(ctx context.Context, arg CompaniesByIDsParams) ([]CompaniesByIDsRow, error) {
+	rows, err := q.db.Query(ctx, companiesByIDs, arg.TenantID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CompaniesByIDsRow
+	for rows.Next() {
+		var i CompaniesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.Name,
+			&i.Domain,
+			&i.Lifecycle,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const companyForDeal = `-- name: CompanyForDeal :one
 SELECT crm_company_id FROM crm.deals WHERE tenant_id = $1 AND id = $2
 `
@@ -213,6 +257,63 @@ func (q *Queries) CrmContactIDsFor(ctx context.Context, arg CrmContactIDsForPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const dealFacts = `-- name: DealFacts :one
+SELECT d.id, d.crm_company_id, c.company_id, d.pipeline_id, s.key AS stage_key, d.status, d.owner_user_id, d.currency,
+  d.contract_value_minor, d.expected_mrr_minor, d.probability, d.expected_close_date, d.source_module, d.source_ref, d.row_version
+FROM crm.deals d
+JOIN crm.companies c ON c.tenant_id = d.tenant_id AND c.id = d.crm_company_id
+JOIN crm.pipeline_stages s ON s.tenant_id = d.tenant_id AND s.id = d.stage_id
+WHERE d.tenant_id = $1 AND d.id = $2
+`
+
+type DealFactsParams struct {
+	TenantID uuid.UUID
+	ID       uuid.UUID
+}
+
+type DealFactsRow struct {
+	ID                 uuid.UUID
+	CrmCompanyID       uuid.UUID
+	CompanyID          *uuid.UUID
+	PipelineID         uuid.UUID
+	StageKey           string
+	Status             string
+	OwnerUserID        *uuid.UUID
+	Currency           string
+	ContractValueMinor *int64
+	ExpectedMrrMinor   *int64
+	Probability        int32
+	ExpectedCloseDate  *time.Time
+	SourceModule       *string
+	SourceRef          *uuid.UUID
+	RowVersion         int32
+}
+
+// What every deal event carries, so a consumer can rebuild a deal's current state from the latest
+// event alone, whatever order events arrive in. IDs and amounts only: never the title or notes.
+func (q *Queries) DealFacts(ctx context.Context, arg DealFactsParams) (DealFactsRow, error) {
+	row := q.db.QueryRow(ctx, dealFacts, arg.TenantID, arg.ID)
+	var i DealFactsRow
+	err := row.Scan(
+		&i.ID,
+		&i.CrmCompanyID,
+		&i.CompanyID,
+		&i.PipelineID,
+		&i.StageKey,
+		&i.Status,
+		&i.OwnerUserID,
+		&i.Currency,
+		&i.ContractValueMinor,
+		&i.ExpectedMrrMinor,
+		&i.Probability,
+		&i.ExpectedCloseDate,
+		&i.SourceModule,
+		&i.SourceRef,
+		&i.RowVersion,
+	)
+	return i, err
 }
 
 const defaultPipeline = `-- name: DefaultPipeline :one
@@ -484,6 +585,26 @@ func (q *Queries) FindContactCompany(ctx context.Context, arg FindContactCompany
 	var i FindContactCompanyRow
 	err := row.Scan(&i.ID, &i.CrmCompanyID)
 	return i, err
+}
+
+const findDealBySource = `-- name: FindDealBySource :one
+SELECT id FROM crm.deals
+WHERE tenant_id = $1 AND source_module = $2 AND source_ref = $3 AND deleted_at IS NULL
+ORDER BY created_at LIMIT 1
+`
+
+type FindDealBySourceParams struct {
+	TenantID     uuid.UUID
+	SourceModule *string
+	SourceRef    *uuid.UUID
+}
+
+// Another module's deal for one of its records, so asking twice opens one deal.
+func (q *Queries) FindDealBySource(ctx context.Context, arg FindDealBySourceParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, findDealBySource, arg.TenantID, arg.SourceModule, arg.SourceRef)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const findMeetingByKey = `-- name: FindMeetingByKey :one

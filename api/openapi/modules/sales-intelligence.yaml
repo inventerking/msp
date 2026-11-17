@@ -1,0 +1,485 @@
+openapi: 3.0.3
+info: {title: Sales Intelligence API, version: 1.0.0}
+servers:
+  - url: /api/v1
+security: [{sessionCookie: []}]
+paths:
+  /sales-intelligence/definitions:
+    get:
+      operationId: listMetricDefinitions
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/MetricDefList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/dashboard:
+    get:
+      operationId: getDashboard
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters: [{$ref: "#/components/parameters/From"}, {$ref: "#/components/parameters/To"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Dashboard"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/revenue:
+    get:
+      operationId: getRevenue
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters: [{$ref: "#/components/parameters/From"}, {$ref: "#/components/parameters/To"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AnalyticsView"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/leads:
+    get:
+      operationId: getLeads
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters: [{$ref: "#/components/parameters/From"}, {$ref: "#/components/parameters/To"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AnalyticsView"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/campaigns:
+    get:
+      operationId: getCampaigns
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters: [{$ref: "#/components/parameters/From"}, {$ref: "#/components/parameters/To"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AnalyticsView"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/funnel:
+    get:
+      operationId: getFunnel
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters: [{$ref: "#/components/parameters/From"}, {$ref: "#/components/parameters/To"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AnalyticsView"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/win-loss:
+    get:
+      operationId: getWinLoss
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters: [{$ref: "#/components/parameters/From"}, {$ref: "#/components/parameters/To"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AnalyticsView"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/team:
+    get:
+      operationId: getTeam
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.team
+      description: Individual employees' results. Limited to manager roles, and every view is audited.
+      parameters: [{$ref: "#/components/parameters/From"}, {$ref: "#/components/parameters/To"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AnalyticsView"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/costs-summary:
+    get:
+      operationId: getCostsView
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters: [{$ref: "#/components/parameters/From"}, {$ref: "#/components/parameters/To"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AnalyticsView"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/metrics/{key}:
+    get:
+      operationId: getMetric
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters:
+        - {name: key, in: path, required: true, schema: {type: string, maxLength: 64}}
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/To"
+        - {name: dimension, in: query, required: false, schema: {type: string, enum: [all, source, stage, campaign]}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AnalyticsView"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/forecasts:
+    get:
+      operationId: listForecasts
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters:
+        - {name: kind, in: query, required: false, schema: {type: string, enum: [revenue, pipeline]}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ForecastList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: requestForecast
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.forecast
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ForecastInput"}}}}
+      responses:
+        "202": {description: "Queued, or the existing run for today", content: {application/json: {schema: {$ref: "#/components/schemas/Forecast"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/forecasts/{id}:
+    get:
+      operationId: getForecast
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Forecast"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/costs:
+    get:
+      operationId: listCosts
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.costs
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CostList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createCost
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.costs
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CostInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Cost"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/costs/{id}:
+    patch:
+      operationId: updateCost
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.costs
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/CostInput"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Cost"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    delete:
+      operationId: deleteCost
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.costs
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/reports:
+    get:
+      operationId: listReports
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/ReportList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createReport
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.export
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ReportInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Report"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/reports/{id}/export:
+    post:
+      operationId: exportReport
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.export
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "202": {description: Queued, content: {application/json: {schema: {$ref: "#/components/schemas/Export"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/exports/{id}:
+    get:
+      operationId: getExport
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.export
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Export"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /sales-intelligence/insights:
+    get:
+      operationId: listInsights
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/InsightList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: requestInsight
+      x-access: tenant
+      x-module: sales_intelligence
+      x-permission: sales_intel.read
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/InsightInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Insight"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+components:
+  securitySchemes:
+    sessionCookie: {type: apiKey, in: cookie, name: session}
+  responses:
+    Problem:
+      description: Error
+      content:
+        application/problem+json:
+          schema: {$ref: "#/components/schemas/Problem"}
+  parameters:
+    Id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    From: {name: from, in: query, required: false, description: "First month, as any date in it", schema: {type: string, format: date}}
+    To: {name: to, in: query, required: false, description: "Last month, as any date in it", schema: {type: string, format: date}}
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        request_id: {type: string}
+        module_key: {type: string}
+        module_status: {type: string}
+    ValueKind: {type: string, enum: [actual, estimated, forecast]}
+    Unit: {type: string, enum: [money, count, ratio]}
+    MetricDef:
+      type: object
+      required: [key, name, section, value_kind, unit, dimensions, description]
+      properties:
+        key: {type: string}
+        name: {type: string}
+        section: {type: string}
+        value_kind: {$ref: "#/components/schemas/ValueKind"}
+        unit: {$ref: "#/components/schemas/Unit"}
+        dimensions: {type: array, items: {type: string}}
+        description: {type: string}
+    MetricDefList:
+      type: object
+      required: [data, attribution_days, roi_horizon_months]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/MetricDef"}}
+        attribution_days: {type: integer}
+        roi_horizon_months: {type: integer}
+    MetricPoint:
+      type: object
+      required: [id, period, value_kind, flags]
+      properties:
+        id: {type: string, format: uuid}
+        period: {type: string, format: date}
+        dimension_value: {type: string}
+        value: {type: number, format: double, nullable: true, description: "Null when it cannot be computed, such as a rate with nothing to divide by"}
+        value_kind: {$ref: "#/components/schemas/ValueKind"}
+        flags: {type: array, items: {type: string, enum: [fx_missing, no_denominator]}}
+    MetricSeries:
+      type: object
+      required: [key, name, value_kind, unit, dimension, points]
+      properties:
+        key: {type: string}
+        name: {type: string}
+        value_kind: {$ref: "#/components/schemas/ValueKind"}
+        unit: {$ref: "#/components/schemas/Unit"}
+        dimension: {type: string}
+        currency: {type: string}
+        points: {type: array, items: {$ref: "#/components/schemas/MetricPoint"}}
+    AnalyticsView:
+      type: object
+      required: [section, available, currency, from, to, series, labels]
+      properties:
+        section: {type: string}
+        available: {type: boolean}
+        reason: {type: string, enum: [module_not_active, insufficient_history, no_cost_data]}
+        currency: {type: string}
+        as_of: {type: string, format: date-time, description: "When these metrics were computed"}
+        facts_as_of: {type: string, format: date-time, description: "The latest event they include"}
+        from: {type: string, format: date}
+        to: {type: string, format: date}
+        series: {type: array, items: {$ref: "#/components/schemas/MetricSeries"}}
+        labels: {type: object, additionalProperties: {type: string}, description: "Names for dimension values, such as campaigns"}
+    Card:
+      type: object
+      required: [key, name, unit, value_kind, period, flags]
+      properties:
+        key: {type: string}
+        name: {type: string}
+        unit: {$ref: "#/components/schemas/Unit"}
+        value_kind: {$ref: "#/components/schemas/ValueKind"}
+        period: {type: string, format: date}
+        value: {type: number, format: double, nullable: true}
+        previous: {type: number, format: double, nullable: true}
+        currency: {type: string}
+        flags: {type: array, items: {type: string}}
+    DashboardSection:
+      type: object
+      required: [key, available, cards]
+      properties:
+        key: {type: string, enum: [revenue, leads, campaigns, funnel, win_loss, costs]}
+        available: {type: boolean}
+        reason: {type: string, enum: [module_not_active, insufficient_history, no_cost_data]}
+        cards: {type: array, items: {$ref: "#/components/schemas/Card"}}
+    Dashboard:
+      type: object
+      required: [currency, from, to, sections]
+      properties:
+        currency: {type: string}
+        as_of: {type: string, format: date-time}
+        facts_as_of: {type: string, format: date-time}
+        from: {type: string, format: date}
+        to: {type: string, format: date}
+        sections: {type: array, items: {$ref: "#/components/schemas/DashboardSection"}}
+    ForecastInput:
+      type: object
+      required: [kind]
+      additionalProperties: false
+      properties:
+        kind: {type: string, enum: [revenue, pipeline]}
+        horizon_months: {type: integer, minimum: 1, maximum: 24, default: 6}
+    ForecastPoint:
+      type: object
+      required: [period, expected, low, high, value_kind]
+      properties:
+        period: {type: string, format: date}
+        expected: {type: integer, format: int64}
+        low: {type: integer, format: int64}
+        high: {type: integer, format: int64}
+        value_kind: {type: string, enum: [forecast]}
+    Forecast:
+      type: object
+      required: [id, kind, status, as_of, method_version, horizon_months, assumptions, value_kind, previous, points, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string, enum: [revenue, pipeline]}
+        status: {type: string, enum: [queued, running, completed, failed]}
+        error_code: {type: string}
+        as_of: {type: string, format: date}
+        method_version: {type: string}
+        horizon_months: {type: integer}
+        assumptions: {type: object, additionalProperties: true}
+        currency: {type: string}
+        value_kind: {type: string, enum: [forecast]}
+        previous: {type: boolean, description: "A newer completed forecast of this kind exists"}
+        points: {type: array, items: {$ref: "#/components/schemas/ForecastPoint"}}
+        created_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
+    ForecastList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Forecast"}}
+    CostInput:
+      type: object
+      required: [period_start, period_end, category, amount_minor, currency]
+      additionalProperties: false
+      properties:
+        period_start: {type: string, format: date}
+        period_end: {type: string, format: date}
+        category: {type: string, enum: [advertising, events, content, tools, outreach, staff, other]}
+        campaign_ref: {type: string, format: uuid, description: "An Outreach campaign, for its ROI"}
+        amount_minor: {type: integer, format: int64, minimum: 0}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        note: {type: string, maxLength: 500}
+    Cost:
+      type: object
+      required: [id, period_start, period_end, category, amount_minor, currency, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        period_start: {type: string, format: date}
+        period_end: {type: string, format: date}
+        category: {type: string}
+        campaign_ref: {type: string, format: uuid}
+        amount_minor: {type: integer, format: int64}
+        currency: {type: string}
+        note: {type: string}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CostList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Cost"}}
+    ReportDefinition:
+      type: object
+      required: [metrics, from, to]
+      additionalProperties: false
+      properties:
+        metrics: {type: array, minItems: 1, maxItems: 40, items: {type: string, maxLength: 64}}
+        from: {type: string, format: date}
+        to: {type: string, format: date}
+        dimension: {type: string, enum: [all, source, stage, campaign]}
+    ReportInput:
+      type: object
+      required: [name, definition]
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        definition: {$ref: "#/components/schemas/ReportDefinition"}
+    Report:
+      type: object
+      required: [id, name, definition, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        definition: {$ref: "#/components/schemas/ReportDefinition"}
+        created_at: {type: string, format: date-time}
+    ReportList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Report"}}
+    Export:
+      type: object
+      required: [id, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [queued, running, ready, failed]}
+        error_code: {type: string}
+        download_url: {type: string, description: "Works for a few minutes. Ask again for a new one"}
+        expires_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    InsightInput:
+      type: object
+      required: [scope]
+      additionalProperties: false
+      properties:
+        scope: {type: string, enum: [dashboard, revenue, funnel, campaigns]}
+    InsightMetric:
+      type: object
+      required: [id, key, period, display, value_kind]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string}
+        period: {type: string}
+        display: {type: string}
+        value_kind: {$ref: "#/components/schemas/ValueKind"}
+    Insight:
+      type: object
+      required: [id, scope, commentary, metrics, cited_metric_ids, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        scope: {type: string}
+        commentary: {type: string, description: "Written by AI from the metrics listed. Every number in it is one of theirs"}
+        metrics: {type: array, items: {$ref: "#/components/schemas/InsightMetric"}}
+        cited_metric_ids: {type: array, items: {type: string, format: uuid}}
+        created_at: {type: string, format: date-time}
+    InsightList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Insight"}}

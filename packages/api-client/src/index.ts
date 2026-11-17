@@ -1,5 +1,19 @@
 import createClient, { type Middleware } from "openapi-fetch";
-import type { AdminPaths, AssessmentPaths, ChatbotPaths, CompetitorPaths, CrmPaths, LeadPaths, ModulePaths, OutreachPaths, ProposalPaths, TenantPaths, VisitorPaths } from "@msp/types";
+import type {
+  AdminPaths,
+  AssessmentPaths,
+  ChatbotPaths,
+  CompetitorPaths,
+  CrmPaths,
+  ExpansionPaths,
+  LeadPaths,
+  ModulePaths,
+  OutreachPaths,
+  ProposalPaths,
+  SalesIntelPaths,
+  TenantPaths,
+  VisitorPaths,
+} from "@msp/types";
 
 /** A failed API call. Code branches on `code`, which never changes once released. */
 export class ApiError extends Error {
@@ -80,7 +94,11 @@ export function createTenantApi(csrf: CsrfStore, hooks: ApiHooks = {}) {
   visitors.use(middleware(csrf, hooks));
   const chatbot = createClient<ChatbotPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
   chatbot.use(middleware(csrf, hooks));
-  return { client, modules, leads, competitors, crm, proposals, assessments, outreach, visitors, chatbot };
+  const expansion = createClient<ExpansionPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
+  expansion.use(middleware(csrf, hooks));
+  const intel = createClient<SalesIntelPaths>({ baseUrl: "/api/v1", credentials: "same-origin" });
+  intel.use(middleware(csrf, hooks));
+  return { client, modules, leads, competitors, crm, proposals, assessments, outreach, visitors, chatbot, expansion, intel };
 }
 
 export function createAdminApi(csrf: CsrfStore, hooks: ApiHooks = {}) {

@@ -356,6 +356,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tenant/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listTenantServices"];
+        put?: never;
+        post: operations["createTenantService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenant/services/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateTenantService"];
+        trace?: never;
+    };
     "/tenant/roles": {
         parameters: {
             query?: never;
@@ -813,6 +845,33 @@ export interface components {
         Reference: {
             countries: components["schemas"]["CodeName"][];
             industries: components["schemas"]["CodeName"][];
+            service_categories: components["schemas"]["CodeName"][];
+        };
+        TenantService: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            status: "active" | "retired";
+            category_key?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        TenantServiceList: {
+            data: components["schemas"]["TenantService"][];
+        };
+        TenantServiceInput: {
+            name: string;
+            description?: string;
+            category_key?: string;
+        };
+        TenantServicePatch: {
+            name?: string;
+            description?: string | null;
+            category_key?: string | null;
+            /** @enum {string} */
+            status?: "active" | "retired";
         };
         CodeName: {
             code: string;
@@ -1732,6 +1791,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Reference"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listTenantServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantServiceList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createTenantService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantServiceInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantService"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateTenantService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantServicePatch"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantService"];
                 };
             };
             default: components["responses"]["Problem"];

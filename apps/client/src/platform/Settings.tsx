@@ -10,6 +10,7 @@ import type { z } from "zod";
 import { api, tenantKey, useMe } from "../app/api";
 import { applyServerError, errorText } from "../app/errors";
 import { NoPermission } from "../shell/StatusPages";
+import { Services } from "./Services";
 
 export function Settings() {
   const { t } = useTranslation();
@@ -79,6 +80,7 @@ export function Settings() {
           ) : null}
         </Card>
       </section>
+      <Services />
       {canAudit ? (
         <section>
           <h2 className="text-sm font-medium text-ink-soft">{t("settings.audit")}</h2>

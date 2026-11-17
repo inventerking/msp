@@ -91,7 +91,12 @@ func TestMixedTablesHaveRLS(t *testing.T) {
 }
 
 func TestSchemaProtectsEveryTenantTable(t *testing.T) {
-	faults, err := schemaFaults(context.Background(), env.Owner, []string{"identity", "platform", "audit", "shared", "jobs", "files", "integration", "notification"}, nil)
+	faults, err := schemaFaults(context.Background(), env.Owner, []string{"identity", "platform", "audit", "shared", "jobs", "files", "integration", "notification",
+		"lead_generation", "competitor_intelligence", "crm", "proposals", "it_assessment", "outreach", "visitor_intelligence", "chatbot",
+		"customer_expansion", "sales_intelligence"},
+		// Partitioned tables must include the partition key in any unique key, and nothing references
+		// these two, so the (tenant_id, id) target for tenant-safe foreign keys is not needed.
+		[]string{"visitor_intelligence.sessions", "visitor_intelligence.events"})
 	if err != nil {
 		t.Fatal(err)
 	}

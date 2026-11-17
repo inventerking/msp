@@ -104,7 +104,7 @@ func (s *Service) Suppress(ctx context.Context, p authctx.Principal, email strin
 		return apperr.Validation(apperr.FieldError{Field: "email", Code: "invalid_email"})
 	}
 	return s.tx(ctx, p, func(q *repo.Queries, tx pgx.Tx) error {
-		if err := q.Suppress(ctx, repo.SuppressParams{TenantID: p.TenantID, EmailHash: s.Shared.EmailKey(p.TenantID, email), Reason: "manual", Source: "user", CreatedBy: uid(p)}); err != nil {
+		if _, err := q.Suppress(ctx, repo.SuppressParams{TenantID: p.TenantID, EmailHash: s.Shared.EmailKey(p.TenantID, email), Reason: "manual", Source: "user", CreatedBy: uid(p)}); err != nil {
 			return err
 		}
 		return audit.Record(ctx, tx, userAudit(p, "outreach.suppressed", "suppression", nil, nil))

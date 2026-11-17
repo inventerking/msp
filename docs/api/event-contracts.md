@@ -64,10 +64,10 @@ Status: planning, pending approval. The envelope, publishing rules and consumer 
 | Event | Key payload | Consumers |
 |---|---|---|
 | `outreach.campaign.approved`, `.started`, `.completed` | `campaign_id` | Notification |
-| `outreach.message.sent` | `message_id`, `campaign_id`, `contact_id` | CRM, Sales Intelligence |
-| `outreach.message.bounced` | `message_id`, `campaign_id`, `bounce_type` | Sales Intelligence |
-| `outreach.reply.received` | `reply_id`, `campaign_id`, `contact_id`, `classification` | CRM, Sales Intelligence, Notification |
-| `outreach.unsubscribe.recorded` | `campaign_id`, `contact_id?` | Sales Intelligence, Contact Identity (consent) |
+| `outreach.message.sent` | `message_id`, `campaign_id`, `contact_id`, `company_id?`, `title` (campaign name, a business label) | CRM, Sales Intelligence |
+| `outreach.message.bounced` | `message_id`, `campaign_id`, `bounce_type` (`hard`, `soft`) | Sales Intelligence |
+| `outreach.reply.received` | `message_id`, `campaign_id`, `contact_id`, `company_id?` | CRM, Sales Intelligence, Notification |
+| `outreach.unsubscribe.recorded` | `message_id`, `campaign_id`, `contact_id`. Once per person per workspace | Sales Intelligence, Contact Identity (consent) |
 | `outreach.suppression.added` | `suppression_id`, `reason` | None at launch |
 | `outreach.sequence.stopped` | `enrollment_id`, `stop_reason` | None at launch |
 
@@ -77,7 +77,7 @@ Status: planning, pending approval. The envelope, publishing rules and consumer 
 |---|---|---|
 | `it_assessment.lead.captured` | `lead_capture_id`, `contact_id?` | CRM, Sales Intelligence, Notification |
 | `it_assessment.authorization.granted` | `authorization_id`, `tier` | None at launch |
-| `it_assessment.assessment.completed` | `assessment_id`, `score`, `risk_level`, `crm_company_id?` | CRM, Customer Expansion |
+| `it_assessment.assessment.completed` | `assessment_id`, `crm_company_id?`, `domain`, `score?`, `risk_level?` | CRM, Customer Expansion |
 | `it_assessment.report.ready` | `report_id`, `assessment_id` | Notification |
 | `it_assessment.consultation.requested`, `.booked` | `booking_id`, `assessment_id` | CRM, Notification |
 
@@ -88,13 +88,15 @@ Status: planning, pending approval. The envelope, publishing rules and consumer 
 | `crm.company.created` | `crm_company_id`, `company_id?` | Lead Generation |
 | `crm.company.lifecycle_changed` | `crm_company_id`, `from`, `to` | Customer Expansion |
 | `crm.contact.created` | `crm_contact_id`, `contact_id` | None at launch |
-| `crm.deal.created` | `deal_id`, `crm_company_id`, `source_module?`, `owner_user_id?` | Sales Intelligence |
-| `crm.deal.stage_changed` | `deal_id`, `from_stage_key`, `to_stage_key` | Sales Intelligence |
-| `crm.deal.won` | `deal_id`, `crm_company_id`, `currency`, `contract_value_minor?`, `expected_mrr_minor?`, `source_module?`, `owner_user_id?` | Customer Expansion, Sales Intelligence, Outreach |
-| `crm.deal.lost` | `deal_id`, `loss_reason_code?` | Customer Expansion, Sales Intelligence, Outreach, Proposals |
-| `crm.deal.reopened` | `deal_id` | Sales Intelligence, Customer Expansion |
+| `crm.deal.created`, `.updated` | The deal snapshot (below) | Sales Intelligence |
+| `crm.deal.stage_changed` | The deal snapshot, plus `from_stage_id`, `to_stage_id`, `to_stage_key`, `requested?` | Sales Intelligence |
+| `crm.deal.won` | The deal snapshot, plus `closed_on` | Customer Expansion, Sales Intelligence, Outreach |
+| `crm.deal.lost` | The deal snapshot, plus `closed_on`. The loss reason is free text, so it stays in CRM | Customer Expansion, Sales Intelligence, Outreach, Proposals |
+| `crm.deal.reopened` | The deal snapshot, plus `previous_status` | Sales Intelligence, Customer Expansion |
 | `crm.meeting.scheduled`, `.completed` | `meeting_id`, `deal_id?` | Sales Intelligence |
 | `crm.task.overdue` | `task_id`, `assignee_user_id` | Notification |
+
+**The deal snapshot.** Every `crm.deal.*` event carries the deal's state after the change, so a consumer can rebuild a deal from its latest event whatever order events arrive in: `deal_id`, `crm_company_id`, `company_id?` (canonical), `pipeline_id`, `stage_key`, `status`, `owner_user_id?`, `currency`, `contract_value_minor?`, `expected_mrr_minor?`, `probability`, `expected_close_date?`, `source_module?`, `source_ref?`, `row_version`. Titles, notes and loss reasons are never included.
 
 ### Proposals
 
@@ -109,7 +111,7 @@ Status: planning, pending approval. The envelope, publishing rules and consumer 
 
 | Event | Key payload | Consumers |
 |---|---|---|
-| `visitor_intelligence.conversion.recorded` | `conversion_id`, `site_id`, `goal_id`, `contact_id?` | CRM, Sales Intelligence |
+| `visitor_intelligence.conversion.recorded` | `conversion_id`, `site_id`, `goal_id`. Once per session and goal | Sales Intelligence |
 | `visitor_intelligence.business.identified` | `site_id`, `company_id`, `day` | Notification (optional) |
 | `visitor_intelligence.consent.withdrawn` | `site_id` | Chatbot |
 | `visitor_intelligence.site.first_event` | `site_id` | Notification |
@@ -119,7 +121,7 @@ Status: planning, pending approval. The envelope, publishing rules and consumer 
 | Event | Key payload | Consumers |
 |---|---|---|
 | `chatbot.contact.captured` | `conversation_id`, `contact_id`, `visitor_ref?` | Visitor Intelligence |
-| `chatbot.prospect.qualified` | `conversation_id`, `qualification_id`, `crm_company_id?` | CRM, Sales Intelligence |
+| `chatbot.lead.captured` | `contact_id`, `crm_company_id`, `title` (bot name); the aggregate is the conversation. Published instead of `chatbot.prospect.qualified` since Phase 5 | CRM, Sales Intelligence |
 | `chatbot.handoff.requested` | `conversation_id`, `handoff_id` | Notification |
 | `chatbot.booking.confirmed`, `.cancelled` | `booking_id`, `crm_meeting_id?` | CRM, Notification |
 | `chatbot.conversation.closed` | `conversation_id` | None at launch |
@@ -128,10 +130,10 @@ Status: planning, pending approval. The envelope, publishing rules and consumer 
 
 | Event | Key payload | Consumers |
 |---|---|---|
-| `customer_expansion.contract.activated` | `contract_id`, `crm_company_id`, `mrr_minor`, `currency`, `movement`, `source_deal_id?` | Sales Intelligence |
-| `customer_expansion.contract.changed` | `contract_id`, `mrr_delta_minor`, `currency`, `movement` | Sales Intelligence |
-| `customer_expansion.contract.ended` | `contract_id`, `mrr_delta_minor`, `currency`, `movement` | Sales Intelligence, CRM |
-| `customer_expansion.renewal.due` | `contract_id`, `due_date`, `window_days` | Notification, CRM (task) |
+| `customer_expansion.contract.activated` | `contract_id`, `crm_company_id`, `mrr_minor`, `mrr_delta_minor`, `currency`, `movement`, `source_deal_id?`, `end_date?`, `auto_renew?` | Sales Intelligence |
+| `customer_expansion.contract.changed` | As activated. `movement` is `none` when only dates changed | Sales Intelligence |
+| `customer_expansion.contract.ended` | As activated, with `mrr_minor` 0. Also published when a reopened deal returns its contract to draft | Sales Intelligence, CRM |
+| `customer_expansion.renewal.due` | `contract_id`, `due_date`, `window_days`, `kind` (`contract_end`, `notice_deadline`) | Notification, CRM (task) |
 | `customer_expansion.recommendation.created`, `.accepted`, `.dismissed` | `recommendation_id`, `kind` | Notification |
 | `customer_expansion.opportunity.won`, `.lost` | `opportunity_id`, `deal_id`, `realised_mrr_minor?`, `currency?` | None at launch |
 
