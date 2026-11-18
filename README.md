@@ -169,9 +169,19 @@ SELECT name FROM crm.companies;   -- now shows that workspace's companies only
 | `role "msp_owner" does not exist` | The users were not created. Run the SQL in option 2, or for the local Docker database, `make reset` |
 | `connection refused` | The database is not running, or `DB_PORT` is wrong: 55432 for `make up`, usually 5432 for your own server |
 
-## Testing server
+## Deploy on a server (VPS)
 
-See [deploy/testing](deploy/testing/README.md).
+The same Docker setup, on a server with real hostnames, with encrypted backups and monitoring. It joins the Traefik already running on the server, here on the `traefik_network` network. On a server without Traefik, use `ACME_EMAIL=you@example.com` instead of `TRAEFIK_NETWORK`, and the stack starts its own Traefik. On the server:
+
+```bash
+make server-init APP_HOST=app.example.com ADMIN_HOST=admin.example.com TRAEFIK_NETWORK=traefik_network
+make server-up                                               # builds, migrates, starts, then checks itself
+make server-admin EMAIL=you@example.com NAME="Your Name"
+```
+
+Updates are `make server-update`. Server size, DNS, firewall, backups and the other commands are in the [VPS guide](deploy/testing/README.md#deploy-on-a-vps).
+
+This runs in testing mode until the legal review is done: email goes to Mailpit, not real inboxes, and all providers are fakes. Use synthetic data only.
 
 ## Layout
 

@@ -1,0 +1,114 @@
+# For a server that already runs Traefik. Use it instead of compose.acme.yaml:
+#   docker compose -f compose.yaml -f compose.external-traefik.yaml up -d --build --wait
+# (`make server-up` does this when TRAEFIK_NETWORK is set in .env.)
+#
+# The bundled Traefik is not started. The two web apps, the API and the ingest process join the
+# existing Traefik's network and are routed with Docker labels, using the same rules as
+# traefik/dynamic.yml. The existing Traefik must use its Docker provider, and it provides HTTPS,
+# certificates and the http-to-https redirect.
+#
+# Settings in .env:
+#   TRAEFIK_NETWORK       the existing Traefik's Docker network, for example traefik_network
+#   TRAEFIK_ENTRYPOINT    its HTTPS entrypoint name (default websecure)
+#   TRAEFIK_CERTRESOLVER  its certificate resolver name (default letsencrypt)
+#
+# The shared network may hold other stacks' containers named postgres, redis and so on. So the
+# containers on it reach this stack's services through msp-* aliases that cannot clash.
+
+x-backend-hosts: &backend-hosts
+  DB_HOST: msp-postgres
+  REDIS_ADDR: msp-redis:6379
+  SMTP_ADDR: msp-mailpit:1025
+  S3_ENDPOINT: http://msp-seaweedfs:8333
+  GOTENBERG_URL: http://msp-gotenberg:3000
+  CLAMAV_ADDR: msp-clamav:3310
+
+services:
+  traefik:
+    # Never started unless this profile is asked for, so it does not take ports 80 and 443.
+    profiles: [bundled-traefik]
+
+  api:
+    environment: *backend-hosts
+    networks: [edge, internal, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK}
+      traefik.http.services.msp-api.loadbalancer.server.port: "8088"
+      # The customer host never serves admin routes, and the admin host serves only those.
+      traefik.http.routers.msp-client-api.rule: Host(`${APP_HOST}`) && PathPrefix(`/api/`) && !PathPrefix(`/api/v1/admin`)
+      traefik.http.routers.msp-client-api.service: msp-api
+      traefik.http.routers.msp-client-api.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.msp-client-api.tls: "true"
+      traefik.http.routers.msp-client-api.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      traefik.http.routers.msp-admin-api.rule: Host(`${ADMIN_HOST}`) && PathPrefix(`/api/v1/admin`)
+      traefik.http.routers.msp-admin-api.service: msp-api
+      traefik.http.routers.msp-admin-api.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.msp-admin-api.tls: "true"
+      traefik.http.routers.msp-admin-api.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+
+  ingest:
+    environment: *backend-hosts
+    networks: [edge, internal, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK}
+      traefik.http.services.msp-ingest.loadbalancer.server.port: "8089"
+      # Visitor tracking goes to its own process, so it cannot use the API's database connections.
+      traefik.http.routers.msp-collect.rule: Host(`${APP_HOST}`) && Path(`/api/v1/public/collect`)
+      traefik.http.routers.msp-collect.priority: "1000"
+      traefik.http.routers.msp-collect.service: msp-ingest
+      traefik.http.routers.msp-collect.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.msp-collect.tls: "true"
+      traefik.http.routers.msp-collect.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+
+  worker:
+    environment: *backend-hosts
+
+  client:
+    networks: [traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK}
+      traefik.http.services.msp-client.loadbalancer.server.port: "8080"
+      traefik.http.routers.msp-client.rule: Host(`${APP_HOST}`)
+      traefik.http.routers.msp-client.service: msp-client
+      traefik.http.routers.msp-client.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.msp-client.tls: "true"
+      traefik.http.routers.msp-client.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+
+  admin:
+    networks: [traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK}
+      traefik.http.services.msp-admin.loadbalancer.server.port: "8080"
+      traefik.http.routers.msp-admin.rule: Host(`${ADMIN_HOST}`)
+      traefik.http.routers.msp-admin.service: msp-admin
+      traefik.http.routers.msp-admin.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.msp-admin.tls: "true"
+      traefik.http.routers.msp-admin.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+
+  postgres:
+    networks:
+      internal: {aliases: [msp-postgres]}
+  redis:
+    networks:
+      internal: {aliases: [msp-redis]}
+  seaweedfs:
+    networks:
+      internal: {aliases: [msp-seaweedfs]}
+  gotenberg:
+    networks:
+      internal: {aliases: [msp-gotenberg]}
+  clamav:
+    networks:
+      internal: {aliases: [msp-clamav]}
+  mailpit:
+    networks:
+      internal: {aliases: [msp-mailpit]}
+
+networks:
+  traefik:
+    name: ${TRAEFIK_NETWORK:?set TRAEFIK_NETWORK in .env to the existing Traefik network}
+    external: true

@@ -6,7 +6,73 @@ Runs the whole system on one host with Docker: Traefik over HTTPS, the API, a wo
 
 This setup is for testing. It runs on one host with no failover, so it does not meet the production design. It does have encrypted backups, a timed restore drill and monitoring, described below and in the [operations docs](../../docs/operations/README.md).
 
-## Set up
+## Deploy on a VPS
+
+**Server size.** Linux (Ubuntu 24.04 or Debian 13 works) with at least 2 vCPUs, 4 GB of memory and 40 GB of disk. The running stack uses about 2.5 GB, ClamAV alone about 1 GB, and building the images needs more. 8 GB is comfortable.
+
+**1. DNS.** Create two A records pointing at the server's IP address, for example `app.example.com` and `admin.example.com`.
+
+**2. Prepare the server** (as root, or with `sudo`):
+
+```bash
+curl -fsSL https://get.docker.com | sh          # Docker and Compose
+apt install -y git make curl openssl
+ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw enable
+```
+
+Docker publishes ports past `ufw`, so the stack is written to publish only 80 and 443 publicly. Mailpit and Grafana listen on the server's loopback address only.
+
+**3. Get the code and configure it.** Choose A or B.
+
+```bash
+git clone <your repository URL> /srv/msp && cd /srv/msp
+```
+
+**A. The server already runs Traefik** (for example on a Docker network named `traefik_network`). The stack does not start its own; it joins that network and is routed by Docker labels:
+
+```bash
+make server-init APP_HOST=app.example.com ADMIN_HOST=admin.example.com TRAEFIK_NETWORK=traefik_network
+```
+
+Your Traefik must use its Docker provider. The labels assume its HTTPS entrypoint is called `websecure` and its certificate resolver `letsencrypt`. If yours have other names, add `TRAEFIK_ENTRYPOINT=...` and `TRAEFIK_CERTRESOLVER=...` to the command, or change them later in `deploy/testing/.env`. To find the names, look at your Traefik's `--entrypoints.<name>` and `--certificatesresolvers.<name>` settings. Your Traefik also handles certificates, the http-to-https redirect and access logs, so this stack's privacy settings for access logs do not apply. Turn off logging of paths there if you can, because URLs can contain tokens. Details are in [compose.external-traefik.yaml](compose.external-traefik.yaml).
+
+**B. No Traefik yet.** The stack starts its own on ports 80 and 443, and gets certificates from Let's Encrypt:
+
+```bash
+make server-init APP_HOST=app.example.com ADMIN_HOST=admin.example.com ACME_EMAIL=you@example.com
+```
+
+Either way, this creates `deploy/testing/.env` with a fresh secret for everything. **Copy `BACKUP_CIPHER_PASS` from that file to a password manager** now.
+
+**4. Start it:**
+
+```bash
+make server-up                                               # builds, migrates, starts, then runs the smoke checks
+make server-admin EMAIL=you@example.com NAME="Your Name"     # first Super Admin; asks for a password
+```
+
+Open `https://app.example.com` and `https://admin.example.com`.
+
+**5. Daily backups.** `crontab -e` and add:
+
+```bash
+15 2 * * * cd /srv/msp/deploy/testing && ./backup.sh >> backup.log 2>&1
+```
+
+### Day to day
+
+| Command | Does |
+|---|---|
+| `make server-update` | `git pull`, rebuild, run new migrations, restart and run the smoke checks |
+| `make server-ps` | Show the containers and their health |
+| `make server-logs` | Follow the API, ingest and worker logs |
+| `make server-backup` | Take a backup now, for example before an update |
+| `make server-down` | Stop everything. Data is kept |
+| `ssh -L 58025:127.0.0.1:58025 -L 53000:127.0.0.1:53000 your-server` | Then Mailpit at http://localhost:58025 and Grafana at http://localhost:53000 |
+
+The `make server-*` commands always include monitoring (Prometheus, Alertmanager, Grafana). They add `compose.external-traefik.yaml` when `TRAEFIK_NETWORK` is set in `.env`, or otherwise `compose.acme.yaml` when `ACME_EMAIL` is set. The rest of this page shows the same steps as plain `docker compose` commands.
+
+## Set up by hand
 
 On the server, with Docker and Compose installed:
 
