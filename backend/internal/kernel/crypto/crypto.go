@@ -25,8 +25,13 @@ const (
 	saltLen        = 16
 )
 
-// KeyID names the active field-encryption key. Rotation adds a new ID.
-const KeyID = "env-1"
+// DefaultKeyID names the field-encryption key when no ID is configured. Data written before key IDs
+// were embedded in ciphertexts was written with this key.
+const DefaultKeyID = "env-1"
+
+// marker starts a ciphertext that names its key: marker, ID length, ID, nonce, sealed data. Older
+// ciphertexts start straight with the nonce; Decrypt still reads them.
+const marker = 0xFE
 
 // HashPassword returns a PHC-format Argon2id hash.
 func HashPassword(password string) (string, error) {
@@ -90,6 +95,25 @@ func HashToken(token string) []byte {
 type Keys struct {
 	HMAC       []byte
 	Encryption []byte
+	// EncryptionID names Encryption. Empty means DefaultKeyID.
+	EncryptionID string
+	// Previous are retired encryption keys by ID, kept only to read data not yet re-encrypted.
+	Previous map[string][]byte
+}
+
+// ID is the name of the key new data is encrypted with.
+func (k Keys) ID() string {
+	if k.EncryptionID == "" {
+		return DefaultKeyID
+	}
+	return k.EncryptionID
+}
+
+func (k Keys) byID(id string) []byte {
+	if id == k.ID() {
+		return k.Encryption
+	}
+	return k.Previous[id]
 }
 
 // HMAC returns a keyed hash with a purpose label, so one value cannot be correlated across uses.
@@ -111,9 +135,14 @@ func (k Keys) VerifyCSRF(sessionID, token string) bool {
 	return subtle.ConstantTimeCompare([]byte(k.CSRFToken(sessionID)), []byte(token)) == 1
 }
 
-// Encrypt seals a secret with AES-256-GCM. The additional data binds it to its owner.
+// Encrypt seals a secret with AES-256-GCM under the current key, and names the key in the result.
+// The additional data binds it to its owner.
 func (k Keys) Encrypt(plaintext, additional []byte) ([]byte, error) {
-	gcm, err := k.gcm()
+	id := k.ID()
+	if len(id) == 0 || len(id) > 32 {
+		return nil, errors.New("encryption key ID must be 1 to 32 bytes")
+	}
+	gcm, err := sealer(k.Encryption)
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +150,60 @@ func (k Keys) Encrypt(plaintext, additional []byte) ([]byte, error) {
 	if _, err := rand.Read(nonce); err != nil {
 		return nil, err
 	}
-	return gcm.Seal(nonce, nonce, plaintext, additional), nil
+	out := append([]byte{marker, byte(len(id))}, id...) //nolint:gosec // Checked above: 1 to 32 bytes.
+	out = append(out, nonce...)
+	return gcm.Seal(out, nonce, plaintext, additional), nil
 }
 
-// Decrypt opens a secret sealed by Encrypt.
+// Decrypt opens a secret sealed by Encrypt with the current or any previous key. Ciphertexts from
+// before keys were named are tried against every key.
 func (k Keys) Decrypt(ciphertext, additional []byte) ([]byte, error) {
-	gcm, err := k.gcm()
+	if id, body, ok := splitNamed(ciphertext); ok {
+		if key := k.byID(id); key != nil {
+			if plain, err := open(key, body, additional); err == nil {
+				return plain, nil
+			}
+		}
+	}
+	for _, key := range k.all() {
+		if plain, err := open(key, ciphertext, additional); err == nil {
+			return plain, nil
+		}
+	}
+	return nil, errors.New("cannot decrypt: no configured key opens this value")
+}
+
+// NeedsReencrypt reports whether a ciphertext is not yet under the current key.
+func (k Keys) NeedsReencrypt(ciphertext []byte) bool {
+	id, _, ok := splitNamed(ciphertext)
+	return !ok || id != k.ID()
+}
+
+// KeyIDOf names the key a ciphertext says it was sealed with, or DefaultKeyID for older values.
+func KeyIDOf(ciphertext []byte) string {
+	if id, _, ok := splitNamed(ciphertext); ok {
+		return id
+	}
+	return DefaultKeyID
+}
+
+func (k Keys) all() [][]byte {
+	out := [][]byte{k.Encryption}
+	for _, key := range k.Previous {
+		out = append(out, key)
+	}
+	return out
+}
+
+func splitNamed(c []byte) (string, []byte, bool) {
+	if len(c) < 2 || c[0] != marker || len(c) < 2+int(c[1]) {
+		return "", nil, false
+	}
+	return string(c[2 : 2+int(c[1])]), c[2+int(c[1]):], true
+}
+
+func open(key, ciphertext, additional []byte) ([]byte, error) {
+	gcm, err := sealer(key)
 	if err != nil {
 		return nil, err
 	}
@@ -137,8 +214,8 @@ func (k Keys) Decrypt(ciphertext, additional []byte) ([]byte, error) {
 	return gcm.Open(nil, nonce, body, additional)
 }
 
-func (k Keys) gcm() (cipher.AEAD, error) {
-	block, err := aes.NewCipher(k.Encryption)
+func sealer(key []byte) (cipher.AEAD, error) {
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}

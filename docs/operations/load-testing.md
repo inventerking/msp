@@ -1,6 +1,6 @@
 # Load testing
 
-Status: **first run 2026-11-18. The CRM target is met; the visitor-ingest targets are not.** The cause is known and the fix is a decision for the Phase 7 gate.
+Status: **2026-11-18. The CRM target is met, and CRM is now isolated from visitor tracking. The ingest throughput target (2,000 events per second) is not met: one ingest process reaches about 1,050.** Reaching the target needs batched writes, which is a decision about delivery guarantees (below).
 
 ## Profile
 
@@ -13,11 +13,11 @@ cd backend
 go test -tags loadtest -run TestLoadProfile -timeout 90m -v ./internal/api/ 2>&1 | grep -v 'INFO request'
 ```
 
-[load_test.go](../../backend/internal/api/load_test.go) starts PostgreSQL in a container and the full API in-process, with the production pool sizes (20 application connections). It creates the tenants through the real sign-up flow and seeds the largest tenant as the application role, so row-level security applies. Requests arrive at a fixed rate whatever the latency, so a slow server shows as latency. The mix is three-quarters reads (lists, search, detail, activity timelines, session context) and one in ten writes; a quarter of traffic goes to the largest tenant. Phase A runs CRM traffic alone for two minutes; phase B adds ingest. Knobs are environment variables listed in the file.
+[load_test.go](../../backend/internal/api/load_test.go) starts PostgreSQL in a container and the full API in-process, with the production pool sizes (20 application connections). It creates the tenants through the real sign-up flow and seeds the largest tenant as the application role, so row-level security applies. Requests arrive at a fixed rate whatever the latency, so a slow server shows as latency. The mix is three-quarters reads (lists, search, detail, activity timelines, session context) and one in ten writes; a quarter of traffic goes to the largest tenant. Phase A runs CRM traffic alone for two minutes; phase B adds ingest. Knobs are environment variables listed in the file. Tracking goes to a separate ingest server, as deployed; `LOAD_SHARED_INGEST=1` sends it to the API instead, as in the first run, and `LOAD_INGEST_CONNS` sets the ingest pool size.
 
 **Limits of this run.** One developer machine, with the load generator, API and database competing for the same CPU. Rate limiting used the in-memory limiter, not Redis. The numbers are a floor for one API process, not a statement about production capacity.
 
-## Result
+## First run: ingest inside the API
 
 Profile: 500 tenants; largest tenant 100000 companies and 500000 activities; CRM 100 requests/s; ingest 2000 events/s to 50 sites; 2m0s per phase. Seeding took 3m13s.
 
@@ -53,14 +53,37 @@ Profile: 500 tenants; largest tenant 100000 companies and 500000 activities; CRM
 | Ingest sustains 2000 events/s | 499 events/s accepted at p95 8295.0 ms, 0 errors | **No** |
 | No errors in CRM traffic | 0 errors | Yes |
 
-## What it shows
+## What the first run showed
 
 1. **CRM on its own meets the target** with room to spare, at p95 238 ms and no errors, even with a quarter of traffic in the 100,000-company tenant. Company search in that tenant is the slowest route (p95 487 ms): it is the first to watch as tenants grow.
 2. **Visitor ingest takes the API down with it.** Each tracked page view runs a transaction on the same 20-connection pool that CRM uses, plus follow-up checks. At 2,000 events per second the pool is saturated: ingest accepted only about 500 per second, and every CRM request queued behind it, to a p95 near 11 seconds. Nothing failed, but everything waited.
-3. This is the risk the architecture named: connection pools are meant to be "separated by role and pool, and bounded so ingest or analytics can't take CRM's connections", with ingest on "the separate ingest path". The separate `ingest` process role was planned for Phase 5 and never built: `engine ingest` still exits with a message.
+3. This is the risk the architecture named: connection pools are meant to be "separated by role and pool, and bounded so ingest or analytics can't take CRM's connections", with ingest on "the separate ingest path". The separate `ingest` process role had been planned for Phase 5 but not built.
 
 A smaller dry run (20 tenants, 200 events per second) already showed the effect: CRM p99 rose from 17 ms to 237 ms.
 
-## Recommended fix (needs approval)
+## Second step: a separate ingest process
 
-Build the `ingest` role: the same binary serving only `/public/collect`, with its own small database pool as `msp_ingest`, and with follow-up work (business identification, conversions) moved to jobs. On the testing server it runs as its own container; Traefik sends `/api/v1/public/collect` to it. Then repeat this test. If one ingest process cannot reach 2,000 events per second, the next steps are batching inserts, or revising the target, which the roadmap allows if it is done formally.
+Following the first run, the `ingest` role was built: the same binary serving only `/api/v1/public/collect`, with its own pool (10 connections by default, `INGEST_DB_CONNS`). Traefik routes the tracker path to it on the testing server. Each hit was also made cheaper: the module's status and the site's goals are cached for 30 seconds, and the site's last-seen time is written at most once a minute, so a hit usually needs one transaction instead of three.
+
+| Run | CRM p95 alone | CRM p95 with ingest | Ingest accepted | Ingest p95 |
+|---|---|---|---|---|
+| Shared pool, full profile (first run) | 238 ms | 10,942 ms | 499 /s | 8,295 ms |
+| Ingest process, 10 connections, small dataset | 23 ms | 20 ms (−16%) | 1,052 /s | 3,980 ms |
+| Ingest process, 20 connections, small dataset | 22 ms | 29 ms (+36%) | 1,445 /s | 2,411 ms |
+| Ingest process, 10 connections, full profile | 352 ms | 8,914 ms | 265 /s, 7,027 timeouts | 20,050 ms |
+
+The "small dataset" runs use 60 tenants and a 2,000-company largest tenant, with CRM at 5 requests per second, to isolate ingest. While they ran, the database used about 1.5 cores and the test process about 1.2 of the machine's 8.
+
+**What it shows.**
+
+1. **Isolation works.** With its own process and pool, ingest no longer takes CRM's connections: on the small dataset CRM was unaffected.
+2. **Ingest is limited by commits.** Each hit is one transaction of several statements, about 9.5 ms end to end, so throughput is roughly the pool size divided by that. More connections raise throughput, but at 20 they start to slow CRM through the shared database (+36%).
+3. **The full-profile run on this machine is not conclusive.** With the 600,000-row dataset freshly written, both CRM and ingest slowed badly, while the CPU was not saturated. The likely cause is disk contention on this one developer machine, which holds the database, the freshly written seed data and everything else. The test should be repeated on the testing server, with the load generator on a different machine.
+
+## Recommended next step (needs a decision)
+
+**Batch ingest writes.** The ingest process would accept a hit, validate it against cached site settings, answer at once, and write hits in batches, for example every 100 ms, so one commit carries many hits. That is the usual design for analytics ingest, and it would cut database commits by one or two orders of magnitude.
+
+The trade-off is delivery: a hit is acknowledged before it is stored, so a crash of the ingest process loses the hits from the last fraction of a second. For page-view analytics that is normally acceptable; consent records, which are evidence, would stay written one by one before answering.
+
+The alternative is to revise the target to what one ingest process sustains today (about 1,000 events per second) and run more ingest processes behind Traefik when needed, which raises database load instead of reducing it.

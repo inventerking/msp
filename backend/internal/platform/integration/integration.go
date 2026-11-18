@@ -271,7 +271,7 @@ func (s *Service) SetCredential(ctx context.Context, a authctx.AdminPrincipal, p
 		return err
 	}
 	return db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
-		err := repo.New(tx).UpsertCredential(ctx, repo.UpsertCredentialParams{ProviderID: providerID, Label: label, SecretCiphertext: sealed, KeyID: crypto.KeyID})
+		err := repo.New(tx).UpsertCredential(ctx, repo.UpsertCredentialParams{ProviderID: providerID, Label: label, SecretCiphertext: sealed, KeyID: s.keys.ID()})
 		var pgErr interface{ SQLState() string }
 		if errors.As(err, &pgErr) && pgErr.SQLState() == "23503" {
 			return apperr.NotFound()
@@ -429,7 +429,7 @@ func (s *Service) CreateEndpoint(ctx context.Context, a authctx.AdminPrincipal, 
 		if err != nil {
 			return err
 		}
-		id, err = q.CreateWebhookEndpoint(ctx, repo.CreateWebhookEndpointParams{TenantID: tenantID, ProviderID: p.ID, PathToken: token, SecretCiphertext: sealed, KeyID: crypto.KeyID})
+		id, err = q.CreateWebhookEndpoint(ctx, repo.CreateWebhookEndpointParams{TenantID: tenantID, ProviderID: p.ID, PathToken: token, SecretCiphertext: sealed, KeyID: s.keys.ID()})
 		if err != nil {
 			return err
 		}

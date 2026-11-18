@@ -27,7 +27,7 @@ On Grafana's health dashboard, check in this order: request errors and latency, 
 
 | Alert | Usual cause | First action |
 |---|---|---|
-| TargetDown | Container stopped or failing its health check | `docker compose logs <service>`; `docker compose up -d <service>` |
+| TargetDown | Container stopped or failing its health check | `docker compose logs <service>`; `docker compose up -d <service>`. If only `ingest` is down, visitor tracking stops but the app keeps working |
 | HighErrorRate | A bad release, the database, or a failing dependency | Find the route in "Slowest routes" and in logs; consider rolling back ([deploy](deploy.md)) |
 | SlowAPI | Database load, a missing index, or pool exhaustion | Check pool use; `SELECT pid, now()-query_start, query FROM pg_stat_activity WHERE state <> 'idle' ORDER BY 2 DESC LIMIT 10;` |
 | DatabasePoolSaturated | Slow queries holding connections, or a leak | As above; restarting the API frees connections but loses the evidence, so capture first |

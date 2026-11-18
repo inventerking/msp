@@ -88,6 +88,10 @@ type Env struct {
 var (
 	env   *Env
 	graph *app.Graph
+	// rotatedKey is the new encryption key in the key rotation test.
+	rotatedKey = bytes.Repeat([]byte{11}, 32)
+	// objects is the object store, which also holds the erasure log.
+	objects = &files.MemoryStore{}
 )
 
 func TestMain(m *testing.M) {
@@ -161,10 +165,12 @@ func run(m *testing.M) (int, error) {
 	defer pools.Close()
 	defer owner.Close()
 
-	keys := crypto.Keys{HMAC: bytes.Repeat([]byte{7}, 32), Encryption: bytes.Repeat([]byte{9}, 32)}
+	// The rotation test re-encrypts stored secrets under rotatedKey; listing it as a previous key keeps
+	// them readable for every later test, as during a real rotation.
+	keys := crypto.Keys{HMAC: bytes.Repeat([]byte{7}, 32), Encryption: bytes.Repeat([]byte{9}, 32), Previous: map[string][]byte{"env-2": rotatedKey}}
 	mail := &fakeMailer{}
 	shared.AllowReservedTLDs = true // Fake company data uses reserved .example domains.
-	g, err := app.Build(pools, keys, app.Options{FakeProviders: true, PDF: fakePDF{}, Mailer: mail, Store: &files.MemoryStore{}, Scanner: files.AllowAllScanner{}, Bucket: "test", BaseURL: "http://app.test"})
+	g, err := app.Build(pools, keys, app.Options{FakeProviders: true, PDF: fakePDF{}, Mailer: mail, Store: objects, Scanner: files.AllowAllScanner{}, Bucket: "test", BaseURL: "http://app.test"})
 	if err != nil {
 		return 1, err
 	}

@@ -382,6 +382,20 @@ func (m *MemoryStore) Put(_ context.Context, key string, body []byte, _ string) 
 	return nil
 }
 
+// List returns the keys under a prefix, in key order.
+func (m *MemoryStore) List(_ context.Context, prefix string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var keys []string
+	for k := range m.data {
+		if strings.HasPrefix(k, prefix) {
+			keys = append(keys, k)
+		}
+	}
+	slices.Sort(keys)
+	return keys, nil
+}
+
 // Get returns bytes.
 func (m *MemoryStore) Get(_ context.Context, key string) ([]byte, error) {
 	m.mu.Lock()

@@ -6,7 +6,7 @@ Status: **for the testing server (D-23).** Production hosting is decided after h
 
 | Piece | Testing server | Notes |
 |---|---|---|
-| API, worker, both apps | One Docker host | One backend image; the role is chosen at start |
+| API, worker, ingest, both apps | One Docker host | One backend image; the role is chosen at start. Ingest serves only the visitor tracker, with its own 10-connection pool, so tracking traffic cannot slow the app |
 | PostgreSQL | Same host, `msp-engine-postgres` image | pgvector and pgBackRest |
 | Backups | `pgbackups` volume, encrypted (AES-256) | Off-host copy is optional here and required in production |
 | Monitoring | `compose.monitoring.yaml` | Prometheus, Alertmanager, Grafana, node-exporter |

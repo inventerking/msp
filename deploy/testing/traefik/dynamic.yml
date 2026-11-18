@@ -10,6 +10,12 @@ http:
       rule: 'Host(`{{ env "APP_HOST" }}`) && PathPrefix(`/api/`) && !PathPrefix(`/api/v1/admin`)'
       service: api
       tls: {{ if env "ACME_EMAIL" }}{certResolver: letsencrypt}{{ else }}{}{{ end }}
+    # Visitor tracking goes to its own process, so it cannot use the API's database connections.
+    collect:
+      rule: 'Host(`{{ env "APP_HOST" }}`) && Path(`/api/v1/public/collect`)'
+      priority: 1000
+      service: ingest
+      tls: {{ if env "ACME_EMAIL" }}{certResolver: letsencrypt}{{ else }}{}{{ end }}
     admin:
       rule: 'Host(`{{ env "ADMIN_HOST" }}`)'
       service: admin
@@ -21,6 +27,8 @@ http:
   services:
     api:
       loadBalancer: {servers: [{url: "http://api:8088"}]}
+    ingest:
+      loadBalancer: {servers: [{url: "http://ingest:8089"}]}
     client:
       loadBalancer: {servers: [{url: "http://client:8080"}]}
     admin:

@@ -55,6 +55,9 @@ The deployment plan's rules still apply: synthetic data only, no email to real r
 | Backups | pgBackRest in the Postgres image: WAL archived at least every minute, daily full backups, 7 kept, AES-256 | Optional second, off-host S3 repository |
 | Restore drill | `restore-drill.sh`: restores into a container with no network, checks, times and reports | Checks row counts, migration version, forced RLS, and that no tenant's rows show without a tenant set |
 | Logs | Rotated by size for every container | Previously unbounded |
+| Ingest process | `engine ingest` serves only the visitor tracker, with its own pool; Traefik routes the tracker path to it | Added after the first load test. Hits also got cheaper: module status and goals cached for 30 seconds, one transaction per hit in the usual case |
+| Key rotation | Encrypted values name their key; previous keys stay readable; `engine rotate-keys` re-encrypts every stored secret | No downtime. The HMAC key is deliberately long-lived: its hashes cannot be recomputed without values the system no longer keeps |
+| Erasure log | Each erasure is logged in object storage, by identifiers only, before it runs; `engine replay-erasures --since DAY` repeats them after a restore | |
 | Runbooks | Incident, data breach, restore, deploy, payments, abuse, key rotation | [operations](../operations/README.md) |
 
 ### Documents for others
@@ -67,7 +70,7 @@ The deployment plan's rules still apply: synthetic data only, no email to real r
 
 | Check | Result |
 |---|---|
-| Backend tests, with the race detector | All 27 packages pass. 340 test functions, up from 324 at Phase 6 |
+| Backend tests, with the race detector | All 27 packages pass. 344 test functions, up from 324 at Phase 6, including key rotation, the erasure log and the ingest process |
 | New backend tests | 12 billing and trust API tests (card purchase to activation, rejection refund, bank transfer, cancel and void, renewal with dunning, suspension and recovery, expiry, seat limit, signed webhook and reconciliation, isolation between workspaces, policy validation, legal acceptance, abuse reports); metrics tests for label safety and failing sources; a worker metrics test against the real schema |
 | Frontend tests | 53 pass, up from 49: the legal gate, and the admin review queue's rules |
 | Browser tests | All 7 flows pass against the local stack, run outside office hours. The new flow puts a plan on sale in the admin app, buys it by card on the test checkout, approves it from the review queue, and sees the module turn on |
@@ -79,7 +82,9 @@ The deployment plan's rules still apply: synthetic data only, no email to real r
 
 ## Load test
 
-Full results in [load-testing](../operations/load-testing.md). With 500 tenants and the 100,000-company tenant, CRM alone ran at p95 238 ms with no errors. With visitor ingest added at 2,000 events per second, ingest reached about 500 per second and CRM p95 rose to about 11 seconds, because ingest shares the API's connection pool. The separate ingest path in the architecture was never built.
+Full results in [load-testing](../operations/load-testing.md). With 500 tenants and the 100,000-company tenant, CRM alone met its target (p95 238 ms, no errors). In the first run, visitor tracking shared the API's connection pool, reached about 500 events per second, and pushed CRM p95 to about 11 seconds.
+
+After the ingest process was built, CRM was unaffected by tracking on a smaller dataset (p95 20 ms with ingest running), and one ingest process sustained about 1,050 events per second against the 2,000 target. Its limit is one commit per hit. The full-profile run on this developer machine slowed everything, with CPU to spare, which points to the one shared disk; it should be repeated on the testing server.
 
 ## Defects found and fixed during the phase
 
@@ -108,11 +113,10 @@ Full results in [load-testing](../operations/load-testing.md). With 500 tenants 
 ## Known gaps
 
 **Before the gate can be passed in full**
-- **Separate ingest path.** Needed to meet the load targets. See [For the gate](#for-the-gate).
-- **Application key rotation.** `ENCRYPTION_KEY` and `HMAC_KEY` cannot be rotated without making data unreadable ([key-rotation](../operations/runbooks/key-rotation.md)).
-- **Erasure log outside the database**, for reapplying erasures after a restore to an earlier point.
+- **Ingest throughput.** About 1,050 events per second per ingest process against 2,000. See [For the gate](#for-the-gate).
 - **Retention jobs** for the proposed periods that are not enforced yet, once counsel confirms them (D-14).
 - **Tenant offboarding purge** (D-14).
+- **Load test on the testing server**, with the load generator on a separate machine.
 
 **Waiting on decisions or handover**
 - A real payment provider (D-04), tax (L-24) and invoice content (L-25).
@@ -127,6 +131,6 @@ Full results in [load-testing](../operations/load-testing.md). With 500 tenants 
 
 ## For the gate
 
-1. **Ingest.** Approve building the separate `ingest` role (its own process, small pool as `msp_ingest`, follow-up work moved to jobs), then rerunning the load test; or formally revise the ingest target.
-2. **Key rotation and the erasure log.** Build now, or record them as conditions for production.
+1. **Ingest throughput.** Approve batched ingest writes (a hit is acknowledged before it is stored, so a crash loses at most the last fraction of a second of page views; consent records stay written one by one), or formally revise the target to about 1,000 events per second per ingest process and add processes as traffic grows.
+2. **HMAC key.** Accept it as a long-lived key, protected rather than rotated, for the reason in [key-rotation](../operations/runbooks/key-rotation.md#hmac-key-hmac_key).
 3. **Legal review pack.** Ready to hand to counsel through the product owner's boss.

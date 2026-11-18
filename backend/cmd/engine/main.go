@@ -25,7 +25,6 @@ import (
 	"mspengine/internal/app"
 	"mspengine/internal/kernel/apperr"
 	"mspengine/internal/kernel/config"
-	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
 	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/kernel/ratelimit"
@@ -55,7 +54,9 @@ func main() {
 			err = runWorker(ctx, cfg)
 		}
 	case "ingest":
-		err = errors.New("the ingest role arrives with Visitor Intelligence in Phase 5")
+		if err = needRuntime(); err == nil {
+			err = runIngest(ctx, cfg)
+		}
 	case "migrate":
 		if err = cfg.RequireDB("owner"); err == nil {
 			err = runMigrate(ctx, cfg)
@@ -68,6 +69,14 @@ func main() {
 		if err = needRuntime(); err == nil {
 			err = runRecoverAdmin(ctx, cfg, os.Args[2:])
 		}
+	case "replay-erasures":
+		if err = needRuntime(); err == nil {
+			err = runReplayErasures(ctx, cfg, os.Args[2:])
+		}
+	case "rotate-keys":
+		if err = needRuntime(); err == nil {
+			err = runRotateKeys(ctx, cfg)
+		}
 	case "healthcheck":
 		err = runHealthcheck(ctx, cfg)
 	default:
@@ -79,7 +88,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: engine api | worker | migrate | healthcheck | create-admin --email E --name N | recover-admin --email E --reason R")
+	fmt.Fprintln(os.Stderr, "usage: engine api | worker | ingest | migrate | healthcheck | replay-erasures --since YYYY-MM-DD | rotate-keys | create-admin --email E --name N | recover-admin --email E --reason R")
 	os.Exit(2)
 }
 
@@ -116,7 +125,12 @@ func fieldHints(fields []apperr.FieldError) string {
 }
 
 func openPools(ctx context.Context, c config.Config) (*db.Pools, error) {
-	app, err := db.Open(ctx, db.DSN(c.DBHost, c.DBPort, c.DBName, "msp_app", c.DBAppPassword), 20)
+	return openPoolsSized(ctx, c, 20)
+}
+
+// openPoolsSized opens the pools with the given number of application connections.
+func openPoolsSized(ctx context.Context, c config.Config, appConns int32) (*db.Pools, error) {
+	app, err := db.Open(ctx, db.DSN(c.DBHost, c.DBPort, c.DBName, "msp_app", c.DBAppPassword), appConns)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +194,40 @@ func runAPI(ctx context.Context, c config.Config) error {
 	return srv.Shutdown(shut)
 }
 
+// runIngest serves only the visitor tracker endpoint, in its own process with its own small pool,
+// so visitor traffic cannot take the API's database connections. Traefik sends the tracker path here.
+func runIngest(ctx context.Context, c config.Config) error {
+	pools, err := openPoolsSized(ctx, c, int32(c.IngestDBConns)) //nolint:gosec // Config caps it at 200.
+	if err != nil {
+		return err
+	}
+	defer pools.Close()
+	if err := migrations.CheckCurrent(ctx, pools.App); err != nil {
+		return err
+	}
+	rdb := redis.NewClient(&redis.Options{Addr: c.RedisAddr})
+	defer func() { _ = rdb.Close() }()
+	g, err := app.BuildFromConfig(ctx, c, pools, rdb)
+	if err != nil {
+		return err
+	}
+	reg := g.IngestMetrics()
+	reg.Serve(ctx, c.MetricsAddr)
+	handler := api.NewIngest(api.IngestDeps{Config: c, Keys: g.Keys, Limiter: ratelimit.New(rdb), DB: pools.App, Redis: rdb, Metrics: reg, Collect: g.CollectHandler()})
+	srv := &http.Server{Addr: c.HTTPAddr, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 2 * time.Minute}
+	errs := make(chan error, 1)
+	go func() { errs <- srv.ListenAndServe() }()
+	slog.Info("ingest listening", "addr", c.HTTPAddr)
+	select {
+	case err := <-errs:
+		return err
+	case <-ctx.Done():
+	}
+	shut, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
+	return srv.Shutdown(shut)
+}
+
 // runWorker runs background jobs, event dispatch and schedules until told to stop.
 func runWorker(ctx context.Context, c config.Config) error {
 	pools, err := openPools(ctx, c)
@@ -209,6 +257,69 @@ func runWorker(ctx context.Context, c config.Config) error {
 	slog.Info("worker running")
 	runner.Run(ctx)
 	<-done
+	return nil
+}
+
+// runReplayErasures repeats, after a database restore, every erasure logged since a day. Use the day
+// of the backup the database was restored from. See docs/operations/runbooks/restore.md.
+func runReplayErasures(ctx context.Context, c config.Config, args []string) error {
+	fs := flag.NewFlagSet("replay-erasures", flag.ExitOnError)
+	since := fs.String("since", "", "first day to replay, YYYY-MM-DD, in UTC")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	day, err := time.Parse("2006-01-02", *since)
+	if err != nil {
+		return errors.New("--since must be a day such as 2026-11-18")
+	}
+	pools, err := openPools(ctx, c)
+	if err != nil {
+		return err
+	}
+	defer pools.Close()
+	g, err := app.BuildFromConfig(ctx, c, pools, nil)
+	if err != nil {
+		return err
+	}
+	r, err := g.Shared.ReplayErasures(ctx, day)
+	if err != nil {
+		return err
+	}
+	slog.Info("erasures replayed; the worker carries them out", "logged", r.Logged, "queued", r.Queued, "not_in_database", r.Absent)
+	return nil
+}
+
+// runRotateKeys re-encrypts every stored secret under the current ENCRYPTION_KEY. Run it after
+// setting a new key, with the old one in ENCRYPTION_KEYS_PREVIOUS; when it reports nothing left, the
+// old key can be removed. It is safe to run again. See docs/operations/runbooks/key-rotation.md.
+func runRotateKeys(ctx context.Context, c config.Config) error {
+	pools, err := openPools(ctx, c)
+	if err != nil {
+		return err
+	}
+	defer pools.Close()
+	g, err := app.BuildFromConfig(ctx, c, pools, nil)
+	if err != nil {
+		return err
+	}
+	ids, err := g.Identity.Reencrypt(ctx)
+	if err != nil {
+		return fmt.Errorf("two-step secrets: %w", err)
+	}
+	ints, err := g.Integration.Reencrypt(ctx)
+	if err != nil {
+		return fmt.Errorf("provider and webhook secrets: %w", err)
+	}
+	// A second pass finds anything changed while the first ran.
+	again, err := g.Identity.Reencrypt(ctx)
+	if err != nil {
+		return err
+	}
+	again2, err := g.Integration.Reencrypt(ctx)
+	if err != nil {
+		return err
+	}
+	slog.Info("re-encrypted under the current key", "key_id", c.CryptoKeys().ID(), "two_step_secrets", ids+again, "provider_and_webhook_secrets", ints+again2)
 	return nil
 }
 
@@ -253,7 +364,7 @@ func runRecoverAdmin(ctx context.Context, c config.Config, args []string) error 
 		return err
 	}
 	defer pools.Close()
-	ids, err := identity.New(pools, crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}, mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, c.AppBaseURL)
+	ids, err := identity.New(pools, c.CryptoKeys(), mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, c.AppBaseURL)
 	if err != nil {
 		return err
 	}
@@ -287,7 +398,7 @@ func runCreateAdmin(ctx context.Context, c config.Config, args []string) error {
 		return err
 	}
 	defer pools.Close()
-	keys := crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}
+	keys := c.CryptoKeys()
 	ids, err := identity.New(pools, keys, mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, c.AppBaseURL)
 	if err != nil {
 		return err

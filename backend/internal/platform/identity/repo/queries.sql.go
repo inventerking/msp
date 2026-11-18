@@ -614,6 +614,67 @@ func (q *Queries) DeleteUnverifiedFactors(ctx context.Context, userID uuid.UUID)
 	return err
 }
 
+const encryptedAdminFactors = `-- name: EncryptedAdminFactors :many
+SELECT id, admin_id, secret_ciphertext FROM identity.platform_admin_mfa_factors WHERE secret_ciphertext IS NOT NULL ORDER BY id
+`
+
+type EncryptedAdminFactorsRow struct {
+	ID               uuid.UUID
+	AdminID          uuid.UUID
+	SecretCiphertext []byte
+}
+
+func (q *Queries) EncryptedAdminFactors(ctx context.Context) ([]EncryptedAdminFactorsRow, error) {
+	rows, err := q.db.Query(ctx, encryptedAdminFactors)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EncryptedAdminFactorsRow
+	for rows.Next() {
+		var i EncryptedAdminFactorsRow
+		if err := rows.Scan(&i.ID, &i.AdminID, &i.SecretCiphertext); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const encryptedUserFactors = `-- name: EncryptedUserFactors :many
+SELECT id, user_id, secret_ciphertext FROM identity.mfa_factors WHERE secret_ciphertext IS NOT NULL ORDER BY id
+`
+
+type EncryptedUserFactorsRow struct {
+	ID               uuid.UUID
+	UserID           uuid.UUID
+	SecretCiphertext []byte
+}
+
+// Key rotation: every stored two-step secret, with the user it is bound to.
+func (q *Queries) EncryptedUserFactors(ctx context.Context) ([]EncryptedUserFactorsRow, error) {
+	rows, err := q.db.Query(ctx, encryptedUserFactors)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EncryptedUserFactorsRow
+	for rows.Next() {
+		var i EncryptedUserFactorsRow
+		if err := rows.Scan(&i.ID, &i.UserID, &i.SecretCiphertext); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getActiveMembership = `-- name: GetActiveMembership :one
 SELECT m.id, m.role_id, r.key AS role_key, t.status AS tenant_status, t.name AS tenant_name, t.slug AS tenant_slug
 FROM identity.memberships m
@@ -1482,6 +1543,54 @@ func (q *Queries) RecordLoginAttempt(ctx context.Context, arg RecordLoginAttempt
 		arg.FailureReason,
 	)
 	return err
+}
+
+const reencryptAdminFactor = `-- name: ReencryptAdminFactor :execrows
+UPDATE identity.platform_admin_mfa_factors SET secret_ciphertext = $1, key_id = $2 WHERE id = $3 AND secret_ciphertext = $4
+`
+
+type ReencryptAdminFactorParams struct {
+	NewCiphertext []byte
+	KeyID         *string
+	ID            uuid.UUID
+	OldCiphertext []byte
+}
+
+func (q *Queries) ReencryptAdminFactor(ctx context.Context, arg ReencryptAdminFactorParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reencryptAdminFactor,
+		arg.NewCiphertext,
+		arg.KeyID,
+		arg.ID,
+		arg.OldCiphertext,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const reencryptUserFactor = `-- name: ReencryptUserFactor :execrows
+UPDATE identity.mfa_factors SET secret_ciphertext = $1, key_id = $2 WHERE id = $3 AND secret_ciphertext = $4
+`
+
+type ReencryptUserFactorParams struct {
+	NewCiphertext []byte
+	KeyID         *string
+	ID            uuid.UUID
+	OldCiphertext []byte
+}
+
+func (q *Queries) ReencryptUserFactor(ctx context.Context, arg ReencryptUserFactorParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reencryptUserFactor,
+		arg.NewCiphertext,
+		arg.KeyID,
+		arg.ID,
+		arg.OldCiphertext,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const removeMember = `-- name: RemoveMember :exec

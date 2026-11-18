@@ -143,7 +143,7 @@ func (s *Service) AdminEnrollTOTP(ctx context.Context, a authctx.AdminPrincipal)
 		return Enrollment{}, err
 	}
 	err = db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
-		_, err := repo.New(tx).CreateAdminFactor(ctx, repo.CreateAdminFactorParams{AdminID: a.AdminID, SecretCiphertext: sealed, KeyID: strPtr(crypto.KeyID)})
+		_, err := repo.New(tx).CreateAdminFactor(ctx, repo.CreateAdminFactorParams{AdminID: a.AdminID, SecretCiphertext: sealed, KeyID: strPtr(s.keys.ID())})
 		return err
 	})
 	if err != nil {

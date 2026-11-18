@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -134,7 +135,7 @@ func (s *Service) Collect(ctx context.Context, h Hit, m HitMeta) error {
 		return err
 	}
 	// Follow-up work runs in the site's tenant as the application role, after the hit is stored.
-	if status, err := s.Commercial.ModuleStatus(ctx, site.TenantID, Module); err != nil || status != "active" {
+	if active, err := s.moduleActive(ctx, site.TenantID); err != nil || !active {
 		return err
 	}
 	if err := s.afterHit(ctx, site, h, pageURL, sessionID); err != nil {
@@ -146,24 +147,56 @@ func (s *Service) Collect(ctx context.Context, h Hit, m HitMeta) error {
 	return nil
 }
 
-// afterHit records conversions for goals the hit meets.
+// moduleActive reads the tenant's entitlement, trusting a recent answer for hotTTL.
+func (s *Service) moduleActive(ctx context.Context, tenant uuid.UUID) (bool, error) {
+	now := time.Now()
+	if v, fresh := s.hot.moduleActive(tenant, now); fresh {
+		return v, nil
+	}
+	status, err := s.Commercial.ModuleStatus(ctx, tenant, Module)
+	if err != nil {
+		return false, err
+	}
+	s.hot.setModuleActive(tenant, status == "active", now)
+	return status == "active", nil
+}
+
+// afterHit records conversions for goals the hit meets, and keeps the site's last-seen time. Goals
+// come from a short-lived cache, so a hit that meets no goal, on a site touched in the last minute,
+// needs no transaction here at all.
 func (s *Service) afterHit(ctx context.Context, site repo.SiteByKeyRow, h Hit, pageURL string, session *uuid.UUID) error {
+	now := time.Now()
+	goals, fresh := s.hot.siteGoals(site.ID, now)
+	if !fresh {
+		if err := s.systemTx(ctx, site.TenantID, func(q *repo.Queries, _ pgx.Tx) error {
+			var err error
+			goals, err = q.ListGoals(ctx, repo.ListGoalsParams{TenantID: site.TenantID, SiteID: site.ID})
+			return err
+		}); err != nil {
+			return err
+		}
+		s.hot.setSiteGoals(site.ID, goals, now)
+	}
+	var met []repo.ListGoalsRow
+	for _, g := range goals {
+		var rule struct{ Contains, Event string }
+		_ = json.Unmarshal(g.Rule, &rule)
+		if (g.Kind == "url_match" && h.Type == "page_view" && rule.Contains != "" && strings.Contains(pageURL, rule.Contains)) ||
+			(g.Kind == "custom_event" && h.Type == "custom" && rule.Event != "" && h.Name == rule.Event) {
+			met = append(met, g)
+		}
+	}
+	touch := s.hot.touchDue(site.ID, now)
+	if len(met) == 0 && !touch {
+		return nil
+	}
 	return s.systemTx(ctx, site.TenantID, func(q *repo.Queries, tx pgx.Tx) error {
-		if err := q.TouchSite(ctx, repo.TouchSiteParams{TenantID: site.TenantID, ID: site.ID}); err != nil {
-			return err
-		}
-		goals, err := q.ListGoals(ctx, repo.ListGoalsParams{TenantID: site.TenantID, SiteID: site.ID})
-		if err != nil {
-			return err
-		}
-		for _, g := range goals {
-			var rule struct{ Contains, Event string }
-			_ = json.Unmarshal(g.Rule, &rule)
-			hit := (g.Kind == "url_match" && h.Type == "page_view" && rule.Contains != "" && strings.Contains(pageURL, rule.Contains)) ||
-				(g.Kind == "custom_event" && h.Type == "custom" && rule.Event != "" && h.Name == rule.Event)
-			if !hit {
-				continue
+		if touch {
+			if err := q.TouchSite(ctx, repo.TouchSiteParams{TenantID: site.TenantID, ID: site.ID}); err != nil {
+				return err
 			}
+		}
+		for _, g := range met {
 			key := g.ID.String() + ":" + uuid.NewString()
 			if session != nil {
 				key = g.ID.String() + ":" + session.String() // Once per session.

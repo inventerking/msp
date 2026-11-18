@@ -35,6 +35,8 @@ type Service struct {
 	pools   *db.Pools
 	keys    crypto.Keys
 	erasers []Eraser
+	// erasureLog keeps a record of each erasure outside the database. Nil means none.
+	erasureLog ObjectLog
 }
 
 // New creates the service.
@@ -373,6 +375,87 @@ func (s *Service) RequestErasure(ctx context.Context, p authctx.Principal, conta
 	return jobID, err
 }
 
+// ObjectLog is append-only storage outside the database, such as an object store bucket.
+type ObjectLog interface {
+	Put(ctx context.Context, key string, body []byte, contentType string) error
+	Get(ctx context.Context, key string) ([]byte, error)
+	List(ctx context.Context, prefix string) ([]string, error)
+}
+
+// erasureLogPrefix holds one object per erased contact, by the UTC day it was erased.
+const erasureLogPrefix = "erasure-log/"
+
+// SetErasureLog records erasures outside the database, so they can be repeated after a restore.
+func (s *Service) SetErasureLog(l ObjectLog) { s.erasureLog = l }
+
+type erasureRecord struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	ContactID uuid.UUID `json:"contact_id"`
+	LoggedAt  time.Time `json:"logged_at"`
+}
+
+// logErasure writes the record before anything is erased, so an erasure that took effect is always
+// in the log. The key is fixed per contact and day, so a retried job writes the same object.
+func (s *Service) logErasure(ctx context.Context, tenantID, contactID uuid.UUID) error {
+	if s.erasureLog == nil {
+		return nil
+	}
+	now := time.Now().UTC()
+	body, _ := json.Marshal(erasureRecord{TenantID: tenantID, ContactID: contactID, LoggedAt: now})
+	return s.erasureLog.Put(ctx, erasureLogPrefix+now.Format("2006-01-02")+"/"+tenantID.String()+"_"+contactID.String()+".json", body, "application/json")
+}
+
+// ReplayResult counts what ReplayErasures found.
+type ReplayResult struct {
+	Logged, Queued, Absent int
+}
+
+// ReplayErasures queues erasure again for every contact logged as erased since the given day. It is
+// for after a database restore, which can bring back data erased after the backup was taken.
+// Contacts the restored database never held are counted as absent. Erasure is idempotent, so a
+// contact that is already erased is harmless to queue.
+func (s *Service) ReplayErasures(ctx context.Context, since time.Time) (ReplayResult, error) {
+	var r ReplayResult
+	if s.erasureLog == nil {
+		return r, errors.New("no erasure log is configured")
+	}
+	for day := since.UTC().Truncate(24 * time.Hour); !day.After(time.Now().UTC()); day = day.Add(24 * time.Hour) {
+		keys, err := s.erasureLog.List(ctx, erasureLogPrefix+day.Format("2006-01-02")+"/")
+		if err != nil {
+			return r, err
+		}
+		for _, k := range keys {
+			raw, err := s.erasureLog.Get(ctx, k)
+			if err != nil {
+				return r, err
+			}
+			var rec erasureRecord
+			if err := json.Unmarshal(raw, &rec); err != nil {
+				return r, fmt.Errorf("%s: %w", k, err)
+			}
+			r.Logged++
+			err = db.TenantTx(ctx, s.pools.App, rec.TenantID, uuid.Nil, func(tx pgx.Tx) error {
+				if _, err := repo.New(tx).GetContact(ctx, repo.GetContactParams{TenantID: rec.TenantID, ID: rec.ContactID}); errors.Is(err, pgx.ErrNoRows) {
+					r.Absent++
+					return nil
+				} else if err != nil {
+					return err
+				}
+				if _, _, err := jobs.Enqueue(ctx, tx, jobs.Spec{TenantID: &rec.TenantID, Kind: JobEraseContact, Queue: jobs.QueueDefault, MaxAttempts: 25,
+					Payload: map[string]any{"contact_id": rec.ContactID}, IdempotencyKey: "erase-replay:" + rec.ContactID.String() + ":" + time.Now().UTC().Format(time.RFC3339)}); err != nil {
+					return err
+				}
+				r.Queued++
+				return audit.Record(ctx, tx, audit.Event{TenantID: &rec.TenantID, ActorType: "system", Action: "privacy.erasure_replayed", ResourceType: "contact", ResourceID: &rec.ContactID})
+			})
+			if err != nil {
+				return r, err
+			}
+		}
+	}
+	return r, nil
+}
+
 // HandleErase is the erasure job. Modules erase first, so that if one fails, the identity survives
 // and the job retries until every module has finished.
 func (s *Service) HandleErase(ctx context.Context, j jobs.Job) error {
@@ -386,6 +469,9 @@ func (s *Service) HandleErase(ctx context.Context, j jobs.Job) error {
 		return jobs.Permanent(errors.New("erasure job has no tenant"))
 	}
 	tenantID := *j.TenantID
+	if err := s.logErasure(ctx, tenantID, p.ContactID); err != nil {
+		return fmt.Errorf("erasure log: %w", err)
+	}
 	for _, e := range s.erasers {
 		if err := e.EraseContact(ctx, tenantID, p.ContactID); err != nil {
 			return fmt.Errorf("erase in %s: %w", e.Name(), err)

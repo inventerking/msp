@@ -41,14 +41,17 @@ type Deps struct {
 }
 
 // Service implements Visitor Intelligence.
-type Service struct{ Deps }
+type Service struct {
+	Deps
+	hot *hotCache
+}
 
 // New creates the service.
 func New(d Deps) *Service {
 	if d.Identifier == nil {
 		d.Identifier = FakeIdentifier{}
 	}
-	return &Service{Deps: d}
+	return &Service{Deps: d, hot: newHotCache()}
 }
 
 func (s *Service) tx(ctx context.Context, p authctx.Principal, fn func(q *repo.Queries, tx pgx.Tx) error) error {
@@ -260,6 +263,7 @@ func (s *Service) CreateGoal(ctx context.Context, p authctx.Principal, site uuid
 		id, err = q.InsertGoal(ctx, repo.InsertGoalParams{TenantID: p.TenantID, SiteID: site, Name: name, Kind: kind, Rule: rule})
 		return err
 	})
+	s.hot.forgetGoals()
 	return id, err
 }
 
@@ -279,6 +283,7 @@ func (s *Service) Goals(ctx context.Context, p authctx.Principal, site uuid.UUID
 
 // DeleteGoal removes a goal. Conversions already recorded stay.
 func (s *Service) DeleteGoal(ctx context.Context, p authctx.Principal, id uuid.UUID) error {
+	defer s.hot.forgetGoals()
 	return s.tx(ctx, p, func(q *repo.Queries, _ pgx.Tx) error {
 		n, err := q.DeleteGoal(ctx, repo.DeleteGoalParams{TenantID: p.TenantID, ID: id})
 		if err == nil && n == 0 {

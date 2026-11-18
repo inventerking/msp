@@ -11,6 +11,10 @@ services:
     environment:
       METRICS_ADDR: 0.0.0.0:9100
     networks: [monitoring]
+  ingest:
+    environment:
+      METRICS_ADDR: 0.0.0.0:9100
+    networks: [monitoring]
 
   prometheus:
     image: prom/prometheus:v3.16.0

@@ -102,3 +102,20 @@ WHERE target.template_id = (SELECT v.template_id FROM integration.prompt_version
 -- name: InsertConnection :one
 INSERT INTO integration.connections (tenant_id, provider_id, display_name, account_ref, status, created_by)
 VALUES (@tenant_id, @provider_id, @display_name, sqlc.narg(account_ref), 'connected', sqlc.narg(created_by)) RETURNING id;
+
+-- name: EncryptedCredentials :many
+-- Key rotation: every stored provider secret, with what it is bound to.
+SELECT id, provider_id, label, secret_ciphertext FROM integration.platform_credentials ORDER BY id;
+
+-- name: ReencryptCredential :execrows
+UPDATE integration.platform_credentials SET secret_ciphertext = @new_ciphertext, key_id = @key_id WHERE id = @id AND secret_ciphertext = @old_ciphertext;
+
+-- name: EncryptedWebhookEndpoints :many
+SELECT id, path_token, secret_ciphertext FROM integration.webhook_endpoints ORDER BY id;
+
+-- name: ReencryptWebhookEndpoint :execrows
+UPDATE integration.webhook_endpoints SET secret_ciphertext = @new_ciphertext, key_id = @key_id WHERE id = @id AND secret_ciphertext = @old_ciphertext;
+
+-- name: EncryptedConnectionCount :one
+-- Tenant connections have a secret column that nothing writes yet; rotation refuses if one appears.
+SELECT count(*)::int FROM integration.connections WHERE secret_ciphertext IS NOT NULL;

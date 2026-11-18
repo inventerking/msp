@@ -51,3 +51,19 @@ func (s *S3Store) Get(ctx context.Context, key string) ([]byte, error) {
 	defer func() { _ = out.Body.Close() }()
 	return io.ReadAll(io.LimitReader(out.Body, MaxBytes+1))
 }
+
+// List returns the keys under a prefix, in key order.
+func (s *S3Store) List(ctx context.Context, prefix string) ([]string, error) {
+	var keys []string
+	p := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{Bucket: &s.bucket, Prefix: &prefix})
+	for p.HasMorePages() {
+		page, err := p.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, o := range page.Contents {
+			keys = append(keys, aws.ToString(o.Key))
+		}
+	}
+	return keys, nil
+}

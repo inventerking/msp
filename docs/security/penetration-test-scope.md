@@ -60,10 +60,10 @@ Find ways that one tenant could read or change another tenant's data, that an ou
 
 These are known, so reporting them again adds nothing unless the tester finds a way to exploit them further:
 
-- Rotating the application encryption and HMAC keys is not supported yet ([key-rotation](../operations/runbooks/key-rotation.md)).
+- The HMAC key is long-lived by design and not rotated on a schedule ([key-rotation](../operations/runbooks/key-rotation.md)).
 - Embedded endpoints have per-address rate limits, but no per-site or per-bot limit.
 - The assessment prober runs in the same worker process as other jobs; the separate network-restricted pool is not built. Live probing is off.
-- Visitor ingest shares the API's database connection pool with the rest of the app ([load-testing](../operations/load-testing.md)).
+- Visitor ingest runs as its own process, but one process sustains about 1,000 events per second ([load-testing](../operations/load-testing.md)). Testing its limits is load testing, which is out of scope.
 
 ## Reporting
 

@@ -94,6 +94,85 @@ func (q *Queries) CreateWebhookEndpoint(ctx context.Context, arg CreateWebhookEn
 	return id, err
 }
 
+const encryptedConnectionCount = `-- name: EncryptedConnectionCount :one
+SELECT count(*)::int FROM integration.connections WHERE secret_ciphertext IS NOT NULL
+`
+
+// Tenant connections have a secret column that nothing writes yet; rotation refuses if one appears.
+func (q *Queries) EncryptedConnectionCount(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, encryptedConnectionCount)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const encryptedCredentials = `-- name: EncryptedCredentials :many
+SELECT id, provider_id, label, secret_ciphertext FROM integration.platform_credentials ORDER BY id
+`
+
+type EncryptedCredentialsRow struct {
+	ID               uuid.UUID
+	ProviderID       uuid.UUID
+	Label            string
+	SecretCiphertext []byte
+}
+
+// Key rotation: every stored provider secret, with what it is bound to.
+func (q *Queries) EncryptedCredentials(ctx context.Context) ([]EncryptedCredentialsRow, error) {
+	rows, err := q.db.Query(ctx, encryptedCredentials)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EncryptedCredentialsRow
+	for rows.Next() {
+		var i EncryptedCredentialsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProviderID,
+			&i.Label,
+			&i.SecretCiphertext,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const encryptedWebhookEndpoints = `-- name: EncryptedWebhookEndpoints :many
+SELECT id, path_token, secret_ciphertext FROM integration.webhook_endpoints ORDER BY id
+`
+
+type EncryptedWebhookEndpointsRow struct {
+	ID               uuid.UUID
+	PathToken        string
+	SecretCiphertext []byte
+}
+
+func (q *Queries) EncryptedWebhookEndpoints(ctx context.Context) ([]EncryptedWebhookEndpointsRow, error) {
+	rows, err := q.db.Query(ctx, encryptedWebhookEndpoints)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EncryptedWebhookEndpointsRow
+	for rows.Next() {
+		var i EncryptedWebhookEndpointsRow
+		if err := rows.Scan(&i.ID, &i.PathToken, &i.SecretCiphertext); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findAIRequestByKey = `-- name: FindAIRequestByKey :one
 SELECT id, outcome FROM integration.ai_requests WHERE tenant_id = $1 AND idempotency_key = $2
 `
@@ -642,6 +721,54 @@ func (q *Queries) ProviderHealth(ctx context.Context, since time.Time) ([]Provid
 		return nil, err
 	}
 	return items, nil
+}
+
+const reencryptCredential = `-- name: ReencryptCredential :execrows
+UPDATE integration.platform_credentials SET secret_ciphertext = $1, key_id = $2 WHERE id = $3 AND secret_ciphertext = $4
+`
+
+type ReencryptCredentialParams struct {
+	NewCiphertext []byte
+	KeyID         string
+	ID            uuid.UUID
+	OldCiphertext []byte
+}
+
+func (q *Queries) ReencryptCredential(ctx context.Context, arg ReencryptCredentialParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reencryptCredential,
+		arg.NewCiphertext,
+		arg.KeyID,
+		arg.ID,
+		arg.OldCiphertext,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const reencryptWebhookEndpoint = `-- name: ReencryptWebhookEndpoint :execrows
+UPDATE integration.webhook_endpoints SET secret_ciphertext = $1, key_id = $2 WHERE id = $3 AND secret_ciphertext = $4
+`
+
+type ReencryptWebhookEndpointParams struct {
+	NewCiphertext []byte
+	KeyID         string
+	ID            uuid.UUID
+	OldCiphertext []byte
+}
+
+func (q *Queries) ReencryptWebhookEndpoint(ctx context.Context, arg ReencryptWebhookEndpointParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reencryptWebhookEndpoint,
+		arg.NewCiphertext,
+		arg.KeyID,
+		arg.ID,
+		arg.OldCiphertext,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setProviderStatus = `-- name: SetProviderStatus :execrows

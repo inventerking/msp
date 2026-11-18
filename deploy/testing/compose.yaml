@@ -38,6 +38,9 @@ x-runtime-secrets: &runtime-secrets
   DB_PLATFORM_PASSWORD: ${DB_PLATFORM_PASSWORD}
   DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
   ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+  # During a key rotation: the new key's ID, and the old keys as id:base64 pairs (see the runbook).
+  ENCRYPTION_KEY_ID: ${ENCRYPTION_KEY_ID:-env-1}
+  ENCRYPTION_KEYS_PREVIOUS: ${ENCRYPTION_KEYS_PREVIOUS:-}
   HMAC_KEY: ${HMAC_KEY}
 
 services:
@@ -68,6 +71,7 @@ services:
     networks: [edge]
     depends_on:
       api: {condition: service_healthy}
+      ingest: {condition: service_healthy}
 
   migrate:
     image: msp-engine-backend:testing
@@ -101,6 +105,27 @@ services:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_healthy}
       seaweedfs: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "/engine", "healthcheck"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  # Serves only the visitor tracker endpoint, with its own small database pool. Traefik routes
+  # /api/v1/public/collect here.
+  ingest:
+    <<: *hardening
+    image: msp-engine-backend:testing
+    command: [ingest]
+    environment:
+      <<: [*backend-env, *runtime-secrets]
+      HTTP_ADDR: 0.0.0.0:8089
+      TRUST_FORWARDED: "true"
+      INGEST_DB_CONNS: "10"
+    networks: [edge, internal]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
     healthcheck:
       test: ["CMD", "/engine", "healthcheck"]
       interval: 5s

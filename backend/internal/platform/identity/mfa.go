@@ -16,7 +16,6 @@ import (
 
 	"mspengine/internal/kernel/apperr"
 	"mspengine/internal/kernel/authctx"
-	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
 	"mspengine/internal/kernel/mailer"
 	"mspengine/internal/platform/audit"
@@ -72,7 +71,7 @@ func (s *Service) EnrollTOTP(ctx context.Context, p authctx.Principal) (Enrollme
 		if err := q.DeleteUnverifiedFactors(ctx, p.UserID); err != nil {
 			return err
 		}
-		_, err := q.CreateMFAFactor(ctx, repo.CreateMFAFactorParams{UserID: p.UserID, SecretCiphertext: sealed, KeyID: strPtr(crypto.KeyID)})
+		_, err := q.CreateMFAFactor(ctx, repo.CreateMFAFactorParams{UserID: p.UserID, SecretCiphertext: sealed, KeyID: strPtr(s.keys.ID())})
 		return err
 	})
 	if err != nil {

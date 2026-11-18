@@ -15,6 +15,13 @@ func (g *Graph) APIMetrics() *metrics.Registry {
 	return r
 }
 
+// IngestMetrics is the ingest process's registry: tracker requests and its connection pools.
+func (g *Graph) IngestMetrics() *metrics.Registry {
+	r := metrics.New("ingest")
+	r.Pools(g.poolMap())
+	return r
+}
+
 // WorkerMetrics is the worker's registry. Platform-wide health gauges are read here, in one place,
 // so running more API replicas does not multiply them. Alert rules still use max() in case more
 // than one worker runs.
@@ -73,7 +80,7 @@ func (g *Graph) WorkerMetrics() *metrics.Registry {
 			{Name: "msp_pg_database_bytes", Help: "Database size.", Value: size},
 		}, err
 	})
-		r.Gauges("trust", func(ctx context.Context) ([]metrics.Sample, error) {
+	r.Gauges("trust", func(ctx context.Context) ([]metrics.Sample, error) {
 		n, err := g.Trust.OpenReports(ctx)
 		return []metrics.Sample{{Name: "msp_abuse_reports_open", Help: "Abuse reports new or under review.", Value: float64(n)}}, err
 	})

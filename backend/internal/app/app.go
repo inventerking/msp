@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
@@ -39,6 +40,7 @@ import (
 	siapp "mspengine/internal/modules/salesintel/app"
 	"mspengine/internal/modules/visitorintel"
 	viapp "mspengine/internal/modules/visitorintel/app"
+	vihttp "mspengine/internal/modules/visitorintel/httpapi"
 	"mspengine/internal/platform/commercial"
 	"mspengine/internal/platform/files"
 	"mspengine/internal/platform/identity"
@@ -133,6 +135,11 @@ func Build(pools *db.Pools, keys crypto.Keys, o Options) (*Graph, error) {
 		Pools: pools, Keys: keys, Hub: hub, Identity: ids, Commercial: com, Integration: ints, AI: gw,
 		Shared: shared.New(pools, keys), Files: files.New(pools, o.Store, o.Scanner, o.Bucket),
 		Notify: notification.New(pools, o.Mailer, hub), Ops: jobs.NewOps(pools.Platform),
+	}
+	// Erasures are also recorded in object storage, outside the database, so they can be repeated
+	// after a restore. Any store that can list keys will do.
+	if l, ok := o.Store.(shared.ObjectLog); ok {
+		g.Shared.SetErasureLog(l)
 	}
 	// Payments are provider-neutral until D-04. Without fake providers there is no card provider, so
 	// only bank transfers confirmed by an admin are possible.
@@ -315,7 +322,7 @@ func BuildFromConfig(ctx context.Context, c config.Config, pools *db.Pools, rdb 
 	default:
 		return nil, fmt.Errorf("SENDING_DOMAIN_CHECK must be fake or live, not %q", c.SendingDomainCheck)
 	}
-	return Build(pools, crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey}, Options{
+	return Build(pools, c.CryptoKeys(), Options{
 		Mailer: mailer.SMTP{Addr: c.SMTPAddr, From: c.MailFrom}, Store: store, Scanner: scanner, Bucket: c.S3Bucket, BaseURL: c.AppBaseURL, Redis: rdb, FakeProviders: fakes,
 		PDF: renderer, Fetcher: fetcher, Prober: prober, DomainChecker: checker, RollupDelay: siapp.DefaultRollupDelay,
 	})
@@ -353,3 +360,6 @@ func (g *Graph) FakeCheckout() FakeCheckoutPage {
 	}
 	return g.FakePayments
 }
+
+// CollectHandler is the visitor tracker's endpoint, for the ingest process.
+func (g *Graph) CollectHandler() http.HandlerFunc { return vihttp.Handlers{S: g.Visitors}.Collect }

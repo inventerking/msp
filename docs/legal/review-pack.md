@@ -160,7 +160,7 @@ The admin **Integrations** page lists every provider configured, with its status
 | Application logs | 30 days | Proposed; the testing server rotates by size |
 | Backups | 7 daily full backups and the change log between them; older ones expire | **Enforced** by pgBackRest |
 
-**Erasure and backups.** An erased person's data remains in backups until they expire. If a backup is restored, erasures made after it must be repeated; see the [restore runbook](../operations/runbooks/restore.md). The record of erasure requests is currently kept in the database itself, which the team considers a gap for production.
+**Erasure and backups.** An erased person's data remains in backups until they expire. Each erasure is also logged, by tenant and contact identifier only, in object storage outside the database, so after any restore the erasures made since the backup are repeated with one command; see the [restore runbook](../operations/runbooks/restore.md).
 
 ## Rights requests
 
@@ -181,7 +181,7 @@ In summary, for the DPA's description of measures. Details are in [security-arch
 - Operator administrators must use two-step verification; their actions are audited, and support access to tenant content needs a time-limited grant visible to the tenant (D-22).
 - Uploaded files are scanned for malware; outbound requests to user-supplied addresses go through a guard that refuses private networks.
 - Logs and metrics leave out IP addresses, paths and bodies.
-- Gaps the team knows of are listed in [phase-7-status](../implementation/phase-7-status.md). They include rotating the application's encryption key, and an independent penetration test, which has not been done.
+- Gaps the team knows of are listed in [phase-7-status](../implementation/phase-7-status.md). They include an independent penetration test, which has not been done. The key that protects stored secrets can be rotated; the key used for lookup hashes is deliberately long-lived, because rotating it would lose suppression entries for erased people ([key-rotation](../operations/runbooks/key-rotation.md)).
 
 ## Legal documents in the product
 

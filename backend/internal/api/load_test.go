@@ -32,7 +32,18 @@ import (
 	"testing"
 	"time"
 
+	"net/http/httptest"
+
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"mspengine/internal/api"
+	"mspengine/internal/app"
+	"mspengine/internal/kernel/config"
+	"mspengine/internal/kernel/crypto"
+	"mspengine/internal/kernel/db"
+	"mspengine/internal/kernel/ratelimit"
+	"mspengine/internal/platform/files"
 )
 
 func knob(name string, def int) int {
@@ -108,12 +119,12 @@ func (r *recorder) summary() []stats {
 }
 
 // send makes one request without failing the test, so it can run from any goroutine.
-func send(hc *http.Client, csrf, method, path string, body []byte, headers map[string]string) (int, time.Duration) {
+func send(hc *http.Client, base, csrf, method, path string, body []byte, headers map[string]string) (int, time.Duration) {
 	var rd io.Reader
 	if body != nil {
 		rd = bytes.NewReader(body)
 	}
-	req, _ := http.NewRequest(method, env.URL+path, rd)
+	req, _ := http.NewRequest(method, base+path, rd)
 	if body != nil && req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -257,6 +268,13 @@ func TestLoadProfile(t *testing.T) {
 	}
 	seedTime := time.Since(seedStart)
 
+	// The ingest process, as deployed: its own graph and pool. LOAD_SHARED_INGEST=1 sends tracking to
+	// the API instead, as before the ingest role existed, for comparison.
+	ingestURL := env.URL
+	if os.Getenv("LOAD_SHARED_INGEST") != "1" {
+		ingestURL = startIngest(t)
+	}
+
 	// 3. Phase A: CRM traffic alone. Phase B: the same with ingest at the stated rate.
 	var reqs atomic.Int64
 	run := func(withIngest bool) *recorder {
@@ -273,7 +291,7 @@ func TestLoadProfile(t *testing.T) {
 					tn = big
 				}
 				op, method, path, body := crmRequest(rng, tn)
-				st, d := send(tn.c.c, tn.c.csrf, method, path, body, nil)
+				st, d := send(tn.c.c, env.URL, tn.c.csrf, method, path, body, nil)
 				reqs.Add(1)
 				rec.add(sample{op, st, d})
 			})
@@ -288,7 +306,7 @@ func TestLoadProfile(t *testing.T) {
 					visitor := strconv.Itoa(rng.IntN(20000))
 					b, _ := json.Marshal(map[string]any{"site_key": s["key"], "type": "page_view", "url": s["origin"] + "/page/" + strconv.Itoa(rng.IntN(50)),
 						"anonymous_id": "anon-" + visitor, "session_id": "sess-" + visitor, "consent": "granted"})
-					st, d := send(hc, "", http.MethodPost, "/api/v1/public/collect", b, map[string]string{"Content-Type": "text/plain;charset=UTF-8", "Origin": s["origin"],
+					st, d := send(hc, ingestURL, "", http.MethodPost, "/api/v1/public/collect", b, map[string]string{"Content-Type": "text/plain;charset=UTF-8", "Origin": s["origin"],
 						"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0"})
 					rec.add(sample{"ingest", st, d})
 				})
@@ -306,6 +324,11 @@ func TestLoadProfile(t *testing.T) {
 	var out strings.Builder
 	fmt.Fprintf(&out, "Profile: %d tenants; largest tenant %d companies and %d activities; CRM %d requests/s; ingest %d events/s to %d sites; %s per phase. Seeding took %s.\n\n",
 		nTenants, bigCompanies, bigActivities, rps, eps, len(sites), dur, seedTime.Round(time.Second))
+	if ingestURL == env.URL {
+		out.WriteString("Ingest: served by the API process, sharing its pool.\n\n")
+	} else {
+		fmt.Fprintf(&out, "Ingest: its own process with a %d-connection pool.\n\n", knob("LOAD_INGEST_CONNS", 10))
+	}
 	table := func(title string, r *recorder) map[string]stats {
 		fmt.Fprintf(&out, "**%s**\n\n| Operation | Requests | Errors | Rate limited | p50 | p95 | p99 | Max |\n|---|---|---|---|---|---|---|---|\n", title)
 		m := map[string]stats{}
@@ -333,7 +356,33 @@ func TestLoadProfile(t *testing.T) {
 	}
 }
 
-func ms(d time.Duration) string { return strconv.FormatFloat(float64(d.Microseconds())/1000, 'f', 1, 64) + " ms" }
+// startIngest runs the ingest handler on its own server, with its own pools sized as in production.
+func startIngest(t *testing.T) string {
+	t.Helper()
+	ctx := context.Background()
+	open := func(role, pw string, n int32) *pgxpool.Pool {
+		p, err := db.Open(ctx, env.DSN(role, pw), n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(p.Close)
+		return p
+	}
+	pools := &db.Pools{App: open("msp_app", "dev_app", int32(knob("LOAD_INGEST_CONNS", 10))), Platform: open("msp_platform", "dev_platform", 2), System: open("msp_system", "dev_system", 1)}
+	keys := crypto.Keys{HMAC: bytes.Repeat([]byte{7}, 32), Encryption: bytes.Repeat([]byte{9}, 32)}
+	g, err := app.Build(pools, keys, app.Options{Mailer: &fakeMailer{}, Store: &files.MemoryStore{}, Scanner: files.AllowAllScanner{}, Bucket: "test", BaseURL: "http://app.test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{Env: "test", AuthRatePerMinute: 1_000_000}
+	srv := httptest.NewServer(api.NewIngest(api.IngestDeps{Config: cfg, Keys: keys, Limiter: ratelimit.New(nil), DB: pools.App, Metrics: g.IngestMetrics(), Collect: g.CollectHandler()}))
+	t.Cleanup(srv.Close)
+	return srv.URL
+}
+
+func ms(d time.Duration) string {
+	return strconv.FormatFloat(float64(d.Microseconds())/1000, 'f', 1, 64) + " ms"
+}
 
 func yes(ok bool) string {
 	if ok {

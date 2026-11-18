@@ -83,3 +83,48 @@ func TestCSRFAndPurposeSeparation(t *testing.T) {
 		t.Fatal("purposes not separated")
 	}
 }
+
+func TestKeyRotation(t *testing.T) {
+	oldKey, newKey := bytes.Repeat([]byte{1}, 32), bytes.Repeat([]byte{2}, 32)
+	before := Keys{Encryption: oldKey}
+	aad := []byte("owner")
+
+	// A value written before ciphertexts named their key.
+	gcm, _ := sealer(oldKey)
+	nonce := make([]byte, gcm.NonceSize())
+	legacy := gcm.Seal(append([]byte{}, nonce...), nonce, []byte("legacy"), aad)
+	if got, err := before.Decrypt(legacy, aad); err != nil || string(got) != "legacy" {
+		t.Fatalf("legacy value unreadable: %v", err)
+	}
+	if KeyIDOf(legacy) != DefaultKeyID || !before.NeedsReencrypt(legacy) {
+		t.Fatal("a legacy value should count as the default key and need re-encrypting")
+	}
+
+	named, err := before.Encrypt([]byte("secret"), aad)
+	if err != nil || KeyIDOf(named) != "env-1" || before.NeedsReencrypt(named) {
+		t.Fatalf("new values should name the current key: %v", err)
+	}
+
+	// Rotated: a new current key, the old one kept as previous.
+	during := Keys{Encryption: newKey, EncryptionID: "env-2", Previous: map[string][]byte{"env-1": oldKey}}
+	for _, c := range [][]byte{legacy, named} {
+		if _, err := during.Decrypt(c, aad); err != nil {
+			t.Fatalf("old data must stay readable during rotation: %v", err)
+		}
+		if !during.NeedsReencrypt(c) {
+			t.Fatal("old data should need re-encrypting")
+		}
+	}
+	plain, _ := during.Decrypt(named, aad)
+	resealed, _ := during.Encrypt(plain, aad)
+	after := Keys{Encryption: newKey, EncryptionID: "env-2"}
+	if got, err := after.Decrypt(resealed, aad); err != nil || string(got) != "secret" {
+		t.Fatalf("re-encrypted value needs only the new key: %v", err)
+	}
+	if _, err := after.Decrypt(named, aad); err == nil {
+		t.Fatal("without the old key, old data must not open")
+	}
+	if _, err := during.Decrypt(resealed, []byte("someone else")); err == nil {
+		t.Fatal("additional data must still bind the value to its owner")
+	}
+}

@@ -354,3 +354,16 @@ ON CONFLICT DO NOTHING;
 
 -- name: AcceptanceCounts :many
 SELECT document_id, count(*)::int AS accepted FROM identity.document_acceptances GROUP BY document_id;
+
+-- name: EncryptedUserFactors :many
+-- Key rotation: every stored two-step secret, with the user it is bound to.
+SELECT id, user_id, secret_ciphertext FROM identity.mfa_factors WHERE secret_ciphertext IS NOT NULL ORDER BY id;
+
+-- name: ReencryptUserFactor :execrows
+UPDATE identity.mfa_factors SET secret_ciphertext = @new_ciphertext, key_id = @key_id WHERE id = @id AND secret_ciphertext = @old_ciphertext;
+
+-- name: EncryptedAdminFactors :many
+SELECT id, admin_id, secret_ciphertext FROM identity.platform_admin_mfa_factors WHERE secret_ciphertext IS NOT NULL ORDER BY id;
+
+-- name: ReencryptAdminFactor :execrows
+UPDATE identity.platform_admin_mfa_factors SET secret_ciphertext = @new_ciphertext, key_id = @key_id WHERE id = @id AND secret_ciphertext = @old_ciphertext;

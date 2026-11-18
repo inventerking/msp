@@ -40,7 +40,12 @@ The timings below are for the incident timeline; the target is 4 hours in total.
    ```
 5. **Check:** migration version (`SELECT max(version_id) FROM goose_db_version`), row counts of key tables against expectations, and that the most recent data you expect is present.
 6. **New backup chain:** after a point-in-time restore, the database is on a new timeline. Run `./backup.sh` at once so later restores start from it.
-7. **Reapply erasures.** A restore to an earlier point can bring back data that was erased after that point. Before reopening, list erasure requests made after the target time in the **old** database's audit log (`action = 'privacy.erasure_requested'`), or in the exported logs if the old database is lost, and repeat them. See the gap below.
+7. **Reapply erasures.** A restore can bring back data that was erased after the backup was taken. Every erasure is logged in object storage, outside the database, before it runs. Start the worker, then replay everything since the day of the backup you restored:
+   ```bash
+   docker compose up -d worker
+   docker compose run --rm --no-deps api replay-erasures --since 2026-11-18
+   ```
+   It reports how many it found, queued, and did not find in the restored database (contacts created after the backup). Erasing is idempotent, so a generous start day is safe. Wait for the erasure jobs to finish (Admin → Jobs) before reopening.
 8. **Reopen:** `docker compose up -d --wait`, then `./smoke.sh`.
 9. Redis needs nothing: it holds only data that can be rebuilt.
 
@@ -50,5 +55,5 @@ Uploaded files are in SeaweedFS (`seaweed` volume) on the testing server and are
 
 ## Known gaps
 
-- **Erasure replay log.** Erasure requests are recorded in the audit log, which lives in the same database. If both the database and its recent WAL are lost, erasures made since the restored point cannot be found from the database alone. Production needs an erasure log held outside the database. Recorded in [phase-7-status](../../implementation/phase-7-status.md).
+- **Erasure log location.** The log is in the same object store as uploaded files. On the testing server that is SeaweedFS on the same host, so losing the host loses both the database and the log. Production needs object storage on separate infrastructure, with versioning (D-23).
 - **Off-host copy.** The testing setup keeps backups on the same host unless `backup-offsite.env` adds a second repository (see the testing README). Losing the host loses the backups.

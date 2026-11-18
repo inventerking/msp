@@ -50,8 +50,8 @@ Status: planning, pending approval. Module-specific criteria are section 22 of e
 - [ ] No open critical or high security findings
 - [ ] Independent penetration test complete, with findings resolved or formally accepted. *Scope written: [penetration-test-scope](../security/penetration-test-scope.md)*
 - [ ] Legal review complete for terms, privacy, DPA, outreach rules, tracking, and assessment authorization. *Questions collected in the [legal review pack](../legal/review-pack.md)*
-- [ ] Load tests meet targets, or targets are formally revised. *2026-11-18: CRM met; ingest not met, see [load-testing](../operations/load-testing.md)*
-- [ ] CRM p95 unaffected, within target, at peak visitor load. *Not met: needs the separate ingest path*
+- [ ] Load tests meet targets, or targets are formally revised. *2026-11-18: CRM met; ingest about 1,050 of 2,000 events per second, see [load-testing](../operations/load-testing.md)*
+- [ ] CRM p95 unaffected, within target, at peak visitor load. *Met at the rate one ingest process sustains, with ingest in its own process; to be confirmed at 2,000 events per second on the testing server*
 - [x] Backup restore drill passed and timed. *Testing setup, 2026-11-18: 19 seconds; repeat on the testing server and in production*
 - [ ] Monitoring, alerts and on-call in place. *Monitoring and alerts built for the testing server; no on-call rota or real alert receiver yet*
 - [x] Incident and data-breach runbooks written. *[runbooks](../operations/README.md)*

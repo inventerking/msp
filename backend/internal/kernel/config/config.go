@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"mspengine/internal/kernel/crypto"
 	"os"
 	"strconv"
 	"strings"
@@ -12,21 +13,25 @@ import (
 
 // Config holds all process settings. Required values are checked at startup.
 type Config struct {
-	Env                                            string
-	HTTPAddr                                       string
-	DBHost                                         string
-	DBPort                                         string
-	DBName                                         string
-	DBOwnerPassword                                string
-	DBAppPassword                                  string
-	DBPlatformPass                                 string
-	DBSystemPassword                               string
-	RedisAddr                                      string
-	SMTPAddr                                       string
-	MailFrom                                       string
-	AppBaseURL                                     string
-	AllowedOrigins                                 []string
-	EncryptionKey                                  []byte
+	Env              string
+	HTTPAddr         string
+	DBHost           string
+	DBPort           string
+	DBName           string
+	DBOwnerPassword  string
+	DBAppPassword    string
+	DBPlatformPass   string
+	DBSystemPassword string
+	RedisAddr        string
+	SMTPAddr         string
+	MailFrom         string
+	AppBaseURL       string
+	AllowedOrigins   []string
+	EncryptionKey    []byte
+	// EncryptionKeyID names EncryptionKey. PreviousEncryptionKeys are retired keys by ID, kept only to
+	// read data until `engine rotate-keys` has re-encrypted it.
+	EncryptionKeyID                                string
+	PreviousEncryptionKeys                         map[string][]byte
 	HMACKey                                        []byte
 	AuthRatePerMinute                              int
 	S3Endpoint, S3Bucket, S3AccessKey, S3SecretKey string
@@ -44,6 +49,8 @@ type Config struct {
 	// MetricsAddr serves Prometheus metrics on a separate listener. Empty turns it off. Never
 	// publish it: it is for the monitoring network only.
 	MetricsAddr string
+	// IngestDBConns is the ingest process's application pool size.
+	IngestDBConns int
 	// TrustForwarded uses X-Forwarded-For. Enable only behind a trusted proxy such as Traefik.
 	TrustForwarded bool
 }
@@ -70,6 +77,7 @@ func Load() (Config, error) {
 		AuthRatePerMinute:  authRate(),
 		TrustForwarded:     os.Getenv("TRUST_FORWARDED") == "true",
 		MetricsAddr:        os.Getenv("METRICS_ADDR"),
+		IngestDBConns:      positiveInt("INGEST_DB_CONNS", 10),
 		S3Endpoint:         os.Getenv("S3_ENDPOINT"),
 		S3Bucket:           get("S3_BUCKET", "msp-files"),
 		S3AccessKey:        os.Getenv("S3_ACCESS_KEY"),
@@ -92,6 +100,10 @@ func Load() (Config, error) {
 		errs = append(errs, err)
 	}
 	if c.HMACKey, err = key("HMAC_KEY"); err != nil {
+		errs = append(errs, err)
+	}
+	c.EncryptionKeyID = get("ENCRYPTION_KEY_ID", "env-1")
+	if c.PreviousEncryptionKeys, err = previousKeys(os.Getenv("ENCRYPTION_KEYS_PREVIOUS"), c.EncryptionKeyID); err != nil {
 		errs = append(errs, err)
 	}
 	return c, errors.Join(errs...)
@@ -139,6 +151,33 @@ func authRate() int {
 	return 30
 }
 
+// previousKeys parses "id:base64,id:base64". The current key's ID may not appear among them.
+func previousKeys(raw, current string) (map[string][]byte, error) {
+	out := map[string][]byte{}
+	for _, part := range strings.Split(raw, ",") {
+		if part = strings.TrimSpace(part); part == "" {
+			continue
+		}
+		id, b64, ok := strings.Cut(part, ":")
+		k, err := base64.StdEncoding.DecodeString(b64)
+		switch {
+		case !ok || id == "" || len(id) > 32:
+			return nil, errors.New("ENCRYPTION_KEYS_PREVIOUS must be id:base64 pairs separated by commas")
+		case err != nil || len(k) != 32:
+			return nil, fmt.Errorf("previous encryption key %s must be 32 bytes of base64", id)
+		case id == current:
+			return nil, fmt.Errorf("previous encryption key %s has the same ID as the current key", id)
+		}
+		out[id] = k
+	}
+	return out, nil
+}
+
+// CryptoKeys are the keys for hashing and field encryption, with any previous encryption keys.
+func (c Config) CryptoKeys() crypto.Keys {
+	return crypto.Keys{HMAC: c.HMACKey, Encryption: c.EncryptionKey, EncryptionID: c.EncryptionKeyID, Previous: c.PreviousEncryptionKeys}
+}
+
 func key(name string) ([]byte, error) {
 	if os.Getenv(name) == "" {
 		return nil, nil
@@ -155,4 +194,12 @@ func get(name, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// positiveInt reads a positive whole number, or returns the default.
+func positiveInt(name string, def int) int {
+	if n, err := strconv.Atoi(os.Getenv(name)); err == nil && n > 0 && n <= 200 {
+		return n
+	}
+	return def
 }
