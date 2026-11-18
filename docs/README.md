@@ -1,6 +1,6 @@
 # MSP Growth Engine: planning documentation
 
-**Status: Phases 1 to 5 are approved. Phase 6 is built and waiting for its gate, a review of the [metric definitions](implementation/metric-definitions.md).** See [phase-6-status](implementation/phase-6-status.md) for what exists, what needs review, and what is left.
+**Status: Phases 1 to 6 are approved. Phase 7 is built for the testing server and waiting for its gate.** See [phase-7-status](implementation/phase-7-status.md) for what exists, what was measured, and what is left before launch. The [legal review pack](legal/review-pack.md) collects the questions for counsel.
 
 Documents still marked "pending approval" follow the approved decisions in [open-decisions](implementation/open-decisions.md), which also lists the follow-up work those decisions still need.
 
@@ -27,9 +27,13 @@ Documents still marked "pending approval" follow the approved decisions in [open
 
 **Frontend:** [application-structure](frontend/application-structure.md) · [screen-inventory](frontend/screen-inventory.md) · [navigation](frontend/navigation.md) · [frontend-contracts](frontend/frontend-contracts.md)
 
-**Security:** [security-architecture](security/security-architecture.md) · [authentication-and-authorization](security/authentication-and-authorization.md) · [tenant-isolation](security/tenant-isolation.md) · [privacy-and-compliance](security/privacy-and-compliance.md) · [threat-model](security/threat-model.md)
+**Operations:** [operations](operations/README.md) · [runbooks](operations/runbooks/) · [load-testing](operations/load-testing.md)
 
-**Implementation:** [open-decisions](implementation/open-decisions.md) · [phase-1-status](implementation/phase-1-status.md) · [phase-2-status](implementation/phase-2-status.md) · [phase-3-status](implementation/phase-3-status.md) · [phase-4-status](implementation/phase-4-status.md) · [phase-5-status](implementation/phase-5-status.md) · [phase-6-status](implementation/phase-6-status.md) · [metric-definitions](implementation/metric-definitions.md) · [tooling-decisions](implementation/tooling-decisions.md) · [implementation-roadmap](implementation/implementation-roadmap.md) · [dependency-matrix](implementation/dependency-matrix.md) · [testing-strategy](implementation/testing-strategy.md) · [acceptance-criteria](implementation/acceptance-criteria.md) · [risk-register](implementation/risk-register.md)
+**Legal:** [review-pack](legal/review-pack.md)
+
+**Security:** [security-architecture](security/security-architecture.md) · [penetration-test-scope](security/penetration-test-scope.md) · [authentication-and-authorization](security/authentication-and-authorization.md) · [tenant-isolation](security/tenant-isolation.md) · [privacy-and-compliance](security/privacy-and-compliance.md) · [threat-model](security/threat-model.md)
+
+**Implementation:** [open-decisions](implementation/open-decisions.md) · [phase-7-status](implementation/phase-7-status.md) · [phase-1-status](implementation/phase-1-status.md) · [phase-2-status](implementation/phase-2-status.md) · [phase-3-status](implementation/phase-3-status.md) · [phase-4-status](implementation/phase-4-status.md) · [phase-5-status](implementation/phase-5-status.md) · [phase-6-status](implementation/phase-6-status.md) · [metric-definitions](implementation/metric-definitions.md) · [tooling-decisions](implementation/tooling-decisions.md) · [implementation-roadmap](implementation/implementation-roadmap.md) · [dependency-matrix](implementation/dependency-matrix.md) · [testing-strategy](implementation/testing-strategy.md) · [acceptance-criteria](implementation/acceptance-criteria.md) · [risk-register](implementation/risk-register.md)
 
 ## Conventions
 

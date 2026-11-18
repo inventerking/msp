@@ -1,6 +1,6 @@
 # Phase 6 status
 
-Status: built and verified locally. **Waiting for the Phase 6 gate: a review of the [metric definitions](metric-definitions.md).** That page lists eleven choices to confirm or change.
+Status: built and verified locally. **Phase 6 gate approved by the product owner on 2026-11-18, when Phase 7 was started.** The [metric definitions](metric-definitions.md) list eleven choices that can still be confirmed or changed.
 
 The deployment plan's rules still apply: synthetic data only, no email to real recipients, and no real visitors tracked. Phase 6 adds no new outside provider. AI wording and commentary come from the fake AI provider, and no exchange-rate source exists yet.
 

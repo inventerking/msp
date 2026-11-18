@@ -21,6 +21,135 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AbuseReportInputCategory.
+const (
+	AbuseReportInputCategoryHarassment           AbuseReportInputCategory = "harassment"
+	AbuseReportInputCategoryMalware              AbuseReportInputCategory = "malware"
+	AbuseReportInputCategoryOther                AbuseReportInputCategory = "other"
+	AbuseReportInputCategoryPhishing             AbuseReportInputCategory = "phishing"
+	AbuseReportInputCategoryPrivacy              AbuseReportInputCategory = "privacy"
+	AbuseReportInputCategorySpam                 AbuseReportInputCategory = "spam"
+	AbuseReportInputCategoryUnauthorizedScanning AbuseReportInputCategory = "unauthorized_scanning"
+)
+
+// Valid indicates whether the value is a known member of the AbuseReportInputCategory enum.
+func (e AbuseReportInputCategory) Valid() bool {
+	switch e {
+	case AbuseReportInputCategoryHarassment:
+		return true
+	case AbuseReportInputCategoryMalware:
+		return true
+	case AbuseReportInputCategoryOther:
+		return true
+	case AbuseReportInputCategoryPhishing:
+		return true
+	case AbuseReportInputCategoryPrivacy:
+		return true
+	case AbuseReportInputCategorySpam:
+		return true
+	case AbuseReportInputCategoryUnauthorizedScanning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FakeCheckoutStatus.
+const (
+	Failed    FakeCheckoutStatus = "failed"
+	Open      FakeCheckoutStatus = "open"
+	Succeeded FakeCheckoutStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the FakeCheckoutStatus enum.
+func (e FakeCheckoutStatus) Valid() bool {
+	switch e {
+	case Failed:
+		return true
+	case Open:
+		return true
+	case Succeeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FakeCheckoutOutcomeOutcome.
+const (
+	Decline              FakeCheckoutOutcomeOutcome = "decline"
+	Pay                  FakeCheckoutOutcomeOutcome = "pay"
+	PayCardDeclinesLater FakeCheckoutOutcomeOutcome = "pay_card_declines_later"
+)
+
+// Valid indicates whether the value is a known member of the FakeCheckoutOutcomeOutcome enum.
+func (e FakeCheckoutOutcomeOutcome) Valid() bool {
+	switch e {
+	case Decline:
+		return true
+	case Pay:
+		return true
+	case PayCardDeclinesLater:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InvoiceStatus.
+const (
+	InvoiceStatusDraft         InvoiceStatus = "draft"
+	InvoiceStatusIssued        InvoiceStatus = "issued"
+	InvoiceStatusPaid          InvoiceStatus = "paid"
+	InvoiceStatusUncollectible InvoiceStatus = "uncollectible"
+	InvoiceStatusVoid          InvoiceStatus = "void"
+)
+
+// Valid indicates whether the value is a known member of the InvoiceStatus enum.
+func (e InvoiceStatus) Valid() bool {
+	switch e {
+	case InvoiceStatusDraft:
+		return true
+	case InvoiceStatusIssued:
+		return true
+	case InvoiceStatusPaid:
+		return true
+	case InvoiceStatusUncollectible:
+		return true
+	case InvoiceStatusVoid:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalDocumentKind.
+const (
+	LegalDocumentKindAcceptableUse LegalDocumentKind = "acceptable_use"
+	LegalDocumentKindDpa           LegalDocumentKind = "dpa"
+	LegalDocumentKindPrivacy       LegalDocumentKind = "privacy"
+	LegalDocumentKindSubprocessors LegalDocumentKind = "subprocessors"
+	LegalDocumentKindTerms         LegalDocumentKind = "terms"
+)
+
+// Valid indicates whether the value is a known member of the LegalDocumentKind enum.
+func (e LegalDocumentKind) Valid() bool {
+	switch e {
+	case LegalDocumentKindAcceptableUse:
+		return true
+	case LegalDocumentKindDpa:
+		return true
+	case LegalDocumentKindPrivacy:
+		return true
+	case LegalDocumentKindSubprocessors:
+		return true
+	case LegalDocumentKindTerms:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NotificationPreferenceChannel.
 const (
 	Email NotificationPreferenceChannel = "email"
@@ -33,6 +162,27 @@ func (e NotificationPreferenceChannel) Valid() bool {
 	case Email:
 		return true
 	case InApp:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PlanOfferBillingPeriod.
+const (
+	Annual  PlanOfferBillingPeriod = "annual"
+	Custom  PlanOfferBillingPeriod = "custom"
+	Monthly PlanOfferBillingPeriod = "monthly"
+)
+
+// Valid indicates whether the value is a known member of the PlanOfferBillingPeriod enum.
+func (e PlanOfferBillingPeriod) Valid() bool {
+	switch e {
+	case Annual:
+		return true
+	case Custom:
+		return true
+	case Monthly:
 		return true
 	default:
 		return false
@@ -57,6 +207,60 @@ func (e ProductKind) Valid() bool {
 	case ProductKindModule:
 		return true
 	case ProductKindSuite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PurchaseStatus.
+const (
+	PurchaseStatusApproved        PurchaseStatus = "approved"
+	PurchaseStatusCancelled       PurchaseStatus = "cancelled"
+	PurchaseStatusDraft           PurchaseStatus = "draft"
+	PurchaseStatusPaymentPending  PurchaseStatus = "payment_pending"
+	PurchaseStatusPaymentVerified PurchaseStatus = "payment_verified"
+	PurchaseStatusRejected        PurchaseStatus = "rejected"
+	PurchaseStatusSubmitted       PurchaseStatus = "submitted"
+	PurchaseStatusUnderReview     PurchaseStatus = "under_review"
+)
+
+// Valid indicates whether the value is a known member of the PurchaseStatus enum.
+func (e PurchaseStatus) Valid() bool {
+	switch e {
+	case PurchaseStatusApproved:
+		return true
+	case PurchaseStatusCancelled:
+		return true
+	case PurchaseStatusDraft:
+		return true
+	case PurchaseStatusPaymentPending:
+		return true
+	case PurchaseStatusPaymentVerified:
+		return true
+	case PurchaseStatusRejected:
+		return true
+	case PurchaseStatusSubmitted:
+		return true
+	case PurchaseStatusUnderReview:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PurchaseInputPaymentMethod.
+const (
+	BankTransfer PurchaseInputPaymentMethod = "bank_transfer"
+	Card         PurchaseInputPaymentMethod = "card"
+)
+
+// Valid indicates whether the value is a known member of the PurchaseInputPaymentMethod enum.
+func (e PurchaseInputPaymentMethod) Valid() bool {
+	switch e {
+	case BankTransfer:
+		return true
+	case Card:
 		return true
 	default:
 		return false
@@ -107,6 +311,22 @@ type AIUsage struct {
 	Tokens    int64  `json:"tokens"`
 }
 
+// AbuseReportInput defines model for AbuseReportInput.
+type AbuseReportInput struct {
+	Category      AbuseReportInputCategory `json:"category"`
+	Details       string                   `json:"details"`
+	ReporterEmail *string                  `json:"reporter_email,omitempty"`
+	SubjectUrl    *string                  `json:"subject_url,omitempty"`
+}
+
+// AbuseReportInputCategory defines model for AbuseReportInput.Category.
+type AbuseReportInputCategory string
+
+// AcceptLegal defines model for AcceptLegal.
+type AcceptLegal struct {
+	DocumentIds []openapi_types.UUID `json:"document_ids"`
+}
+
 // Accepted defines model for Accepted.
 type Accepted struct {
 	Status string `json:"status"`
@@ -134,6 +354,11 @@ type AuditEvent struct {
 type AuditEventList struct {
 	Data       []AuditEvent `json:"data"`
 	NextCursor *string      `json:"next_cursor,omitempty"`
+}
+
+// CheckoutLink defines model for CheckoutLink.
+type CheckoutLink struct {
+	CheckoutUrl string `json:"checkout_url"`
 }
 
 // CodeName defines model for CodeName.
@@ -196,6 +421,27 @@ type EntitlementList struct {
 	Data []Entitlement `json:"data"`
 }
 
+// FakeCheckout defines model for FakeCheckout.
+type FakeCheckout struct {
+	AmountMinor int64              `json:"amount_minor"`
+	Currency    string             `json:"currency"`
+	Description string             `json:"description"`
+	Ref         string             `json:"ref"`
+	ReturnUrl   *string            `json:"return_url,omitempty"`
+	Status      FakeCheckoutStatus `json:"status"`
+}
+
+// FakeCheckoutStatus defines model for FakeCheckout.Status.
+type FakeCheckoutStatus string
+
+// FakeCheckoutOutcome defines model for FakeCheckoutOutcome.
+type FakeCheckoutOutcome struct {
+	Outcome FakeCheckoutOutcomeOutcome `json:"outcome"`
+}
+
+// FakeCheckoutOutcomeOutcome defines model for FakeCheckoutOutcome.Outcome.
+type FakeCheckoutOutcomeOutcome string
+
 // FileInfo defines model for FileInfo.
 type FileInfo struct {
 	ContentType string             `json:"content_type"`
@@ -241,6 +487,59 @@ type InvitationList struct {
 	Data []Invitation `json:"data"`
 }
 
+// Invoice defines model for Invoice.
+type Invoice struct {
+	Currency       string              `json:"currency"`
+	DueAt          *time.Time          `json:"due_at,omitempty"`
+	Id             openapi_types.UUID  `json:"id"`
+	IssuedAt       *time.Time          `json:"issued_at,omitempty"`
+	Number         string              `json:"number"`
+	PaidAt         *time.Time          `json:"paid_at,omitempty"`
+	Status         InvoiceStatus       `json:"status"`
+	SubscriptionId *openapi_types.UUID `json:"subscription_id,omitempty"`
+	SubtotalMinor  int64               `json:"subtotal_minor"`
+	TaxMinor       int64               `json:"tax_minor"`
+	TotalMinor     int64               `json:"total_minor"`
+}
+
+// InvoiceStatus defines model for Invoice.Status.
+type InvoiceStatus string
+
+// InvoiceDetail defines model for InvoiceDetail.
+type InvoiceDetail struct {
+	BankInstructions *string          `json:"bank_instructions,omitempty"`
+	Invoice          Invoice          `json:"invoice"`
+	Lines            []InvoiceLine    `json:"lines"`
+	Payments         []InvoicePayment `json:"payments"`
+}
+
+// InvoiceLine defines model for InvoiceLine.
+type InvoiceLine struct {
+	AmountMinor     int64      `json:"amount_minor"`
+	Description     string     `json:"description"`
+	PeriodEnd       *time.Time `json:"period_end,omitempty"`
+	PeriodStart     *time.Time `json:"period_start,omitempty"`
+	Quantity        int        `json:"quantity"`
+	UnitAmountMinor int64      `json:"unit_amount_minor"`
+}
+
+// InvoiceList defines model for InvoiceList.
+type InvoiceList struct {
+	Data []Invoice `json:"data"`
+}
+
+// InvoicePayment defines model for InvoicePayment.
+type InvoicePayment struct {
+	AmountMinor  int64              `json:"amount_minor"`
+	CreatedAt    time.Time          `json:"created_at"`
+	Currency     string             `json:"currency"`
+	FailureCode  *string            `json:"failure_code,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
+	Method       string             `json:"method"`
+	RefundStatus *string            `json:"refund_status,omitempty"`
+	Status       string             `json:"status"`
+}
+
 // Job defines model for Job.
 type Job struct {
 	Attempt    int                     `json:"attempt"`
@@ -255,6 +554,29 @@ type Job struct {
 // JobRef defines model for JobRef.
 type JobRef struct {
 	JobId openapi_types.UUID `json:"job_id"`
+}
+
+// LegalDocument defines model for LegalDocument.
+type LegalDocument struct {
+	// Body Plain text or Markdown supplied by counsel. Shown as text, never as HTML
+	Body string `json:"body"`
+
+	// CounselReviewed As recorded by the platform operator
+	CounselReviewed    bool               `json:"counsel_reviewed"`
+	Id                 openapi_types.UUID `json:"id"`
+	Kind               LegalDocumentKind  `json:"kind"`
+	PublishedAt        time.Time          `json:"published_at"`
+	RequiresAcceptance bool               `json:"requires_acceptance"`
+	Title              string             `json:"title"`
+	Version            int                `json:"version"`
+}
+
+// LegalDocumentKind defines model for LegalDocument.Kind.
+type LegalDocumentKind string
+
+// LegalDocumentList defines model for LegalDocumentList.
+type LegalDocumentList struct {
+	Data []LegalDocument `json:"data"`
 }
 
 // Login defines model for Login.
@@ -371,6 +693,37 @@ type PasswordReset struct {
 	Token    string `json:"token"`
 }
 
+// PendingLegal defines model for PendingLegal.
+type PendingLegal struct {
+	Data []LegalDocument `json:"data"`
+}
+
+// PlanOffer defines model for PlanOffer.
+type PlanOffer struct {
+	AmountMinor        int64                  `json:"amount_minor"`
+	BillingPeriod      PlanOfferBillingPeriod `json:"billing_period"`
+	Currency           string                 `json:"currency"`
+	IncludedCredits    map[string]interface{} `json:"included_credits"`
+	PlanId             openapi_types.UUID     `json:"plan_id"`
+	PlanKey            string                 `json:"plan_key"`
+	PlanName           string                 `json:"plan_name"`
+	ProductDescription string                 `json:"product_description"`
+	ProductKey         string                 `json:"product_key"`
+	ProductName        string                 `json:"product_name"`
+	TrialDays          int                    `json:"trial_days"`
+	UsageLimits        map[string]interface{} `json:"usage_limits"`
+}
+
+// PlanOfferBillingPeriod defines model for PlanOffer.BillingPeriod.
+type PlanOfferBillingPeriod string
+
+// PlanOfferList defines model for PlanOfferList.
+type PlanOfferList struct {
+	CardAvailable bool        `json:"card_available"`
+	Data          []PlanOffer `json:"data"`
+	TaxNote       string      `json:"tax_note"`
+}
+
 // Problem defines model for Problem.
 type Problem struct {
 	Code   string  `json:"code"`
@@ -407,6 +760,62 @@ type ProductKind string
 // ProductList defines model for ProductList.
 type ProductList struct {
 	Data []Product `json:"data"`
+}
+
+// Purchase defines model for Purchase.
+type Purchase struct {
+	BankInstructions *string `json:"bank_instructions,omitempty"`
+
+	// CheckoutUrl Where to pay, while a card payment is waiting
+	CheckoutUrl     *string             `json:"checkout_url,omitempty"`
+	CreatedAt       time.Time           `json:"created_at"`
+	Id              openapi_types.UUID  `json:"id"`
+	InvoiceId       *openapi_types.UUID `json:"invoice_id,omitempty"`
+	PaymentMethod   string              `json:"payment_method"`
+	PlanId          openapi_types.UUID  `json:"plan_id"`
+	PlanName        string              `json:"plan_name"`
+	Quote           Quote               `json:"quote"`
+	RejectionReason *string             `json:"rejection_reason,omitempty"`
+	ReviewedAt      *time.Time          `json:"reviewed_at,omitempty"`
+	Status          PurchaseStatus      `json:"status"`
+}
+
+// PurchaseStatus defines model for Purchase.Status.
+type PurchaseStatus string
+
+// PurchaseInput defines model for PurchaseInput.
+type PurchaseInput struct {
+	Currency      string                     `json:"currency"`
+	PaymentMethod PurchaseInputPaymentMethod `json:"payment_method"`
+	PlanId        openapi_types.UUID         `json:"plan_id"`
+	PromotionCode *string                    `json:"promotion_code,omitempty"`
+	Quantity      int                        `json:"quantity"`
+}
+
+// PurchaseInputPaymentMethod defines model for PurchaseInput.PaymentMethod.
+type PurchaseInputPaymentMethod string
+
+// PurchaseList defines model for PurchaseList.
+type PurchaseList struct {
+	Data []Purchase `json:"data"`
+}
+
+// Quote defines model for Quote.
+type Quote struct {
+	BillingPeriod string  `json:"billing_period"`
+	Currency      string  `json:"currency"`
+	DiscountMinor int64   `json:"discount_minor"`
+	PlanName      string  `json:"plan_name"`
+	ProductName   string  `json:"product_name"`
+	PromotionCode *string `json:"promotion_code,omitempty"`
+	Quantity      int     `json:"quantity"`
+	SubtotalMinor int64   `json:"subtotal_minor"`
+
+	// Tax not_calculated until a payment provider or merchant of record is chosen
+	Tax             string `json:"tax"`
+	TotalMinor      int64  `json:"total_minor"`
+	TrialDays       int    `json:"trial_days"`
+	UnitAmountMinor int64  `json:"unit_amount_minor"`
 }
 
 // RecoveryCodes defines model for RecoveryCodes.
@@ -594,6 +1003,11 @@ type Id = openapi_types.UUID
 // Limit defines model for Limit.
 type Limit = int
 
+// SubmitPurchaseParams defines parameters for SubmitPurchase.
+type SubmitPurchaseParams struct {
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
 // SearchCompaniesParams defines parameters for SearchCompanies.
 type SearchCompaniesParams struct {
 	Q string `form:"q" json:"q"`
@@ -635,6 +1049,9 @@ type VerifyEmailJSONRequestBody = TokenRequest
 // ResendVerificationJSONRequestBody defines body for ResendVerification for application/json ContentType.
 type ResendVerificationJSONRequestBody = EmailRequest
 
+// SubmitPurchaseJSONRequestBody defines body for SubmitPurchase for application/json ContentType.
+type SubmitPurchaseJSONRequestBody = PurchaseInput
+
 // CreateUploadJSONRequestBody defines body for CreateUpload for application/json ContentType.
 type CreateUploadJSONRequestBody = CreateUpload
 
@@ -644,8 +1061,17 @@ type AcceptInvitationJSONRequestBody = TokenRequest
 // SetActiveTenantJSONRequestBody defines body for SetActiveTenant for application/json ContentType.
 type SetActiveTenantJSONRequestBody = ActiveTenant
 
+// AcceptLegalJSONRequestBody defines body for AcceptLegal for application/json ContentType.
+type AcceptLegalJSONRequestBody = AcceptLegal
+
 // SetNotificationPreferenceJSONRequestBody defines body for SetNotificationPreference for application/json ContentType.
 type SetNotificationPreferenceJSONRequestBody = NotificationPreference
+
+// ReportAbuseJSONRequestBody defines body for ReportAbuse for application/json ContentType.
+type ReportAbuseJSONRequestBody = AbuseReportInput
+
+// CompleteFakeCheckoutJSONRequestBody defines body for CompleteFakeCheckout for application/json ContentType.
+type CompleteFakeCheckoutJSONRequestBody = FakeCheckoutOutcome
 
 // UpdateTenantJSONRequestBody defines body for UpdateTenant for application/json ContentType.
 type UpdateTenantJSONRequestBody = UpdateTenant
@@ -716,6 +1142,33 @@ type ServerInterface interface {
 	// (POST /auth/verify-email/resend)
 	ResendVerification(w http.ResponseWriter, r *http.Request)
 
+	// (GET /billing/invoices)
+	ListInvoices(w http.ResponseWriter, r *http.Request)
+
+	// (GET /billing/invoices/{id})
+	GetInvoice(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /billing/invoices/{id}/pay)
+	PayInvoice(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (GET /billing/plans)
+	ListPlanOffers(w http.ResponseWriter, r *http.Request)
+
+	// (GET /billing/purchases)
+	ListPurchases(w http.ResponseWriter, r *http.Request)
+
+	// (POST /billing/purchases)
+	SubmitPurchase(w http.ResponseWriter, r *http.Request, params SubmitPurchaseParams)
+
+	// (GET /billing/purchases/{id})
+	GetPurchase(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /billing/purchases/{id}/cancel)
+	CancelPurchase(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /billing/subscriptions/{id}/cancel)
+	CancelSubscription(w http.ResponseWriter, r *http.Request, id Id)
+
 	// (GET /catalog/modules)
 	ListCatalogModules(w http.ResponseWriter, r *http.Request)
 
@@ -752,11 +1205,20 @@ type ServerInterface interface {
 	// (POST /jobs/{id}/cancel)
 	CancelJob(w http.ResponseWriter, r *http.Request, id Id)
 
+	// (GET /legal/documents)
+	ListLegalDocuments(w http.ResponseWriter, r *http.Request)
+
 	// (POST /me/active-tenant)
 	SetActiveTenant(w http.ResponseWriter, r *http.Request)
 
 	// (GET /me/context)
 	GetMeContext(w http.ResponseWriter, r *http.Request)
+
+	// (GET /me/legal)
+	GetPendingLegal(w http.ResponseWriter, r *http.Request)
+
+	// (POST /me/legal/accept)
+	AcceptLegal(w http.ResponseWriter, r *http.Request)
 
 	// (GET /notifications)
 	ListNotifications(w http.ResponseWriter, r *http.Request)
@@ -778,6 +1240,15 @@ type ServerInterface interface {
 
 	// (GET /privacy/contacts/{id}/export)
 	ExportContact(w http.ResponseWriter, r *http.Request, id Id)
+
+	// (POST /public/abuse-reports)
+	ReportAbuse(w http.ResponseWriter, r *http.Request)
+
+	// (GET /public/fake-checkout/{ref})
+	GetFakeCheckout(w http.ResponseWriter, r *http.Request, ref string)
+
+	// (POST /public/fake-checkout/{ref}/complete)
+	CompleteFakeCheckout(w http.ResponseWriter, r *http.Request, ref string)
 
 	// (GET /public/files/{token})
 	DownloadSharedFile(w http.ResponseWriter, r *http.Request, token string)
@@ -922,6 +1393,51 @@ func (_ Unimplemented) ResendVerification(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// (GET /billing/invoices)
+func (_ Unimplemented) ListInvoices(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /billing/invoices/{id})
+func (_ Unimplemented) GetInvoice(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /billing/invoices/{id}/pay)
+func (_ Unimplemented) PayInvoice(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /billing/plans)
+func (_ Unimplemented) ListPlanOffers(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /billing/purchases)
+func (_ Unimplemented) ListPurchases(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /billing/purchases)
+func (_ Unimplemented) SubmitPurchase(w http.ResponseWriter, r *http.Request, params SubmitPurchaseParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /billing/purchases/{id})
+func (_ Unimplemented) GetPurchase(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /billing/purchases/{id}/cancel)
+func (_ Unimplemented) CancelPurchase(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /billing/subscriptions/{id}/cancel)
+func (_ Unimplemented) CancelSubscription(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // (GET /catalog/modules)
 func (_ Unimplemented) ListCatalogModules(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -982,6 +1498,11 @@ func (_ Unimplemented) CancelJob(w http.ResponseWriter, r *http.Request, id Id) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// (GET /legal/documents)
+func (_ Unimplemented) ListLegalDocuments(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // (POST /me/active-tenant)
 func (_ Unimplemented) SetActiveTenant(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -989,6 +1510,16 @@ func (_ Unimplemented) SetActiveTenant(w http.ResponseWriter, r *http.Request) {
 
 // (GET /me/context)
 func (_ Unimplemented) GetMeContext(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /me/legal)
+func (_ Unimplemented) GetPendingLegal(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /me/legal/accept)
+func (_ Unimplemented) AcceptLegal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1024,6 +1555,21 @@ func (_ Unimplemented) EraseContact(w http.ResponseWriter, r *http.Request, id I
 
 // (GET /privacy/contacts/{id}/export)
 func (_ Unimplemented) ExportContact(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /public/abuse-reports)
+func (_ Unimplemented) ReportAbuse(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /public/fake-checkout/{ref})
+func (_ Unimplemented) GetFakeCheckout(w http.ResponseWriter, r *http.Request, ref string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /public/fake-checkout/{ref}/complete)
+func (_ Unimplemented) CompleteFakeCheckout(w http.ResponseWriter, r *http.Request, ref string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1363,6 +1909,223 @@ func (siw *ServerInterfaceWrapper) ResendVerification(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ListInvoices operation middleware
+func (siw *ServerInterfaceWrapper) ListInvoices(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListInvoices(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetInvoice operation middleware
+func (siw *ServerInterfaceWrapper) GetInvoice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetInvoice(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PayInvoice operation middleware
+func (siw *ServerInterfaceWrapper) PayInvoice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PayInvoice(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPlanOffers operation middleware
+func (siw *ServerInterfaceWrapper) ListPlanOffers(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPlanOffers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPurchases operation middleware
+func (siw *ServerInterfaceWrapper) ListPurchases(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPurchases(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitPurchase operation middleware
+func (siw *ServerInterfaceWrapper) SubmitPurchase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubmitPurchaseParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = IdempotencyKey
+
+	} else {
+		err := fmt.Errorf("Header parameter Idempotency-Key is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "Idempotency-Key", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitPurchase(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPurchase operation middleware
+func (siw *ServerInterfaceWrapper) GetPurchase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPurchase(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelPurchase operation middleware
+func (siw *ServerInterfaceWrapper) CancelPurchase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelPurchase(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelSubscription operation middleware
+func (siw *ServerInterfaceWrapper) CancelSubscription(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelSubscription(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListCatalogModules operation middleware
 func (siw *ServerInterfaceWrapper) ListCatalogModules(w http.ResponseWriter, r *http.Request) {
 
@@ -1610,6 +2373,20 @@ func (siw *ServerInterfaceWrapper) CancelJob(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListLegalDocuments operation middleware
+func (siw *ServerInterfaceWrapper) ListLegalDocuments(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLegalDocuments(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SetActiveTenant operation middleware
 func (siw *ServerInterfaceWrapper) SetActiveTenant(w http.ResponseWriter, r *http.Request) {
 
@@ -1629,6 +2406,34 @@ func (siw *ServerInterfaceWrapper) GetMeContext(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMeContext(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPendingLegal operation middleware
+func (siw *ServerInterfaceWrapper) GetPendingLegal(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPendingLegal(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptLegal operation middleware
+func (siw *ServerInterfaceWrapper) AcceptLegal(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptLegal(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1763,6 +2568,72 @@ func (siw *ServerInterfaceWrapper) ExportContact(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExportContact(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReportAbuse operation middleware
+func (siw *ServerInterfaceWrapper) ReportAbuse(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReportAbuse(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFakeCheckout operation middleware
+func (siw *ServerInterfaceWrapper) GetFakeCheckout(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "ref" -------------
+	var ref string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "ref", chi.URLParam(r, "ref"), &ref, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "ref", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFakeCheckout(w, r, ref)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteFakeCheckout operation middleware
+func (siw *ServerInterfaceWrapper) CompleteFakeCheckout(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "ref" -------------
+	var ref string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "ref", chi.URLParam(r, "ref"), &ref, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "ref", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteFakeCheckout(w, r, ref)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2374,6 +3245,51 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/tenant/services/{id}", wrapper.UpdateTenantService)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/legal/documents", wrapper.ListLegalDocuments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/legal", wrapper.GetPendingLegal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/legal/accept", wrapper.AcceptLegal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/abuse-reports", wrapper.ReportAbuse)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/fake-checkout/{ref}", wrapper.GetFakeCheckout)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/fake-checkout/{ref}/complete", wrapper.CompleteFakeCheckout)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/billing/plans", wrapper.ListPlanOffers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/billing/purchases", wrapper.ListPurchases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/billing/purchases", wrapper.SubmitPurchase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/billing/purchases/{id}", wrapper.GetPurchase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/billing/purchases/{id}/cancel", wrapper.CancelPurchase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/billing/invoices", wrapper.ListInvoices)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/billing/invoices/{id}", wrapper.GetInvoice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/billing/invoices/{id}/pay", wrapper.PayInvoice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/billing/subscriptions/{id}/cancel", wrapper.CancelSubscription)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tenant/roles", wrapper.ListRoles)
 	})
 	r.Group(func(r chi.Router) {
@@ -2472,74 +3388,102 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

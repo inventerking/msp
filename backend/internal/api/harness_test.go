@@ -171,7 +171,7 @@ func run(m *testing.M) (int, error) {
 	ids := g.Identity
 	cfg := config.Config{Env: "test", AllowedOrigins: []string{"http://app.test"}, AuthRatePerMinute: 1_000_000}
 	h, err := api.New(api.Deps{Config: cfg, Identity: ids, Commercial: g.Commercial, Keys: keys, Limiter: ratelimit.New(nil), Hub: g.Hub, DB: pools.App,
-		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops, Modules: g.Modules, OutreachPolicy: g.Outreach})
+		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops, Modules: g.Modules, OutreachPolicy: g.Outreach, Trust: g.Trust, FakeCheckout: g.FakeCheckout()})
 	if err != nil {
 		return 1, err
 	}

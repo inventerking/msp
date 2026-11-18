@@ -1,6 +1,6 @@
 import { unwrap } from "@msp/api-client";
 import { Button, cn, ErrorState, SkeletonRows } from "@msp/ui";
-import { Activity, Boxes, Bot, Building2, CreditCard, KeyRound, LayoutDashboard, MailX, Plug, LogOut, ScrollText, UserCog, type LucideIcon } from "lucide-react";
+import { Activity, Bot, Boxes, Building2, CreditCard, FileText, Flag, KeyRound, LayoutDashboard, LogOut, MailX, Plug, Receipt, ScrollText, UserCog, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router";
 import { api, hasRole, queryClient, useAdmin } from "../app/api";
@@ -43,6 +43,9 @@ export function Shell() {
             {hasRole(me, "super_admin", "platform_support", "billing_admin", "platform_analyst") ? <Item to="/tenants" icon={Building2} label={t("nav.tenants")} /> : null}
             <Item to="/catalog" icon={Boxes} label={t("nav.catalog")} />
             {hasRole(me, "super_admin", "platform_support", "billing_admin", "platform_analyst") ? <Item to="/subscriptions" icon={CreditCard} label={t("nav.subscriptions")} /> : null}
+            {hasRole(me, "super_admin", "billing_admin", "platform_analyst") ? <Item to="/billing" icon={Receipt} label={t("nav.billing")} /> : null}
+            {hasRole(me, "super_admin", "platform_support") ? <Item to="/abuse" icon={Flag} label={t("nav.abuse")} /> : null}
+            {hasRole(me, "super_admin", "platform_support") ? <Item to="/legal" icon={FileText} label={t("nav.legal")} /> : null}
             {hasRole(me, "super_admin", "integration_admin", "platform_support") ? <Item to="/integrations" icon={Plug} label={t("nav.integrations")} /> : null}
             {hasRole(me, "super_admin", "integration_admin", "platform_support") ? <Item to="/ai" icon={Bot} label={t("nav.ai")} /> : null}
             {hasRole(me, "super_admin", "platform_support") ? <Item to="/outreach-policy" icon={MailX} label={t("nav.outreachPolicy")} /> : null}

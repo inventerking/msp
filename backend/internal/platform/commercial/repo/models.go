@@ -827,6 +827,14 @@ type FilesObjectReference struct {
 	OwnerID     uuid.UUID
 }
 
+type IdentityDocumentAcceptance struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UserID      uuid.UUID
+	WorkspaceID *uuid.UUID
+	DocumentID  uuid.UUID
+}
+
 type IdentityInvitation struct {
 	ID         uuid.UUID
 	TenantID   uuid.UUID
@@ -1105,6 +1113,20 @@ type IntegrationConnection struct {
 	LastHealthAt     *time.Time
 	LastErrorCode    *string
 	CreatedBy        *uuid.UUID
+}
+
+type IntegrationFakePaymentLedger struct {
+	Ref            string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Kind           string
+	Status         string
+	AmountMinor    int64
+	Currency       string
+	RefundedMinor  int64
+	MethodRef      *string
+	IdempotencyKey string
+	Description    *string
 }
 
 type IntegrationPlatformCredential struct {
@@ -1937,6 +1959,21 @@ type OutreachTemplateVersion struct {
 	AiRequestID *uuid.UUID
 }
 
+type PlatformAbuseReport struct {
+	ID             uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Category       string
+	SubjectUrl     *string
+	Details        string
+	ReporterEmail  *string
+	TargetTenantID *uuid.UUID
+	Status         string
+	Decision       *string
+	ReviewedBy     *uuid.UUID
+	ReviewedAt     *time.Time
+}
+
 type PlatformCreditAccount struct {
 	ID        uuid.UUID
 	TenantID  uuid.UUID
@@ -2024,6 +2061,22 @@ type PlatformInvoiceLine struct {
 	PeriodEnd       *time.Time
 }
 
+type PlatformLegalDocument struct {
+	ID                 uuid.UUID
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	Kind               string
+	Version            int32
+	Title              string
+	Body               string
+	Status             string
+	RequiresAcceptance bool
+	CounselReviewed    bool
+	PublishedAt        *time.Time
+	PublishedBy        *uuid.UUID
+	CreatedBy          *uuid.UUID
+}
+
 type PlatformModule struct {
 	ID            uuid.UUID
 	CreatedAt     time.Time
@@ -2043,20 +2096,29 @@ type PlatformModuleDependency struct {
 }
 
 type PlatformPayment struct {
-	ID                 uuid.UUID
-	TenantID           uuid.UUID
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	InvoiceID          *uuid.UUID
-	PurchaseRequestID  *uuid.UUID
-	Provider           string
-	ProviderPaymentRef *string
-	Method             string
-	Status             string
-	AmountMinor        int64
-	Currency           string
-	VerifiedBy         *uuid.UUID
-	VerifiedAt         *time.Time
+	ID                  uuid.UUID
+	TenantID            uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	InvoiceID           *uuid.UUID
+	PurchaseRequestID   *uuid.UUID
+	Provider            string
+	ProviderPaymentRef  *string
+	Method              string
+	Status              string
+	AmountMinor         int64
+	Currency            string
+	VerifiedBy          *uuid.UUID
+	VerifiedAt          *time.Time
+	IdempotencyKey      *string
+	CheckoutUrl         *string
+	ProviderMethodRef   *string
+	FailureCode         *string
+	RefundRef           *string
+	RefundStatus        *string
+	RefundedAmountMinor int64
+	RefundedAt          *time.Time
+	Purpose             string
 }
 
 type PlatformPlan struct {
@@ -2149,6 +2211,39 @@ type PlatformPurchaseRequest struct {
 	ReviewedBy      *uuid.UUID
 	ReviewedAt      *time.Time
 	RejectionReason *string
+	Currency        *string
+	PaymentMethod   *string
+	InvoiceID       *uuid.UUID
+	SubmittedAt     *time.Time
+}
+
+type PlatformReconciliationIssue struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	RunID       uuid.UUID
+	Provider    string
+	ProviderRef string
+	PaymentID   *uuid.UUID
+	Kind        string
+	Detail      []byte
+	Status      string
+	ResolvedBy  *uuid.UUID
+	ResolvedAt  *time.Time
+	Note        *string
+}
+
+type PlatformReconciliationRun struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Provider    string
+	WindowStart time.Time
+	WindowEnd   time.Time
+	Checked     int32
+	Issues      int32
+	Status      string
+	Error       *string
 }
 
 type PlatformSetting struct {
@@ -2159,20 +2254,26 @@ type PlatformSetting struct {
 }
 
 type PlatformSubscription struct {
-	ID                      uuid.UUID
-	TenantID                uuid.UUID
-	CreatedAt               time.Time
-	UpdatedAt               time.Time
-	PlanID                  uuid.UUID
-	PurchaseRequestID       *uuid.UUID
-	Status                  string
-	PriceSnapshot           []byte
-	Currency                string
-	CurrentPeriodStart      *time.Time
-	CurrentPeriodEnd        *time.Time
-	TrialEndsAt             *time.Time
-	CancelAt                *time.Time
-	ProviderSubscriptionRef *string
+	ID                       uuid.UUID
+	TenantID                 uuid.UUID
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	PlanID                   uuid.UUID
+	PurchaseRequestID        *uuid.UUID
+	Status                   string
+	PriceSnapshot            []byte
+	Currency                 string
+	CurrentPeriodStart       *time.Time
+	CurrentPeriodEnd         *time.Time
+	TrialEndsAt              *time.Time
+	CancelAt                 *time.Time
+	ProviderSubscriptionRef  *string
+	PaymentMethod            *string
+	PaymentProvider          *string
+	ProviderPaymentMethodRef *string
+	PastDueSince             *time.Time
+	DunningAttempts          int32
+	NextRetryAt              *time.Time
 }
 
 type PlatformTenantModuleEntitlement struct {

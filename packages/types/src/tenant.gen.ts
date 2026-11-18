@@ -388,6 +388,231 @@ export interface paths {
         patch: operations["updateTenantService"];
         trace?: never;
     };
+    "/legal/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listLegalDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/legal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPendingLegal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/legal/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["acceptLegal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/abuse-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reportAbuse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/fake-checkout/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The test payment provider's checkout page. It exists only where fake providers are on; no money moves. */
+        get: operations["getFakeCheckout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/fake-checkout/{ref}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeFakeCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPlanOffers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPurchases"];
+        put?: never;
+        post: operations["submitPurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/purchases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPurchase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/purchases/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelPurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/invoices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/invoices/{id}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["payInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscriptions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tenant/roles": {
         parameters: {
             query?: never;
@@ -841,6 +1066,188 @@ export interface components {
             max_employees?: number | null;
             technologies: string[];
             version: number;
+        };
+        LegalDocument: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "terms" | "privacy" | "dpa" | "acceptable_use" | "subprocessors";
+            version: number;
+            title: string;
+            /** @description Plain text or Markdown supplied by counsel. Shown as text, never as HTML */
+            body: string;
+            requires_acceptance: boolean;
+            /** @description As recorded by the platform operator */
+            counsel_reviewed: boolean;
+            /** Format: date-time */
+            published_at: string;
+        };
+        LegalDocumentList: {
+            data: components["schemas"]["LegalDocument"][];
+        };
+        PendingLegal: {
+            data: components["schemas"]["LegalDocument"][];
+        };
+        AcceptLegal: {
+            document_ids: string[];
+        };
+        AbuseReportInput: {
+            /** @enum {string} */
+            category: "spam" | "phishing" | "malware" | "privacy" | "harassment" | "unauthorized_scanning" | "other";
+            details: string;
+            subject_url?: string;
+            reporter_email?: string;
+        };
+        FakeCheckout: {
+            ref: string;
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
+            description: string;
+            /** @enum {string} */
+            status: "open" | "succeeded" | "failed";
+            return_url?: string;
+        };
+        FakeCheckoutOutcome: {
+            /** @enum {string} */
+            outcome: "pay" | "pay_card_declines_later" | "decline";
+        };
+        PlanOffer: {
+            /** Format: uuid */
+            plan_id: string;
+            plan_key: string;
+            plan_name: string;
+            product_key: string;
+            product_name: string;
+            product_description: string;
+            /** @enum {string} */
+            billing_period: "monthly" | "annual" | "custom";
+            trial_days: number;
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+            usage_limits: {
+                [key: string]: unknown;
+            };
+            included_credits: {
+                [key: string]: unknown;
+            };
+        };
+        PlanOfferList: {
+            data: components["schemas"]["PlanOffer"][];
+            card_available: boolean;
+            tax_note: string;
+        };
+        PurchaseInput: {
+            /** Format: uuid */
+            plan_id: string;
+            currency: string;
+            quantity: number;
+            promotion_code?: string;
+            /** @enum {string} */
+            payment_method: "card" | "bank_transfer";
+        };
+        Quote: {
+            plan_name: string;
+            product_name: string;
+            billing_period: string;
+            trial_days: number;
+            currency: string;
+            /** Format: int64 */
+            unit_amount_minor: number;
+            quantity: number;
+            /** Format: int64 */
+            subtotal_minor: number;
+            /** Format: int64 */
+            discount_minor: number;
+            /** Format: int64 */
+            total_minor: number;
+            promotion_code?: string;
+            /** @description not_calculated until a payment provider or merchant of record is chosen */
+            tax: string;
+        };
+        Purchase: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            plan_id: string;
+            plan_name: string;
+            /** @enum {string} */
+            status: "draft" | "submitted" | "payment_pending" | "payment_verified" | "under_review" | "approved" | "rejected" | "cancelled";
+            quote: components["schemas"]["Quote"];
+            payment_method: string;
+            /** Format: uuid */
+            invoice_id?: string;
+            rejection_reason?: string;
+            /** @description Where to pay, while a card payment is waiting */
+            checkout_url?: string;
+            bank_instructions?: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            reviewed_at?: string;
+        };
+        PurchaseList: {
+            data: components["schemas"]["Purchase"][];
+        };
+        Invoice: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            subscription_id?: string;
+            number: string;
+            /** @enum {string} */
+            status: "draft" | "issued" | "paid" | "void" | "uncollectible";
+            currency: string;
+            /** Format: int64 */
+            subtotal_minor: number;
+            /** Format: int64 */
+            tax_minor: number;
+            /** Format: int64 */
+            total_minor: number;
+            /** Format: date-time */
+            issued_at?: string;
+            /** Format: date-time */
+            due_at?: string;
+            /** Format: date-time */
+            paid_at?: string;
+        };
+        InvoiceList: {
+            data: components["schemas"]["Invoice"][];
+        };
+        InvoiceLine: {
+            description: string;
+            quantity: number;
+            /** Format: int64 */
+            unit_amount_minor: number;
+            /** Format: int64 */
+            amount_minor: number;
+            /** Format: date-time */
+            period_start?: string;
+            /** Format: date-time */
+            period_end?: string;
+        };
+        InvoicePayment: {
+            /** Format: uuid */
+            id: string;
+            method: string;
+            status: string;
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
+            refund_status?: string;
+            failure_code?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        InvoiceDetail: {
+            invoice: components["schemas"]["Invoice"];
+            lines: components["schemas"]["InvoiceLine"][];
+            payments: components["schemas"]["InvoicePayment"][];
+            bank_instructions?: string;
+        };
+        CheckoutLink: {
+            checkout_url: string;
         };
         Reference: {
             countries: components["schemas"]["CodeName"][];
@@ -1865,6 +2272,347 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TenantService"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listLegalDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalDocumentList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getPendingLegal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingLegal"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    acceptLegal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptLegal"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    reportAbuse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AbuseReportInput"];
+            };
+        };
+        responses: {
+            /** @description Received */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Accepted"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getFakeCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FakeCheckout"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    completeFakeCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FakeCheckoutOutcome"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FakeCheckout"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listPlanOffers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOfferList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listPurchases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    submitPurchase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Purchase"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Purchase"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    cancelPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listInvoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    payInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    cancelSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

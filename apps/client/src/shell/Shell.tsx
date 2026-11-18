@@ -4,6 +4,7 @@ import { CreditCard, LayoutDashboard, Lock, LogOut, Menu, Settings as SettingsIc
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useNavigate } from "react-router";
+import { LegalGate } from "./LegalGate";
 import { api, queryClient, resetSession, useMe } from "../app/api";
 import { navState } from "../app/moduleStatus";
 import { NotificationBell } from "./NotificationBell";
@@ -109,6 +110,7 @@ export function Shell() {
           </div>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6"><Outlet /></main>
+        <LegalGate />
       </div>
     </div>
   );

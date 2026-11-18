@@ -48,6 +48,7 @@ type Service struct {
 	keys    crypto.Keys
 	mail    mailer.Mailer
 	baseURL string
+	seatLimit func(ctx context.Context, tenantID uuid.UUID) (int, error)
 	// dummyHash keeps login timing the same whether or not the account exists.
 	dummyHash string
 }

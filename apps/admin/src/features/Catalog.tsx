@@ -38,10 +38,14 @@ export function Catalog() {
     if (await guarded(() => unwrap(api.POST("/products", { body: values })))) productForm.reset();
   });
 
-  const planForm = useForm<z.input<typeof planSchema>, unknown, z.output<typeof planSchema>>({ resolver: zodResolver(planSchema), defaultValues: { product_version_id: "", key: "", name: "", billing_period: "monthly", trial_days: 0 } });
+  const planForm = useForm<z.input<typeof planSchema>, unknown, z.output<typeof planSchema>>({ resolver: zodResolver(planSchema), defaultValues: { product_version_id: "", key: "", name: "", billing_period: "monthly", trial_days: 0, seats: "", ai_credits: "", lead_credits: "" } });
   const ple = planForm.formState.errors;
-  const createPlan = planForm.handleSubmit(async (values) => {
-    if (await guarded(() => unwrap(api.POST("/plans", { body: values })))) planForm.reset();
+  const createPlan = planForm.handleSubmit(async ({ seats, ai_credits, lead_credits, ...values }) => {
+    const credits: Record<string, number> = {};
+    if (typeof ai_credits === "number" && ai_credits > 0) credits["ai_credits"] = ai_credits;
+    if (typeof lead_credits === "number" && lead_credits > 0) credits["lead_credits"] = lead_credits;
+    const body = { ...values, ...(typeof seats === "number" ? { seats } : {}), ...(Object.keys(credits).length ? { included_credits: credits } : {}) };
+    if (await guarded(() => unwrap(api.POST("/plans", { body })))) planForm.reset();
   });
 
   const [priceFor, setPriceFor] = useState<string>();
@@ -154,6 +158,9 @@ export function Catalog() {
                   <Field label={t("catalog.name")} error={ple.name?.message && t(ple.name.message)}>{(ids) => <Input {...ids} {...planForm.register("name")} />}</Field>
                   <Field label={t("catalog.period")}>{(ids) => <Select {...ids} {...planForm.register("billing_period")}><option value="monthly">monthly</option><option value="annual">annual</option><option value="custom">custom</option></Select>}</Field>
                   <Field label={t("catalog.trialDays")}>{(ids) => <Input {...ids} type="number" min={0} max={365} {...planForm.register("trial_days")} />}</Field>
+                  <Field label={t("catalog.seats")} hint={t("catalog.seatsHint")}>{(ids) => <Input {...ids} type="number" min={1} {...planForm.register("seats")} />}</Field>
+                  <Field label={t("catalog.aiCredits")} hint={t("catalog.creditsHint")}>{(ids) => <Input {...ids} type="number" min={0} {...planForm.register("ai_credits")} />}</Field>
+                  <Field label={t("catalog.leadCredits")} hint={t("catalog.creditsHint")}>{(ids) => <Input {...ids} type="number" min={0} {...planForm.register("lead_credits")} />}</Field>
                 </div>
                 <Button type="submit" disabled={planForm.formState.isSubmitting}>{t("catalog.createPlan")}</Button>
               </form>

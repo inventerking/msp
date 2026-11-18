@@ -1,5 +1,8 @@
 import { createBrowserRouter } from "react-router";
+import { Abuse } from "../features/Abuse";
 import { Account } from "../features/Account";
+import { Billing } from "../features/Billing";
+import { Legal } from "../features/Legal";
 import { Admins } from "../features/Admins";
 import { Audit } from "../features/Audit";
 import { Catalog } from "../features/Catalog";
@@ -34,6 +37,9 @@ export const router = createBrowserRouter([
           { path: "/operations", Component: Operations },
           { path: "/ai", Component: Ai },
           { path: "/outreach-policy", Component: OutreachPolicy },
+          { path: "/billing", Component: Billing },
+          { path: "/legal", Component: Legal },
+          { path: "/abuse", Component: Abuse },
         ],
       },
     ],

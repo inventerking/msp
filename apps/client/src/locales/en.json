@@ -413,7 +413,18 @@
     "service_exists": "A service with this name already exists.",
     "alert_changed": "This alert changed meanwhile. Reload to see it.",
     "ai_unavailable": "AI commentary is not available.",
-    "file_quarantined": "The file failed the malware scan and was not imported."
+    "file_quarantined": "The file failed the malware scan and was not imported.",
+    "card_payments_unavailable": "Card payments are not available yet. Choose bank transfer.",
+    "purchase_not_cancellable": "Only a purchase still waiting for payment can be cancelled.",
+    "payment_not_pending": "This payment is no longer waiting.",
+    "invoice_not_open": "This invoice is not open.",
+    "seat_limit_reached": "All your plan's seats are in use. Remove a member or buy more seats.",
+    "checkout_closed": "This checkout is already finished.",
+    "not_cancellable": "This subscription is not renewing.",
+    "price_unavailable": "This plan has no price in that currency.",
+    "refund_failed": "The refund did not go through. Try again.",
+    "manual_refund": "Refund this payment by hand, then record it.",
+    "purchase_not_reviewable": "This purchase was already decided."
   },
   "notifications": {
     "title": "Notifications",
@@ -1752,5 +1763,105 @@
     },
     "noData": "No data for this period.",
     "definitionsHelp": "Metrics are defined once and calculated the same way everywhere. Campaign attribution looks back {{days}} days; ROI counts {{months}} months of won MRR. Actual, estimated and forecast values are never added together."
+  },
+  "billing": {
+    "buy": "Buy a plan",
+    "buyNote": "Card payments are taken when you submit. An administrator then reviews the purchase; if it is not approved, you are refunded.",
+    "noPlans": "No plans are on sale yet",
+    "plan": "Plan",
+    "choosePlan": "Choose a plan",
+    "quantity": "Quantity",
+    "paymentMethod": "Payment method",
+    "methods": {
+      "card": "Card",
+      "bank_transfer": "Bank transfer"
+    },
+    "promotion": "Promotion code",
+    "per": {
+      "monthly": "a month",
+      "annual": "a year",
+      "custom": "a period"
+    },
+    "trial_one": "{{count}}-day trial",
+    "trial_other": "{{count}}-day trial",
+    "summary": "Total {{amount}}, before tax.",
+    "seats_one": "{{count}} seat",
+    "seats_other": "{{count}} seats",
+    "payByCard": "Pay by card",
+    "requestInvoice": "Request an invoice",
+    "purchases": "Purchases",
+    "status": "Status",
+    "total": "Total",
+    "submitted": "Submitted",
+    "actions": "Actions",
+    "payNow": "Pay now",
+    "cancel": "Cancel",
+    "stopRenewing": "Stop renewing",
+    "purchaseStatus": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "payment_pending": "Waiting for payment",
+      "payment_verified": "Paid",
+      "under_review": "Paid, under review",
+      "approved": "Approved",
+      "rejected": "Not approved",
+      "cancelled": "Cancelled"
+    },
+    "invoices": "Invoices",
+    "noInvoices": "No invoices yet",
+    "number": "Invoice",
+    "due": "Due",
+    "line": "Item",
+    "amount": "Amount",
+    "invoiceStatus": {
+      "draft": "Draft",
+      "issued": "Open",
+      "paid": "Paid",
+      "void": "Void",
+      "uncollectible": "Unpaid, closed"
+    },
+    "taxNotCalculated": "Tax is not calculated yet. Prices exclude tax."
+  },
+  "checkout": {
+    "title": "Test checkout",
+    "testOnly": "This is a test payment page. No money moves and no card details are taken.",
+    "pay": "Pay",
+    "payDeclinesLater": "Pay, and decline future charges",
+    "decline": "Decline",
+    "status": {
+      "open": "Waiting",
+      "succeeded": "Paid",
+      "failed": "Declined"
+    },
+    "back": "Back to your workspace"
+  },
+  "legal": {
+    "title": "Legal documents",
+    "none": "No documents have been published.",
+    "version": "Version {{version}}, published {{date}}",
+    "gateTitle": "Please review and accept",
+    "gateBody": "These documents apply to your use of the platform. Your acceptance is recorded with the version shown.",
+    "confirmRead": "I have read these documents",
+    "accept": "Accept and continue"
+  },
+  "abuse": {
+    "title": "Report abuse",
+    "link": "Report abuse",
+    "intro": "Tell the platform operator about misuse, such as unwanted email or unauthorised scanning. Reports are reviewed by people, and the reported workspace is not told who reported it.",
+    "category": "What happened",
+    "details": "Details",
+    "url": "Address of the page or email involved (optional)",
+    "email": "Your email, if you want a reply (optional)",
+    "send": "Send report",
+    "thanks": "Thank you. Your report was received and will be reviewed.",
+    "categories": {
+      "spam": "Unwanted email",
+      "phishing": "Phishing",
+      "malware": "Malware",
+      "privacy": "Privacy concern",
+      "harassment": "Harassment",
+      "unauthorized_scanning": "Unauthorised scanning",
+      "other": "Something else"
+    }
   }
 }

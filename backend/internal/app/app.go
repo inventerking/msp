@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -47,6 +48,7 @@ import (
 	"mspengine/internal/platform/notification"
 	"mspengine/internal/platform/pdf"
 	"mspengine/internal/platform/shared"
+	"mspengine/internal/platform/trust"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -75,6 +77,10 @@ type Graph struct {
 	Chatbot     *cbapp.Service
 	Expansion   *ceapp.Service
 	SalesIntel  *siapp.Service
+	// FakePayments is the test payment provider, when fake providers are on.
+	FakePayments *fakes.FakePayments
+	// Trust publishes legal documents and takes abuse reports.
+	Trust *trust.Service
 	// Modules are the built business modules. The others are served as skeletons.
 	Modules []modulekit.Module
 }
@@ -89,6 +95,9 @@ type Options struct {
 	Redis   *redis.Client
 	// FakeProviders registers the fake company data provider. It is never set in production.
 	FakeProviders bool
+	// NoFakePayments keeps the fake payment provider off even with other fakes, so tests can check
+	// that card payments are refused without a provider.
+	NoFakePayments bool
 	// PDF renders documents. Without it, reports have no PDF.
 	PDF pdf.Renderer
 	// Fetcher reads competitor pages. Nil means the fake fetcher, which reaches no real website.
@@ -125,6 +134,24 @@ func Build(pools *db.Pools, keys crypto.Keys, o Options) (*Graph, error) {
 		Shared: shared.New(pools, keys), Files: files.New(pools, o.Store, o.Scanner, o.Bucket),
 		Notify: notification.New(pools, o.Mailer, hub), Ops: jobs.NewOps(pools.Platform),
 	}
+	// Payments are provider-neutral until D-04. Without fake providers there is no card provider, so
+	// only bank transfers confirmed by an admin are possible.
+	cardProvider := ""
+	if o.FakePayments() {
+		g.FakePayments = &fakes.FakePayments{Pool: pools.Platform, BaseURL: o.BaseURL}
+		ints.RegisterPaymentProvider(g.FakePayments)
+		cardProvider = fakes.FakePaymentsKey
+	}
+	ints.RegisterWebhook(fakes.FakePaymentsKey, integration.VerifyHMAC, func(ctx context.Context, _ *uuid.UUID, body []byte) error {
+		var ev integration.PaymentEvent
+		if err := json.Unmarshal(body, &ev); err != nil || ev.PaymentRef == "" {
+			return jobs.Permanent(fmt.Errorf("bad payment event: %w", err))
+		}
+		return com.ApplyPaymentEvent(ctx, fakes.FakePaymentsKey, ev)
+	})
+	g.Trust = trust.New(pools)
+	com.SetBilling(commercial.Billing{Integration: ints, Notify: g.Notify, Owner: ids.TenantOwner, CardProvider: cardProvider, BaseURL: o.BaseURL})
+	ids.SetSeatLimit(com.SeatLimit)
 	comps, compSvc := competitorintel.New(ciapp.Deps{Pools: pools, Identity: ids, Commercial: com, Shared: g.Shared, Integration: ints, Files: g.Files, AI: gw, PDF: o.PDF, Fetcher: o.Fetcher})
 	crmMod, crmSvc := crm.New(crmapp.Deps{Pools: pools, Identity: ids, Shared: g.Shared, Files: g.Files, Notify: g.Notify})
 	leads, leadSvc := leadgeneration.New(leadapp.Deps{Pools: pools, Identity: ids, Commercial: com, Shared: g.Shared, Integration: ints, Files: g.Files, AI: gw, Competitors: compSvc, CRM: crmSvc})
@@ -145,6 +172,9 @@ func Build(pools *db.Pools, keys crypto.Keys, o Options) (*Graph, error) {
 	return g, nil
 }
 
+// FakePayments reports whether the fake payment provider is registered.
+func (o Options) FakePayments() bool { return o.FakeProviders && !o.NoFakePayments }
+
 // Job kinds for housekeeping.
 const (
 	jobPartitions = "housekeeping.partitions"
@@ -159,6 +189,9 @@ func (g *Graph) Worker(workerID string) (*jobs.Runner, *events.Bus) {
 	r.Register(notification.JobDeliver, g.Notify.HandleDeliver)
 	r.Register(integration.JobWebhookDispatch, g.Integration.HandleWebhookDispatch)
 	r.Register(commercial.JobSweepReservations, g.Commercial.HandleSweepReservations)
+	for kind, h := range g.Commercial.BillingJobs() {
+		r.Register(kind, h)
+	}
 	r.Register(jobPartitions, g.housekeepPartitions)
 	r.Register(jobCleanup, g.housekeepCleanup)
 	bus := events.New(g.Pools.System, g.Pools.App, func(ctx context.Context, tenant uuid.UUID, module string) (bool, error) {
@@ -183,6 +216,8 @@ func (g *Graph) EnsureSchedules(ctx context.Context) error {
 		"partitions":   {"@every 24h", jobPartitions},
 		"cleanup":      {"@every 1h", jobCleanup},
 		"credit_sweep": {"@every 5m", commercial.JobSweepReservations},
+		"billing_tick": {"@every 15m", commercial.JobBillingTick},
+		"reconcile":    {"@every 24h", commercial.JobReconcile},
 	} {
 		if err := jobs.EnsureSchedule(ctx, g.Pools.System, key, s[0], s[1]); err != nil {
 			return err
@@ -303,4 +338,18 @@ func WorkerID() string {
 		host = "worker"
 	}
 	return host + "-" + uuid.NewString()[:8]
+}
+
+// FakeCheckoutPage is what the API's fake checkout routes use.
+type FakeCheckoutPage interface {
+	Info(ctx context.Context, ref string) (fakes.CheckoutInfo, error)
+	Complete(ctx context.Context, ref, outcome string) (integration.PaymentEvent, error)
+}
+
+// FakeCheckout returns the test checkout, or nil where fake providers are off.
+func (g *Graph) FakeCheckout() FakeCheckoutPage {
+	if g.FakePayments == nil {
+		return nil // A typed nil would look present; the routes must answer not found.
+	}
+	return g.FakePayments
 }

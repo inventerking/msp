@@ -228,6 +228,137 @@ paths:
       responses:
         "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/TenantService"}}}}
         default: {$ref: "#/components/responses/Problem"}
+  /legal/documents:
+    get:
+      operationId: listLegalDocuments
+      x-access: public
+      security: []
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/LegalDocumentList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /me/legal:
+    get:
+      operationId: getPendingLegal
+      x-access: session
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PendingLegal"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /me/legal/accept:
+    post:
+      operationId: acceptLegal
+      x-access: session
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AcceptLegal"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/abuse-reports:
+    post:
+      operationId: reportAbuse
+      x-access: public
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AbuseReportInput"}}}}
+      responses:
+        "202": {description: Received, content: {application/json: {schema: {$ref: "#/components/schemas/Accepted"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/fake-checkout/{ref}:
+    get:
+      operationId: getFakeCheckout
+      x-access: public
+      security: []
+      description: The test payment provider's checkout page. It exists only where fake providers are on; no money moves.
+      parameters: [{name: ref, in: path, required: true, schema: {type: string, maxLength: 80}}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/FakeCheckout"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /public/fake-checkout/{ref}/complete:
+    post:
+      operationId: completeFakeCheckout
+      x-access: public
+      security: []
+      parameters: [{name: ref, in: path, required: true, schema: {type: string, maxLength: 80}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/FakeCheckoutOutcome"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/FakeCheckout"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/plans:
+    get:
+      operationId: listPlanOffers
+      x-access: tenant
+      x-permission: billing.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PlanOfferList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/purchases:
+    get:
+      operationId: listPurchases
+      x-access: tenant
+      x-permission: billing.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/PurchaseList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: submitPurchase
+      x-access: tenant
+      x-permission: billing.manage
+      parameters:
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 128}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PurchaseInput"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Purchase"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/purchases/{id}:
+    get:
+      operationId: getPurchase
+      x-access: tenant
+      x-permission: billing.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Purchase"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/purchases/{id}/cancel:
+    post:
+      operationId: cancelPurchase
+      x-access: tenant
+      x-permission: billing.manage
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/invoices:
+    get:
+      operationId: listInvoices
+      x-access: tenant
+      x-permission: billing.read
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/InvoiceList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/invoices/{id}:
+    get:
+      operationId: getInvoice
+      x-access: tenant
+      x-permission: billing.read
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/InvoiceDetail"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/invoices/{id}/pay:
+    post:
+      operationId: payInvoice
+      x-access: tenant
+      x-permission: billing.manage
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/CheckoutLink"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/subscriptions/{id}/cancel:
+    post:
+      operationId: cancelSubscription
+      x-access: tenant
+      x-permission: billing.manage
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
   /tenant/roles:
     get:
       operationId: listRoles
@@ -525,6 +656,184 @@ components:
         max_employees: {type: integer, nullable: true}
         technologies: {type: array, items: {type: string}}
         version: {type: integer}
+    LegalDocument:
+      type: object
+      required: [id, kind, version, title, body, requires_acceptance, counsel_reviewed, published_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string, enum: [terms, privacy, dpa, acceptable_use, subprocessors]}
+        version: {type: integer}
+        title: {type: string}
+        body: {type: string, description: "Plain text or Markdown supplied by counsel. Shown as text, never as HTML"}
+        requires_acceptance: {type: boolean}
+        counsel_reviewed: {type: boolean, description: "As recorded by the platform operator"}
+        published_at: {type: string, format: date-time}
+    LegalDocumentList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/LegalDocument"}}
+    PendingLegal:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/LegalDocument"}}
+    AcceptLegal:
+      type: object
+      required: [document_ids]
+      additionalProperties: false
+      properties:
+        document_ids: {type: array, minItems: 1, maxItems: 10, items: {type: string, format: uuid}}
+    AbuseReportInput:
+      type: object
+      required: [category, details]
+      additionalProperties: false
+      properties:
+        category: {type: string, enum: [spam, phishing, malware, privacy, harassment, unauthorized_scanning, other]}
+        details: {type: string, minLength: 1, maxLength: 5000}
+        subject_url: {type: string, maxLength: 2000}
+        reporter_email: {type: string, maxLength: 254}
+    FakeCheckout:
+      type: object
+      required: [ref, amount_minor, currency, description, status]
+      properties:
+        ref: {type: string}
+        amount_minor: {type: integer, format: int64}
+        currency: {type: string}
+        description: {type: string}
+        status: {type: string, enum: [open, succeeded, failed]}
+        return_url: {type: string}
+    FakeCheckoutOutcome:
+      type: object
+      required: [outcome]
+      additionalProperties: false
+      properties:
+        outcome: {type: string, enum: [pay, pay_card_declines_later, decline]}
+    PlanOffer:
+      type: object
+      required: [plan_id, plan_key, plan_name, product_key, product_name, product_description, billing_period, trial_days, currency, amount_minor, usage_limits, included_credits]
+      properties:
+        plan_id: {type: string, format: uuid}
+        plan_key: {type: string}
+        plan_name: {type: string}
+        product_key: {type: string}
+        product_name: {type: string}
+        product_description: {type: string}
+        billing_period: {type: string, enum: [monthly, annual, custom]}
+        trial_days: {type: integer}
+        currency: {type: string}
+        amount_minor: {type: integer, format: int64}
+        usage_limits: {type: object, additionalProperties: true}
+        included_credits: {type: object, additionalProperties: true}
+    PlanOfferList:
+      type: object
+      required: [data, card_available, tax_note]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/PlanOffer"}}
+        card_available: {type: boolean}
+        tax_note: {type: string}
+    PurchaseInput:
+      type: object
+      required: [plan_id, currency, quantity, payment_method]
+      additionalProperties: false
+      properties:
+        plan_id: {type: string, format: uuid}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        quantity: {type: integer, minimum: 1, maximum: 10000}
+        promotion_code: {type: string, maxLength: 64}
+        payment_method: {type: string, enum: [card, bank_transfer]}
+    Quote:
+      type: object
+      required: [plan_name, product_name, billing_period, trial_days, currency, unit_amount_minor, quantity, subtotal_minor, discount_minor, total_minor, tax]
+      properties:
+        plan_name: {type: string}
+        product_name: {type: string}
+        billing_period: {type: string}
+        trial_days: {type: integer}
+        currency: {type: string}
+        unit_amount_minor: {type: integer, format: int64}
+        quantity: {type: integer}
+        subtotal_minor: {type: integer, format: int64}
+        discount_minor: {type: integer, format: int64}
+        total_minor: {type: integer, format: int64}
+        promotion_code: {type: string}
+        tax: {type: string, description: "not_calculated until a payment provider or merchant of record is chosen"}
+    Purchase:
+      type: object
+      required: [id, plan_id, plan_name, status, quote, payment_method, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        plan_id: {type: string, format: uuid}
+        plan_name: {type: string}
+        status: {type: string, enum: [draft, submitted, payment_pending, payment_verified, under_review, approved, rejected, cancelled]}
+        quote: {$ref: "#/components/schemas/Quote"}
+        payment_method: {type: string}
+        invoice_id: {type: string, format: uuid}
+        rejection_reason: {type: string}
+        checkout_url: {type: string, description: "Where to pay, while a card payment is waiting"}
+        bank_instructions: {type: string}
+        created_at: {type: string, format: date-time}
+        reviewed_at: {type: string, format: date-time}
+    PurchaseList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Purchase"}}
+    Invoice:
+      type: object
+      required: [id, number, status, currency, subtotal_minor, tax_minor, total_minor]
+      properties:
+        id: {type: string, format: uuid}
+        subscription_id: {type: string, format: uuid}
+        number: {type: string}
+        status: {type: string, enum: [draft, issued, paid, void, uncollectible]}
+        currency: {type: string}
+        subtotal_minor: {type: integer, format: int64}
+        tax_minor: {type: integer, format: int64}
+        total_minor: {type: integer, format: int64}
+        issued_at: {type: string, format: date-time}
+        due_at: {type: string, format: date-time}
+        paid_at: {type: string, format: date-time}
+    InvoiceList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Invoice"}}
+    InvoiceLine:
+      type: object
+      required: [description, quantity, unit_amount_minor, amount_minor]
+      properties:
+        description: {type: string}
+        quantity: {type: integer}
+        unit_amount_minor: {type: integer, format: int64}
+        amount_minor: {type: integer, format: int64}
+        period_start: {type: string, format: date-time}
+        period_end: {type: string, format: date-time}
+    InvoicePayment:
+      type: object
+      required: [id, method, status, amount_minor, currency, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        method: {type: string}
+        status: {type: string}
+        amount_minor: {type: integer, format: int64}
+        currency: {type: string}
+        refund_status: {type: string}
+        failure_code: {type: string}
+        created_at: {type: string, format: date-time}
+    InvoiceDetail:
+      type: object
+      required: [invoice, lines, payments]
+      properties:
+        invoice: {$ref: "#/components/schemas/Invoice"}
+        lines: {type: array, items: {$ref: "#/components/schemas/InvoiceLine"}}
+        payments: {type: array, items: {$ref: "#/components/schemas/InvoicePayment"}}
+        bank_instructions: {type: string}
+    CheckoutLink:
+      type: object
+      required: [checkout_url]
+      properties:
+        checkout_url: {type: string}
     Reference:
       type: object
       required: [countries, industries, service_categories]

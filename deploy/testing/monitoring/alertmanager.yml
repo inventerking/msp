@@ -1,0 +1,21 @@
+# Alerts go to Mailpit on the testing server, so nobody outside receives them. Before handover,
+# replace the receiver with the on-call channel chosen then.
+route:
+  receiver: mailpit
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: mailpit
+      repeat_interval: 1h
+
+receivers:
+  - name: mailpit
+    email_configs:
+      - to: oncall@example.test
+        from: alerts@example.test
+        smarthost: mailpit:1025
+        require_tls: false
+        send_resolved: true

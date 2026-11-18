@@ -28,6 +28,7 @@ import (
 	"mspengine/internal/kernel/crypto"
 	"mspengine/internal/kernel/db"
 	"mspengine/internal/kernel/jobs"
+	"mspengine/internal/kernel/metrics"
 	"mspengine/internal/kernel/modulekit"
 	"mspengine/internal/kernel/ratelimit"
 	"mspengine/internal/kernel/realtime"
@@ -36,8 +37,10 @@ import (
 	"mspengine/internal/platform/identity"
 	"mspengine/internal/platform/integration"
 	"mspengine/internal/platform/integration/aigateway"
+	"mspengine/internal/platform/integration/fakes"
 	"mspengine/internal/platform/notification"
 	"mspengine/internal/platform/shared"
+	"mspengine/internal/platform/trust"
 )
 
 // Deps are the services the HTTP layer needs.
@@ -61,6 +64,19 @@ type Deps struct {
 	Modules []modulekit.Module
 	// OutreachPolicy manages the platform's outreach rules. Nil returns 503 for those routes.
 	OutreachPolicy OutreachPolicy
+	// Trust publishes legal documents and takes abuse reports.
+	Trust *trust.Service
+	// FakeCheckout is the test payment provider's checkout. Nil (outside test environments) means
+	// its routes answer not found.
+	FakeCheckout FakeCheckout
+	// Metrics records HTTP requests. Nil records nothing.
+	Metrics *metrics.Registry
+}
+
+// FakeCheckout is what the fake checkout page needs from the test payment provider.
+type FakeCheckout interface {
+	Info(ctx context.Context, ref string) (fakes.CheckoutInfo, error)
+	Complete(ctx context.Context, ref, outcome string) (integration.PaymentEvent, error)
 }
 
 // Server holds handler dependencies.
@@ -129,7 +145,7 @@ func New(d Deps) (http.Handler, error) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(s.requestMeta, recoverer, requestLog, securityHeaders(!d.Config.IsLocal()), embedCORS, s.originCheck, s.rateLimit)
+	r.Use(s.requestMeta, recoverer, requestLog, d.Metrics.HTTP, securityHeaders(!d.Config.IsLocal()), embedCORS, s.originCheck, s.rateLimit)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, 200, map[string]string{"status": "ok"}) })
 	r.Get("/readyz", s.ready)
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) { writeError(w, r, apperr.NotFound()) })

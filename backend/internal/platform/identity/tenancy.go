@@ -350,6 +350,9 @@ func (s *Service) CreateInvitation(ctx context.Context, p authctx.Principal, ema
 		if err != nil {
 			return err
 		}
+		if err := s.checkSeats(ctx, q, p.TenantID, 1); err != nil {
+			return err
+		}
 		r, err := q.CreateInvitation(ctx, repo.CreateInvitationParams{TenantID: p.TenantID, Email: email, RoleID: role.ID, TokenHash: hash, InvitedBy: p.UserID, ExpiresAt: time.Now().Add(inviteTTL)})
 		if isUnique(err) {
 			return apperr.Conflict("invitation_exists", "This person already has a pending invitation")
@@ -412,6 +415,10 @@ func (s *Service) AcceptInvitation(ctx context.Context, p authctx.Principal, tok
 		if !strings.EqualFold(inv.Email, p.Email) {
 			return apperr.NotFound()
 		}
+		// The invitation already holds a seat, so accepting it needs no new one.
+		if err := s.checkSeats(ctx, q, tenantID, 0); err != nil {
+			return err
+		}
 		if _, err := q.CreateMembership(ctx, repo.CreateMembershipParams{TenantID: tenantID, UserID: p.UserID, RoleID: inv.RoleID}); err != nil {
 			return err
 		}
@@ -466,4 +473,98 @@ func (s *Service) ReportingCurrency(ctx context.Context, tenantID uuid.UUID) (st
 		return err
 	})
 	return cur, err
+}
+
+// SeatLimit, when set, returns the most members a tenant's plans allow; zero means no limit.
+// It is set at start-up, so identity does not depend on billing.
+func (s *Service) SetSeatLimit(f func(ctx context.Context, tenantID uuid.UUID) (int, error)) { s.seatLimit = f }
+
+// checkSeats refuses to go over the plan's seats. Extra is the seats the change adds.
+func (s *Service) checkSeats(ctx context.Context, q *repo.Queries, tenant uuid.UUID, extra int) error {
+	if s.seatLimit == nil {
+		return nil
+	}
+	limit, err := s.seatLimit(ctx, tenant)
+	if err != nil || limit == 0 {
+		return err
+	}
+	used, err := q.SeatsInUse(ctx, tenant)
+	if err != nil {
+		return err
+	}
+	if int(used)+extra > limit {
+		return apperr.Conflict("seat_limit_reached", "Your plan's seats are all in use. Remove a member or buy more seats")
+	}
+	return nil
+}
+
+// TenantOwner returns a tenant's owner, if any.
+func (s *Service) TenantOwner(ctx context.Context, tenantID uuid.UUID) (*uuid.UUID, error) {
+	var out *uuid.UUID
+	err := db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
+		var err error
+		out, err = repo.New(tx).TenantOwnerID(ctx, tenantID)
+		return err
+	})
+	return out, err
+}
+
+// TenantNames looks up tenant names for admin lists.
+func (s *Service) TenantNames(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	out := map[uuid.UUID]string{}
+	err := db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
+		rows, err := repo.New(tx).TenantNames(ctx, ids)
+		for _, r := range rows {
+			out[r.ID] = r.Name
+		}
+		return err
+	})
+	return out, err
+}
+
+// Acceptance is a document a user has accepted, for a workspace or for themselves.
+type Acceptance struct {
+	DocumentID  uuid.UUID
+	WorkspaceID *uuid.UUID
+}
+
+// Acceptances lists what a user has accepted.
+func (s *Service) Acceptances(ctx context.Context, userID uuid.UUID) ([]Acceptance, error) {
+	var out []Acceptance
+	err := db.UserTx(ctx, s.pools.App, userID, func(tx pgx.Tx) error {
+		rows, err := repo.New(tx).AcceptedDocuments(ctx, userID)
+		for _, r := range rows {
+			out = append(out, Acceptance{DocumentID: r.DocumentID, WorkspaceID: r.WorkspaceID})
+		}
+		return err
+	})
+	return out, err
+}
+
+// Accept records a user's acceptance of document versions. Workspace is set for a DPA, accepted on
+// the workspace's behalf. Accepting again is harmless.
+func (s *Service) Accept(ctx context.Context, p authctx.Principal, documents []uuid.UUID, workspace *uuid.UUID) error {
+	return db.UserTx(ctx, s.pools.App, p.UserID, func(tx pgx.Tx) error {
+		q := repo.New(tx)
+		for _, d := range documents {
+			if err := q.InsertAcceptance(ctx, repo.InsertAcceptanceParams{UserID: p.UserID, WorkspaceID: workspace, DocumentID: d}); err != nil {
+				return err
+			}
+		}
+		return audit.Record(ctx, tx, audit.Event{TenantID: workspace, ActorType: "user", ActorID: &p.UserID, Action: "legal.documents_accepted", ResourceType: "user",
+			ResourceID: &p.UserID, After: map[string]any{"documents": documents}})
+	})
+}
+
+// AcceptanceCounts counts acceptances per document version, for admins.
+func (s *Service) AcceptanceCounts(ctx context.Context) (map[uuid.UUID]int, error) {
+	out := map[uuid.UUID]int{}
+	err := db.Tx(ctx, s.pools.Platform, func(tx pgx.Tx) error {
+		rows, err := repo.New(tx).AcceptanceCounts(ctx)
+		for _, r := range rows {
+			out[r.DocumentID] = int(r.Accepted)
+		}
+		return err
+	})
+	return out, err
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"text/template"
 
 	"github.com/google/uuid"
@@ -170,10 +171,7 @@ func (s *Service) Consumer() events.Consumer {
 			if err := e.Decode(&p); err != nil {
 				return err
 			}
-			key, data := "entitlement.changed", map[string]string{"module": p.ModuleKey, "status": e.Type[len("platform.entitlement."):min(len(e.Type), len("platform.entitlement.")+20)]}
-			if e.Type == "platform.credits.low" {
-				key, data = "credits.low", map[string]string{"meter": "credit"}
-			}
+			key, data := platformNotice(e.Type, p.ModuleKey)
 			users, err := identity.MembersWithPermission(ctx, tx, *e.TenantID, "billing.read")
 			if err != nil {
 				return err
@@ -186,6 +184,16 @@ func (s *Service) Consumer() events.Consumer {
 			return nil
 		},
 	}
+}
+
+// platformNotice picks the template and data for a platform event. Only entitlement events carry a
+// status in their type; slicing other types the same way once panicked on platform.credits.low.
+func platformNotice(eventType, module string) (string, map[string]string) {
+	if eventType == "platform.credits.low" {
+		return "credits.low", map[string]string{"meter": "credit"}
+	}
+	status, _ := strings.CutPrefix(eventType, "platform.entitlement.")
+	return "entitlement.changed", map[string]string{"module": module, "status": status}
 }
 
 // List returns the caller's notifications and unread count.

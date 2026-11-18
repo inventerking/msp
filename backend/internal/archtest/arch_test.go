@@ -194,6 +194,7 @@ func TestSQLStaysInOwnSchema(t *testing.T) {
 		"../platform/integration/queries.sql":      "integration",
 		"../platform/notification/queries.sql":     "notification",
 		"../platform/files/queries.sql":            "files",
+		"../platform/trust/queries.sql":            "platform",
 		"../modules/leadgeneration/queries.sql":    "lead_generation",
 		"../modules/competitorintel/queries.sql":   "competitor_intelligence",
 		"../modules/crm/queries.sql":               "crm",

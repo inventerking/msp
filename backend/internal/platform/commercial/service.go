@@ -28,8 +28,9 @@ const EntitlementsChanged = "tenant.entitlements_changed"
 
 // Service implements commercial use cases.
 type Service struct {
-	pools *db.Pools
-	hub   *realtime.Hub
+	pools   *db.Pools
+	hub     *realtime.Hub
+	billing Billing
 }
 
 // New creates the service.
@@ -131,10 +132,20 @@ func (s *Service) ListTenantSubscriptions(ctx context.Context, tenantID uuid.UUI
 
 // --- Platform administration ---
 
+// adminEvent records an admin's action, or the system's when no admin is acting, such as renewals.
 func adminEvent(ctx context.Context, tenantID *uuid.UUID, action, resType string, resID *uuid.UUID, before, after any) audit.Event {
-	a := authctx.AdminFrom(ctx)
-	return audit.Event{TenantID: tenantID, ActorType: "platform_admin", ActorID: &a.AdminID, Action: action,
+	actorType, actor := actorOf(ctx)
+	return audit.Event{TenantID: tenantID, ActorType: actorType, ActorID: actor, Action: action,
 		ResourceType: resType, ResourceID: resID, Before: before, After: after}
+}
+
+func actorOf(ctx context.Context) (string, *uuid.UUID) {
+	a := authctx.AdminFrom(ctx)
+	if a.AdminID == uuid.Nil {
+		return "system", nil
+	}
+	id := a.AdminID
+	return "platform_admin", &id
 }
 
 // AdminListModules returns the module catalog through the platform role.
@@ -563,7 +574,6 @@ func entitlementEvent(ctx context.Context, tx pgx.Tx, tenantID, moduleID uuid.UU
 
 // recompute projects grants into the effective entitlement and records the change.
 func (s *Service) recompute(ctx context.Context, q *repo.Queries, tenantID, moduleID uuid.UUID, grantID *uuid.UUID, reason string) (ChangeResult, error) {
-	admin := authctx.AdminFrom(ctx)
 	rows, err := q.ListGrantsForModule(ctx, repo.ListGrantsForModuleParams{TenantID: tenantID, ModuleID: moduleID})
 	if err != nil {
 		return ChangeResult{}, err
@@ -588,7 +598,8 @@ func (s *Service) recompute(ctx context.Context, q *repo.Queries, tenantID, modu
 	if err != nil {
 		return ChangeResult{}, err
 	}
-	if err := q.InsertHistory(ctx, repo.InsertHistoryParams{TenantID: tenantID, ModuleID: moduleID, GrantID: grantID, FromStatus: from, ToStatus: status, ActorType: "platform_admin", ActorID: &admin.AdminID, Reason: &reason}); err != nil {
+	actorType, actor := actorOf(ctx)
+	if err := q.InsertHistory(ctx, repo.InsertHistoryParams{TenantID: tenantID, ModuleID: moduleID, GrantID: grantID, FromStatus: from, ToStatus: status, ActorType: actorType, ActorID: actor, Reason: &reason}); err != nil {
 		return ChangeResult{}, err
 	}
 	return ChangeResult{Status: row.Status, Version: row.EntitlementVersion}, nil

@@ -40,5 +40,9 @@ export const planSchema = z.object({
   name: z.string().trim().min(2, "validation.tooShort").max(120),
   billing_period: z.enum(["monthly", "annual", "custom"]),
   trial_days: z.coerce.number().int().min(0).max(365),
+  /** Members allowed per unit bought; empty means no limit. */
+  seats: z.union([z.literal(""), z.coerce.number().int().min(1).max(100000)]).optional(),
+  ai_credits: z.union([z.literal(""), z.coerce.number().int().min(0).max(10000000)]).optional(),
+  lead_credits: z.union([z.literal(""), z.coerce.number().int().min(0).max(10000000)]).optional(),
 });
 export const priceSchema = z.object({ currency: z.string().trim().length(3, "validation.currencyCode"), amount_minor: z.coerce.number().int().min(0) });

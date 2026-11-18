@@ -333,3 +333,24 @@ DO UPDATE SET name = EXCLUDED.name, industries = EXCLUDED.industries, countries 
   max_employees = EXCLUDED.max_employees, technologies = EXCLUDED.technologies, version = identity.tenant_icps.version + 1
 RETURNING id, version;
 
+
+-- name: SeatsInUse :one
+-- Active members plus invitations still open: both hold a seat under a plan's limit.
+SELECT ((SELECT count(*) FROM identity.memberships m WHERE m.tenant_id = sqlc.arg(tenant_id)::uuid AND m.status = 'active')
+      + (SELECT count(*) FROM identity.invitations i WHERE i.tenant_id = sqlc.arg(tenant_id)::uuid AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > now()))::int;
+
+-- name: TenantOwnerID :one
+SELECT owner_user_id FROM identity.tenants WHERE id = @id;
+
+-- name: TenantNames :many
+SELECT id, name FROM identity.tenants WHERE id = ANY(@ids::uuid[]);
+
+-- name: AcceptedDocuments :many
+SELECT document_id, workspace_id FROM identity.document_acceptances WHERE user_id = @user_id;
+
+-- name: InsertAcceptance :exec
+INSERT INTO identity.document_acceptances (user_id, workspace_id, document_id) VALUES (@user_id, sqlc.narg(workspace_id), @document_id)
+ON CONFLICT DO NOTHING;
+
+-- name: AcceptanceCounts :many
+SELECT document_id, count(*)::int AS accepted FROM identity.document_acceptances GROUP BY document_id;

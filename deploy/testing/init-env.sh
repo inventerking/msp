@@ -27,6 +27,11 @@ ENCRYPTION_KEY=$(openssl rand -base64 32)
 HMAC_KEY=$(openssl rand -base64 32)
 S3_ACCESS_KEY=$(openssl rand -hex 12)
 S3_SECRET_KEY=$(openssl rand -hex 24)
+# Encrypts backups. Store a copy somewhere other than this server and its backups: without it,
+# the backups cannot be read.
+BACKUP_CIPHER_PASS=$(openssl rand -base64 36)
+GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)
+GRAFANA_PORT=53000
 ENV
 mkdir -p seaweedfs
 . ./.env

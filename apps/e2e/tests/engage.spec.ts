@@ -110,6 +110,13 @@ test("an approved campaign emails an allowed contact who can unsubscribe, and th
   await owner.getByLabel("Sender").selectOption({ index: 1 });
   await owner.getByLabel("Audience").selectOption({ index: 1 });
   await owner.getByLabel("Postal address shown in every email").fill("1 Test Street, Testville");
+  // The form leaves the default window, weekdays 09:00 to 17:00 in the browser's time zone, which
+  // would hold the email outside office hours. The test opens the window so it can run at any time.
+  await owner.route("**/api/v1/outreach/campaigns", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    const body = { ...route.request().postDataJSON(), sending_window: { days: [0, 1, 2, 3, 4, 5, 6], start: "00:00", end: "23:59" } };
+    await route.fallback({ postData: JSON.stringify(body) });
+  });
   await owner.getByRole("button", { name: "Create campaign" }).click();
   await expect(owner.getByRole("heading", { name: "Dental intro" })).toBeVisible();
   await owner.getByRole("button", { name: "Add step" }).click();

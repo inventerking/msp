@@ -12,6 +12,20 @@ import (
 	"github.com/google/uuid"
 )
 
+const activeSeatLimit = `-- name: ActiveSeatLimit :one
+SELECT COALESCE(max(((pl.usage_limits->>'seats')::int) * COALESCE((s.price_snapshot->>'quantity')::int, 1)), 0)::int
+FROM platform.subscriptions s JOIN platform.plans pl ON pl.id = s.plan_id
+WHERE s.tenant_id = $1 AND s.status IN ('active','trialing','past_due') AND pl.usage_limits ? 'seats'
+`
+
+// The most seats any active subscription allows: plan seats per unit times quantity. Zero means no limit.
+func (q *Queries) ActiveSeatLimit(ctx context.Context, tenantID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, activeSeatLimit, tenantID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const addBalance = `-- name: AddBalance :one
 UPDATE platform.credit_accounts SET balance = balance + $1 WHERE id = $2 AND balance + $1 >= reserved RETURNING balance
 `
@@ -41,6 +55,43 @@ type AddVersionModuleParams struct {
 func (q *Queries) AddVersionModule(ctx context.Context, arg AddVersionModuleParams) error {
 	_, err := q.db.Exec(ctx, addVersionModule, arg.VersionID, arg.ModuleKey)
 	return err
+}
+
+const billingHealth = `-- name: BillingHealth :one
+SELECT
+  (SELECT count(*) FROM platform.purchase_requests WHERE status = 'under_review')::bigint AS review_waiting,
+  (SELECT COALESCE(EXTRACT(EPOCH FROM now() - min(submitted_at)), 0) FROM platform.purchase_requests WHERE status = 'under_review')::float8 AS review_oldest_seconds,
+  (SELECT count(*) FROM platform.payments WHERE refund_status IN ('pending','failed'))::bigint AS refunds_pending,
+  (SELECT count(*) FROM platform.payments WHERE method = 'bank_transfer' AND status = 'pending')::bigint AS bank_transfers_pending,
+  (SELECT count(*) FROM platform.subscriptions WHERE status = 'past_due')::bigint AS subscriptions_past_due,
+  (SELECT count(*) FROM platform.reconciliation_issues WHERE status = 'open')::bigint AS reconciliation_open,
+  (SELECT COALESCE(EXTRACT(EPOCH FROM now() - max(created_at)), -1) FROM platform.reconciliation_runs WHERE status = 'completed')::float8 AS reconciliation_age_seconds
+`
+
+type BillingHealthRow struct {
+	ReviewWaiting            int64
+	ReviewOldestSeconds      float64
+	RefundsPending           int64
+	BankTransfersPending     int64
+	SubscriptionsPastDue     int64
+	ReconciliationOpen       int64
+	ReconciliationAgeSeconds float64
+}
+
+// Counts for monitoring. Nothing here identifies a tenant.
+func (q *Queries) BillingHealth(ctx context.Context) (BillingHealthRow, error) {
+	row := q.db.QueryRow(ctx, billingHealth)
+	var i BillingHealthRow
+	err := row.Scan(
+		&i.ReviewWaiting,
+		&i.ReviewOldestSeconds,
+		&i.RefundsPending,
+		&i.BankTransfersPending,
+		&i.SubscriptionsPastDue,
+		&i.ReconciliationOpen,
+		&i.ReconciliationAgeSeconds,
+	)
+	return i, err
 }
 
 const createGrant = `-- name: CreateGrant :one
@@ -79,8 +130,8 @@ func (q *Queries) CreateGrant(ctx context.Context, arg CreateGrantParams) (uuid.
 }
 
 const createPlan = `-- name: CreatePlan :one
-INSERT INTO platform.plans (product_version_id, key, name, billing_period, trial_days, status)
-VALUES ($1, $2, $3, $4, $5, 'active')
+INSERT INTO platform.plans (product_version_id, key, name, billing_period, trial_days, status, usage_limits, included_credits)
+VALUES ($1, $2, $3, $4, $5, 'active', $6, $7)
 RETURNING id, product_version_id, key, name, billing_period, trial_days, status
 `
 
@@ -90,6 +141,8 @@ type CreatePlanParams struct {
 	Name             string
 	BillingPeriod    string
 	TrialDays        int32
+	UsageLimits      []byte
+	IncludedCredits  []byte
 }
 
 type CreatePlanRow struct {
@@ -109,6 +162,8 @@ func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (CreateP
 		arg.Name,
 		arg.BillingPeriod,
 		arg.TrialDays,
+		arg.UsageLimits,
+		arg.IncludedCredits,
 	)
 	var i CreatePlanRow
 	err := row.Scan(
@@ -223,6 +278,47 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 	return id, err
 }
 
+const createSubscriptionFull = `-- name: CreateSubscriptionFull :one
+INSERT INTO platform.subscriptions (tenant_id, plan_id, purchase_request_id, status, price_snapshot, currency, current_period_start, current_period_end,
+  trial_ends_at, payment_method, payment_provider, provider_payment_method_ref)
+VALUES ($1, $2, $3, 'pending_activation', $4, $5, $6, $7,
+  $8, $9, $10, $11)
+RETURNING id
+`
+
+type CreateSubscriptionFullParams struct {
+	TenantID                 uuid.UUID
+	PlanID                   uuid.UUID
+	PurchaseRequestID        *uuid.UUID
+	PriceSnapshot            []byte
+	Currency                 string
+	CurrentPeriodStart       *time.Time
+	CurrentPeriodEnd         *time.Time
+	TrialEndsAt              *time.Time
+	PaymentMethod            *string
+	PaymentProvider          *string
+	ProviderPaymentMethodRef *string
+}
+
+func (q *Queries) CreateSubscriptionFull(ctx context.Context, arg CreateSubscriptionFullParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createSubscriptionFull,
+		arg.TenantID,
+		arg.PlanID,
+		arg.PurchaseRequestID,
+		arg.PriceSnapshot,
+		arg.Currency,
+		arg.CurrentPeriodStart,
+		arg.CurrentPeriodEnd,
+		arg.TrialEndsAt,
+		arg.PaymentMethod,
+		arg.PaymentProvider,
+		arg.ProviderPaymentMethodRef,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const currentPrice = `-- name: CurrentPrice :one
 SELECT id, amount_minor FROM platform.prices
 WHERE plan_id = $1 AND currency = $2 AND valid_to IS NULL
@@ -243,6 +339,61 @@ func (q *Queries) CurrentPrice(ctx context.Context, arg CurrentPriceParams) (Cur
 	var i CurrentPriceRow
 	err := row.Scan(&i.ID, &i.AmountMinor)
 	return i, err
+}
+
+const decidePurchase = `-- name: DecidePurchase :execrows
+UPDATE platform.purchase_requests SET status = $1, reviewed_by = $2, reviewed_at = now(), rejection_reason = $3
+WHERE id = $4 AND status = ANY($5::text[])
+`
+
+type DecidePurchaseParams struct {
+	Status          string
+	ReviewedBy      *uuid.UUID
+	RejectionReason *string
+	ID              uuid.UUID
+	FromStatuses    []string
+}
+
+func (q *Queries) DecidePurchase(ctx context.Context, arg DecidePurchaseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, decidePurchase,
+		arg.Status,
+		arg.ReviewedBy,
+		arg.RejectionReason,
+		arg.ID,
+		arg.FromStatuses,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const dueSubscriptions = `-- name: DueSubscriptions :many
+SELECT id FROM platform.subscriptions
+WHERE (status IN ('active','trialing') AND current_period_end <= now())
+   OR (status IN ('past_due','suspended') AND (next_retry_at <= now() OR past_due_since <= now() - interval '1 day'))
+ORDER BY current_period_end LIMIT 500
+`
+
+// Renewals, trial ends, cancellations and dunning steps that are due, across tenants.
+func (q *Queries) DueSubscriptions(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, dueSubscriptions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const endCurrentPrice = `-- name: EndCurrentPrice :exec
@@ -275,6 +426,29 @@ func (q *Queries) EnsureCreditAccount(ctx context.Context, arg EnsureCreditAccou
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const finishReconciliationRun = `-- name: FinishReconciliationRun :exec
+UPDATE platform.reconciliation_runs SET status = $1, checked = $2, issues = $3, error = $4 WHERE id = $5
+`
+
+type FinishReconciliationRunParams struct {
+	Status  string
+	Checked int32
+	Issues  int32
+	Error   *string
+	ID      uuid.UUID
+}
+
+func (q *Queries) FinishReconciliationRun(ctx context.Context, arg FinishReconciliationRunParams) error {
+	_, err := q.db.Exec(ctx, finishReconciliationRun,
+		arg.Status,
+		arg.Checked,
+		arg.Issues,
+		arg.Error,
+		arg.ID,
+	)
+	return err
 }
 
 const getEffectiveEntitlement = `-- name: GetEffectiveEntitlement :one
@@ -315,6 +489,48 @@ func (q *Queries) GetEffectiveStatus(ctx context.Context, arg GetEffectiveStatus
 	var status string
 	err := row.Scan(&status)
 	return status, err
+}
+
+const getInvoice = `-- name: GetInvoice :one
+SELECT id, tenant_id, subscription_id, number, status, currency, subtotal_minor, tax_minor, total_minor, issued_at, due_at, paid_at, created_at
+FROM platform.invoices WHERE id = $1
+`
+
+type GetInvoiceRow struct {
+	ID             uuid.UUID
+	TenantID       uuid.UUID
+	SubscriptionID *uuid.UUID
+	Number         string
+	Status         string
+	Currency       string
+	SubtotalMinor  int64
+	TaxMinor       int64
+	TotalMinor     int64
+	IssuedAt       *time.Time
+	DueAt          *time.Time
+	PaidAt         *time.Time
+	CreatedAt      time.Time
+}
+
+func (q *Queries) GetInvoice(ctx context.Context, id uuid.UUID) (GetInvoiceRow, error) {
+	row := q.db.QueryRow(ctx, getInvoice, id)
+	var i GetInvoiceRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.SubscriptionID,
+		&i.Number,
+		&i.Status,
+		&i.Currency,
+		&i.SubtotalMinor,
+		&i.TaxMinor,
+		&i.TotalMinor,
+		&i.IssuedAt,
+		&i.DueAt,
+		&i.PaidAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getMeterByKey = `-- name: GetMeterByKey :one
@@ -367,6 +583,53 @@ func (q *Queries) GetModuleKey(ctx context.Context, id uuid.UUID) (string, error
 	var key string
 	err := row.Scan(&key)
 	return key, err
+}
+
+const getPaymentForUpdate = `-- name: GetPaymentForUpdate :one
+SELECT id, tenant_id, invoice_id, purchase_request_id, provider, provider_payment_ref, method, status, amount_minor, currency, checkout_url,
+  provider_method_ref, refund_status, refunded_amount_minor, purpose
+FROM platform.payments WHERE id = $1 FOR UPDATE
+`
+
+type GetPaymentForUpdateRow struct {
+	ID                  uuid.UUID
+	TenantID            uuid.UUID
+	InvoiceID           *uuid.UUID
+	PurchaseRequestID   *uuid.UUID
+	Provider            string
+	ProviderPaymentRef  *string
+	Method              string
+	Status              string
+	AmountMinor         int64
+	Currency            string
+	CheckoutUrl         *string
+	ProviderMethodRef   *string
+	RefundStatus        *string
+	RefundedAmountMinor int64
+	Purpose             string
+}
+
+func (q *Queries) GetPaymentForUpdate(ctx context.Context, id uuid.UUID) (GetPaymentForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getPaymentForUpdate, id)
+	var i GetPaymentForUpdateRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.InvoiceID,
+		&i.PurchaseRequestID,
+		&i.Provider,
+		&i.ProviderPaymentRef,
+		&i.Method,
+		&i.Status,
+		&i.AmountMinor,
+		&i.Currency,
+		&i.CheckoutUrl,
+		&i.ProviderMethodRef,
+		&i.RefundStatus,
+		&i.RefundedAmountMinor,
+		&i.Purpose,
+	)
+	return i, err
 }
 
 const getPlan = `-- name: GetPlan :one
@@ -442,6 +705,85 @@ func (q *Queries) GetProductByVersion(ctx context.Context, versionID uuid.UUID) 
 	return i, err
 }
 
+const getPromotionByCode = `-- name: GetPromotionByCode :one
+SELECT id, kind, percent_off, amount_off_minor, currency, max_redemptions, valid_from, valid_to, status,
+  (SELECT count(*) FROM platform.promotion_redemptions r WHERE r.promotion_id = p.id)::int AS redemptions
+FROM platform.promotions p WHERE code = $1
+`
+
+type GetPromotionByCodeRow struct {
+	ID             uuid.UUID
+	Kind           string
+	PercentOff     *float64
+	AmountOffMinor *int64
+	Currency       *string
+	MaxRedemptions *int32
+	ValidFrom      time.Time
+	ValidTo        *time.Time
+	Status         string
+	Redemptions    int32
+}
+
+func (q *Queries) GetPromotionByCode(ctx context.Context, code string) (GetPromotionByCodeRow, error) {
+	row := q.db.QueryRow(ctx, getPromotionByCode, code)
+	var i GetPromotionByCodeRow
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.PercentOff,
+		&i.AmountOffMinor,
+		&i.Currency,
+		&i.MaxRedemptions,
+		&i.ValidFrom,
+		&i.ValidTo,
+		&i.Status,
+		&i.Redemptions,
+	)
+	return i, err
+}
+
+const getPurchaseForUpdate = `-- name: GetPurchaseForUpdate :one
+SELECT id, tenant_id, plan_id, quantity, quote_snapshot, status, requested_by, currency, payment_method, invoice_id, rejection_reason, created_at, submitted_at
+FROM platform.purchase_requests WHERE id = $1 FOR UPDATE
+`
+
+type GetPurchaseForUpdateRow struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	PlanID          uuid.UUID
+	Quantity        int32
+	QuoteSnapshot   []byte
+	Status          string
+	RequestedBy     uuid.UUID
+	Currency        *string
+	PaymentMethod   *string
+	InvoiceID       *uuid.UUID
+	RejectionReason *string
+	CreatedAt       time.Time
+	SubmittedAt     *time.Time
+}
+
+func (q *Queries) GetPurchaseForUpdate(ctx context.Context, id uuid.UUID) (GetPurchaseForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getPurchaseForUpdate, id)
+	var i GetPurchaseForUpdateRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.PlanID,
+		&i.Quantity,
+		&i.QuoteSnapshot,
+		&i.Status,
+		&i.RequestedBy,
+		&i.Currency,
+		&i.PaymentMethod,
+		&i.InvoiceID,
+		&i.RejectionReason,
+		&i.CreatedAt,
+		&i.SubmittedAt,
+	)
+	return i, err
+}
+
 const getReservation = `-- name: GetReservation :one
 SELECT account_id, amount, source_module FROM platform.credit_ledger
 WHERE tenant_id = $1 AND idempotency_key = $2 AND entry_type = 'reservation'
@@ -463,6 +805,17 @@ func (q *Queries) GetReservation(ctx context.Context, arg GetReservationParams) 
 	var i GetReservationRow
 	err := row.Scan(&i.AccountID, &i.Amount, &i.SourceModule)
 	return i, err
+}
+
+const getSetting = `-- name: GetSetting :one
+SELECT value FROM platform.settings WHERE key = $1
+`
+
+func (q *Queries) GetSetting(ctx context.Context, key string) ([]byte, error) {
+	row := q.db.QueryRow(ctx, getSetting, key)
+	var value []byte
+	err := row.Scan(&value)
+	return value, err
 }
 
 const getSubscription = `-- name: GetSubscription :one
@@ -498,6 +851,62 @@ func (q *Queries) GetSubscription(ctx context.Context, id uuid.UUID) (GetSubscri
 	return i, err
 }
 
+const getSubscriptionBilling = `-- name: GetSubscriptionBilling :one
+SELECT s.id, s.tenant_id, s.plan_id, pl.name AS plan_name, pl.billing_period, s.status, s.currency, s.price_snapshot, s.current_period_start,
+  s.current_period_end, s.trial_ends_at, s.cancel_at, s.payment_method, s.payment_provider, s.provider_payment_method_ref, s.past_due_since,
+  s.dunning_attempts, s.next_retry_at, s.purchase_request_id
+FROM platform.subscriptions s JOIN platform.plans pl ON pl.id = s.plan_id WHERE s.id = $1 FOR UPDATE OF s
+`
+
+type GetSubscriptionBillingRow struct {
+	ID                       uuid.UUID
+	TenantID                 uuid.UUID
+	PlanID                   uuid.UUID
+	PlanName                 string
+	BillingPeriod            string
+	Status                   string
+	Currency                 string
+	PriceSnapshot            []byte
+	CurrentPeriodStart       *time.Time
+	CurrentPeriodEnd         *time.Time
+	TrialEndsAt              *time.Time
+	CancelAt                 *time.Time
+	PaymentMethod            *string
+	PaymentProvider          *string
+	ProviderPaymentMethodRef *string
+	PastDueSince             *time.Time
+	DunningAttempts          int32
+	NextRetryAt              *time.Time
+	PurchaseRequestID        *uuid.UUID
+}
+
+func (q *Queries) GetSubscriptionBilling(ctx context.Context, id uuid.UUID) (GetSubscriptionBillingRow, error) {
+	row := q.db.QueryRow(ctx, getSubscriptionBilling, id)
+	var i GetSubscriptionBillingRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.PlanID,
+		&i.PlanName,
+		&i.BillingPeriod,
+		&i.Status,
+		&i.Currency,
+		&i.PriceSnapshot,
+		&i.CurrentPeriodStart,
+		&i.CurrentPeriodEnd,
+		&i.TrialEndsAt,
+		&i.CancelAt,
+		&i.PaymentMethod,
+		&i.PaymentProvider,
+		&i.ProviderPaymentMethodRef,
+		&i.PastDueSince,
+		&i.DunningAttempts,
+		&i.NextRetryAt,
+		&i.PurchaseRequestID,
+	)
+	return i, err
+}
+
 const insertHistory = `-- name: InsertHistory :exec
 INSERT INTO platform.entitlement_status_history (tenant_id, module_id, grant_id, from_status, to_status, actor_type, actor_id, reason)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -524,6 +933,65 @@ func (q *Queries) InsertHistory(ctx context.Context, arg InsertHistoryParams) er
 		arg.ActorType,
 		arg.ActorID,
 		arg.Reason,
+	)
+	return err
+}
+
+const insertInvoice = `-- name: InsertInvoice :one
+INSERT INTO platform.invoices (tenant_id, subscription_id, number, status, currency, subtotal_minor, tax_minor, total_minor, issued_at, due_at)
+VALUES ($1, $2, $3, 'issued', $4, $5, 0, $5, now(), $6)
+RETURNING id
+`
+
+type InsertInvoiceParams struct {
+	TenantID       uuid.UUID
+	SubscriptionID *uuid.UUID
+	Number         string
+	Currency       string
+	SubtotalMinor  int64
+	DueAt          *time.Time
+}
+
+func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertInvoice,
+		arg.TenantID,
+		arg.SubscriptionID,
+		arg.Number,
+		arg.Currency,
+		arg.SubtotalMinor,
+		arg.DueAt,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertInvoiceLine = `-- name: InsertInvoiceLine :exec
+INSERT INTO platform.invoice_lines (tenant_id, invoice_id, description, quantity, unit_amount_minor, amount_minor, period_start, period_end)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type InsertInvoiceLineParams struct {
+	TenantID        uuid.UUID
+	InvoiceID       uuid.UUID
+	Description     string
+	Quantity        int32
+	UnitAmountMinor int64
+	AmountMinor     int64
+	PeriodStart     *time.Time
+	PeriodEnd       *time.Time
+}
+
+func (q *Queries) InsertInvoiceLine(ctx context.Context, arg InsertInvoiceLineParams) error {
+	_, err := q.db.Exec(ctx, insertInvoiceLine,
+		arg.TenantID,
+		arg.InvoiceID,
+		arg.Description,
+		arg.Quantity,
+		arg.UnitAmountMinor,
+		arg.AmountMinor,
+		arg.PeriodStart,
+		arg.PeriodEnd,
 	)
 	return err
 }
@@ -565,6 +1033,182 @@ func (q *Queries) InsertLedger(ctx context.Context, arg InsertLedgerParams) (uui
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const insertPayment = `-- name: InsertPayment :one
+INSERT INTO platform.payments (tenant_id, invoice_id, purchase_request_id, provider, method, status, amount_minor, currency, idempotency_key, purpose)
+VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9)
+ON CONFLICT (provider, idempotency_key) WHERE idempotency_key IS NOT NULL DO UPDATE SET updated_at = now()
+RETURNING id
+`
+
+type InsertPaymentParams struct {
+	TenantID          uuid.UUID
+	InvoiceID         *uuid.UUID
+	PurchaseRequestID *uuid.UUID
+	Provider          string
+	Method            string
+	AmountMinor       int64
+	Currency          string
+	IdempotencyKey    *string
+	Purpose           string
+}
+
+func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertPayment,
+		arg.TenantID,
+		arg.InvoiceID,
+		arg.PurchaseRequestID,
+		arg.Provider,
+		arg.Method,
+		arg.AmountMinor,
+		arg.Currency,
+		arg.IdempotencyKey,
+		arg.Purpose,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertPurchase = `-- name: InsertPurchase :one
+INSERT INTO platform.purchase_requests (tenant_id, plan_id, promotion_id, quantity, quote_snapshot, status, idempotency_key, requested_by, currency, payment_method, submitted_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+RETURNING id
+`
+
+type InsertPurchaseParams struct {
+	TenantID       uuid.UUID
+	PlanID         uuid.UUID
+	PromotionID    *uuid.UUID
+	Quantity       int32
+	QuoteSnapshot  []byte
+	Status         string
+	IdempotencyKey string
+	RequestedBy    uuid.UUID
+	Currency       *string
+	PaymentMethod  *string
+}
+
+func (q *Queries) InsertPurchase(ctx context.Context, arg InsertPurchaseParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertPurchase,
+		arg.TenantID,
+		arg.PlanID,
+		arg.PromotionID,
+		arg.Quantity,
+		arg.QuoteSnapshot,
+		arg.Status,
+		arg.IdempotencyKey,
+		arg.RequestedBy,
+		arg.Currency,
+		arg.PaymentMethod,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertReconciliationIssue = `-- name: InsertReconciliationIssue :execrows
+INSERT INTO platform.reconciliation_issues (run_id, provider, provider_ref, payment_id, kind, detail)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (provider, provider_ref, kind) WHERE status = 'open' DO NOTHING
+`
+
+type InsertReconciliationIssueParams struct {
+	RunID       uuid.UUID
+	Provider    string
+	ProviderRef string
+	PaymentID   *uuid.UUID
+	Kind        string
+	Detail      []byte
+}
+
+func (q *Queries) InsertReconciliationIssue(ctx context.Context, arg InsertReconciliationIssueParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertReconciliationIssue,
+		arg.RunID,
+		arg.Provider,
+		arg.ProviderRef,
+		arg.PaymentID,
+		arg.Kind,
+		arg.Detail,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const insertReconciliationRun = `-- name: InsertReconciliationRun :one
+INSERT INTO platform.reconciliation_runs (provider, window_start, window_end, status) VALUES ($1, $2, $3, 'running') RETURNING id
+`
+
+type InsertReconciliationRunParams struct {
+	Provider    string
+	WindowStart time.Time
+	WindowEnd   time.Time
+}
+
+func (q *Queries) InsertReconciliationRun(ctx context.Context, arg InsertReconciliationRunParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, insertReconciliationRun, arg.Provider, arg.WindowStart, arg.WindowEnd)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertRedemption = `-- name: InsertRedemption :exec
+INSERT INTO platform.promotion_redemptions (tenant_id, promotion_id, purchase_request_id) VALUES ($1, $2, $3)
+`
+
+type InsertRedemptionParams struct {
+	TenantID          uuid.UUID
+	PromotionID       uuid.UUID
+	PurchaseRequestID uuid.UUID
+}
+
+func (q *Queries) InsertRedemption(ctx context.Context, arg InsertRedemptionParams) error {
+	_, err := q.db.Exec(ctx, insertRedemption, arg.TenantID, arg.PromotionID, arg.PurchaseRequestID)
+	return err
+}
+
+const invoiceLines = `-- name: InvoiceLines :many
+SELECT description, quantity, unit_amount_minor, amount_minor, period_start, period_end FROM platform.invoice_lines
+WHERE invoice_id = $1 ORDER BY created_at, id
+`
+
+type InvoiceLinesRow struct {
+	Description     string
+	Quantity        int32
+	UnitAmountMinor int64
+	AmountMinor     int64
+	PeriodStart     *time.Time
+	PeriodEnd       *time.Time
+}
+
+func (q *Queries) InvoiceLines(ctx context.Context, invoiceID uuid.UUID) ([]InvoiceLinesRow, error) {
+	rows, err := q.db.Query(ctx, invoiceLines, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []InvoiceLinesRow
+	for rows.Next() {
+		var i InvoiceLinesRow
+		if err := rows.Scan(
+			&i.Description,
+			&i.Quantity,
+			&i.UnitAmountMinor,
+			&i.AmountMinor,
+			&i.PeriodStart,
+			&i.PeriodEnd,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const ledgerTotals = `-- name: LedgerTotals :one
@@ -1010,6 +1654,105 @@ func (q *Queries) ListProducts(ctx context.Context, publishedOnly bool) ([]ListP
 	return items, nil
 }
 
+const listReconciliationIssues = `-- name: ListReconciliationIssues :many
+SELECT id, run_id, provider, provider_ref, payment_id, kind, detail, status, resolved_by, resolved_at, note, created_at
+FROM platform.reconciliation_issues WHERE ($1::text IS NULL OR status = $1) ORDER BY created_at DESC LIMIT 200
+`
+
+type ListReconciliationIssuesRow struct {
+	ID          uuid.UUID
+	RunID       uuid.UUID
+	Provider    string
+	ProviderRef string
+	PaymentID   *uuid.UUID
+	Kind        string
+	Detail      []byte
+	Status      string
+	ResolvedBy  *uuid.UUID
+	ResolvedAt  *time.Time
+	Note        *string
+	CreatedAt   time.Time
+}
+
+func (q *Queries) ListReconciliationIssues(ctx context.Context, status *string) ([]ListReconciliationIssuesRow, error) {
+	rows, err := q.db.Query(ctx, listReconciliationIssues, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReconciliationIssuesRow
+	for rows.Next() {
+		var i ListReconciliationIssuesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RunID,
+			&i.Provider,
+			&i.ProviderRef,
+			&i.PaymentID,
+			&i.Kind,
+			&i.Detail,
+			&i.Status,
+			&i.ResolvedBy,
+			&i.ResolvedAt,
+			&i.Note,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReconciliationRuns = `-- name: ListReconciliationRuns :many
+SELECT id, provider, window_start, window_end, checked, issues, status, error, created_at FROM platform.reconciliation_runs ORDER BY created_at DESC LIMIT 30
+`
+
+type ListReconciliationRunsRow struct {
+	ID          uuid.UUID
+	Provider    string
+	WindowStart time.Time
+	WindowEnd   time.Time
+	Checked     int32
+	Issues      int32
+	Status      string
+	Error       *string
+	CreatedAt   time.Time
+}
+
+func (q *Queries) ListReconciliationRuns(ctx context.Context) ([]ListReconciliationRunsRow, error) {
+	rows, err := q.db.Query(ctx, listReconciliationRuns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReconciliationRunsRow
+	for rows.Next() {
+		var i ListReconciliationRunsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Provider,
+			&i.WindowStart,
+			&i.WindowEnd,
+			&i.Checked,
+			&i.Issues,
+			&i.Status,
+			&i.Error,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSubscriptionGrants = `-- name: ListSubscriptionGrants :many
 SELECT id, module_id, status FROM platform.entitlement_grants
 WHERE tenant_id = $1 AND subscription_id = $2
@@ -1037,6 +1780,112 @@ func (q *Queries) ListSubscriptionGrants(ctx context.Context, arg ListSubscripti
 	for rows.Next() {
 		var i ListSubscriptionGrantsRow
 		if err := rows.Scan(&i.ID, &i.ModuleID, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTenantInvoices = `-- name: ListTenantInvoices :many
+SELECT id, subscription_id, number, status, currency, subtotal_minor, tax_minor, total_minor, issued_at, due_at, paid_at
+FROM platform.invoices WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 200
+`
+
+type ListTenantInvoicesRow struct {
+	ID             uuid.UUID
+	SubscriptionID *uuid.UUID
+	Number         string
+	Status         string
+	Currency       string
+	SubtotalMinor  int64
+	TaxMinor       int64
+	TotalMinor     int64
+	IssuedAt       *time.Time
+	DueAt          *time.Time
+	PaidAt         *time.Time
+}
+
+func (q *Queries) ListTenantInvoices(ctx context.Context, tenantID uuid.UUID) ([]ListTenantInvoicesRow, error) {
+	rows, err := q.db.Query(ctx, listTenantInvoices, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTenantInvoicesRow
+	for rows.Next() {
+		var i ListTenantInvoicesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SubscriptionID,
+			&i.Number,
+			&i.Status,
+			&i.Currency,
+			&i.SubtotalMinor,
+			&i.TaxMinor,
+			&i.TotalMinor,
+			&i.IssuedAt,
+			&i.DueAt,
+			&i.PaidAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTenantPurchases = `-- name: ListTenantPurchases :many
+SELECT pr.id, pr.plan_id, pl.name AS plan_name, pr.quantity, pr.quote_snapshot, pr.status, pr.currency, pr.payment_method, pr.invoice_id,
+  pr.rejection_reason, pr.created_at, pr.reviewed_at
+FROM platform.purchase_requests pr JOIN platform.plans pl ON pl.id = pr.plan_id
+WHERE pr.tenant_id = $1 ORDER BY pr.created_at DESC LIMIT 100
+`
+
+type ListTenantPurchasesRow struct {
+	ID              uuid.UUID
+	PlanID          uuid.UUID
+	PlanName        string
+	Quantity        int32
+	QuoteSnapshot   []byte
+	Status          string
+	Currency        *string
+	PaymentMethod   *string
+	InvoiceID       *uuid.UUID
+	RejectionReason *string
+	CreatedAt       time.Time
+	ReviewedAt      *time.Time
+}
+
+func (q *Queries) ListTenantPurchases(ctx context.Context, tenantID uuid.UUID) ([]ListTenantPurchasesRow, error) {
+	rows, err := q.db.Query(ctx, listTenantPurchases, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTenantPurchasesRow
+	for rows.Next() {
+		var i ListTenantPurchasesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlanID,
+			&i.PlanName,
+			&i.Quantity,
+			&i.QuoteSnapshot,
+			&i.Status,
+			&i.Currency,
+			&i.PaymentMethod,
+			&i.InvoiceID,
+			&i.RejectionReason,
+			&i.CreatedAt,
+			&i.ReviewedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1093,6 +1942,17 @@ func (q *Queries) ListTenantSubscriptions(ctx context.Context, tenantID uuid.UUI
 	return items, nil
 }
 
+const nextInvoiceNumber = `-- name: NextInvoiceNumber :one
+SELECT nextval('platform.invoice_number_seq')::bigint
+`
+
+func (q *Queries) NextInvoiceNumber(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextInvoiceNumber)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const nextProductVersion = `-- name: NextProductVersion :one
 SELECT COALESCE(MAX(version), 0)::int + 1 AS next FROM platform.product_versions WHERE product_id = $1
 `
@@ -1102,6 +1962,283 @@ func (q *Queries) NextProductVersion(ctx context.Context, productID uuid.UUID) (
 	var next int32
 	err := row.Scan(&next)
 	return next, err
+}
+
+const oldestUnderReview = `-- name: OldestUnderReview :one
+SELECT COALESCE(EXTRACT(EPOCH FROM now() - min(submitted_at)), 0)::float8 FROM platform.purchase_requests WHERE status = 'under_review'
+`
+
+func (q *Queries) OldestUnderReview(ctx context.Context) (float64, error) {
+	row := q.db.QueryRow(ctx, oldestUnderReview)
+	var column_1 float64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const openInvoiceForSubscription = `-- name: OpenInvoiceForSubscription :one
+SELECT id, total_minor, currency, due_at, status FROM platform.invoices
+WHERE subscription_id = $1 AND status = 'issued' ORDER BY created_at DESC LIMIT 1
+`
+
+type OpenInvoiceForSubscriptionRow struct {
+	ID         uuid.UUID
+	TotalMinor int64
+	Currency   string
+	DueAt      *time.Time
+	Status     string
+}
+
+func (q *Queries) OpenInvoiceForSubscription(ctx context.Context, subscriptionID *uuid.UUID) (OpenInvoiceForSubscriptionRow, error) {
+	row := q.db.QueryRow(ctx, openInvoiceForSubscription, subscriptionID)
+	var i OpenInvoiceForSubscriptionRow
+	err := row.Scan(
+		&i.ID,
+		&i.TotalMinor,
+		&i.Currency,
+		&i.DueAt,
+		&i.Status,
+	)
+	return i, err
+}
+
+const overdueBankInvoices = `-- name: OverdueBankInvoices :many
+SELECT i.id, i.subscription_id FROM platform.invoices i JOIN platform.subscriptions s ON s.id = i.subscription_id
+WHERE i.status = 'issued' AND i.due_at < now() AND s.status = 'active' AND s.payment_method = 'bank_transfer'
+`
+
+type OverdueBankInvoicesRow struct {
+	ID             uuid.UUID
+	SubscriptionID *uuid.UUID
+}
+
+func (q *Queries) OverdueBankInvoices(ctx context.Context) ([]OverdueBankInvoicesRow, error) {
+	rows, err := q.db.Query(ctx, overdueBankInvoices)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OverdueBankInvoicesRow
+	for rows.Next() {
+		var i OverdueBankInvoicesRow
+		if err := rows.Scan(&i.ID, &i.SubscriptionID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const paymentByRef = `-- name: PaymentByRef :one
+SELECT id FROM platform.payments WHERE provider = $1 AND provider_payment_ref = $2
+`
+
+type PaymentByRefParams struct {
+	Provider string
+	Ref      *string
+}
+
+func (q *Queries) PaymentByRef(ctx context.Context, arg PaymentByRefParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, paymentByRef, arg.Provider, arg.Ref)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const paymentsForInvoice = `-- name: PaymentsForInvoice :many
+SELECT id, provider, method, status, amount_minor, currency, checkout_url, refund_status, failure_code, created_at
+FROM platform.payments WHERE invoice_id = $1 ORDER BY created_at
+`
+
+type PaymentsForInvoiceRow struct {
+	ID           uuid.UUID
+	Provider     string
+	Method       string
+	Status       string
+	AmountMinor  int64
+	Currency     string
+	CheckoutUrl  *string
+	RefundStatus *string
+	FailureCode  *string
+	CreatedAt    time.Time
+}
+
+func (q *Queries) PaymentsForInvoice(ctx context.Context, invoiceID *uuid.UUID) ([]PaymentsForInvoiceRow, error) {
+	rows, err := q.db.Query(ctx, paymentsForInvoice, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PaymentsForInvoiceRow
+	for rows.Next() {
+		var i PaymentsForInvoiceRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Provider,
+			&i.Method,
+			&i.Status,
+			&i.AmountMinor,
+			&i.Currency,
+			&i.CheckoutUrl,
+			&i.RefundStatus,
+			&i.FailureCode,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const paymentsForPurchase = `-- name: PaymentsForPurchase :many
+SELECT id, provider, method, status, amount_minor, currency, checkout_url, refund_status, failure_code, created_at
+FROM platform.payments WHERE purchase_request_id = $1 ORDER BY created_at
+`
+
+type PaymentsForPurchaseRow struct {
+	ID           uuid.UUID
+	Provider     string
+	Method       string
+	Status       string
+	AmountMinor  int64
+	Currency     string
+	CheckoutUrl  *string
+	RefundStatus *string
+	FailureCode  *string
+	CreatedAt    time.Time
+}
+
+func (q *Queries) PaymentsForPurchase(ctx context.Context, purchaseRequestID *uuid.UUID) ([]PaymentsForPurchaseRow, error) {
+	rows, err := q.db.Query(ctx, paymentsForPurchase, purchaseRequestID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PaymentsForPurchaseRow
+	for rows.Next() {
+		var i PaymentsForPurchaseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Provider,
+			&i.Method,
+			&i.Status,
+			&i.AmountMinor,
+			&i.Currency,
+			&i.CheckoutUrl,
+			&i.RefundStatus,
+			&i.FailureCode,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const paymentsSince = `-- name: PaymentsSince :many
+SELECT id, provider, provider_payment_ref, status, amount_minor, refunded_amount_minor, currency, created_at FROM platform.payments
+WHERE provider = $1 AND provider_payment_ref IS NOT NULL AND created_at >= $2
+`
+
+type PaymentsSinceParams struct {
+	Provider string
+	Since    time.Time
+}
+
+type PaymentsSinceRow struct {
+	ID                  uuid.UUID
+	Provider            string
+	ProviderPaymentRef  *string
+	Status              string
+	AmountMinor         int64
+	RefundedAmountMinor int64
+	Currency            string
+	CreatedAt           time.Time
+}
+
+func (q *Queries) PaymentsSince(ctx context.Context, arg PaymentsSinceParams) ([]PaymentsSinceRow, error) {
+	rows, err := q.db.Query(ctx, paymentsSince, arg.Provider, arg.Since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PaymentsSinceRow
+	for rows.Next() {
+		var i PaymentsSinceRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Provider,
+			&i.ProviderPaymentRef,
+			&i.Status,
+			&i.AmountMinor,
+			&i.RefundedAmountMinor,
+			&i.Currency,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pendingBankTransfers = `-- name: PendingBankTransfers :many
+SELECT p.id, p.tenant_id, p.invoice_id, i.number AS invoice_number, p.amount_minor, p.currency, p.purpose, p.created_at
+FROM platform.payments p LEFT JOIN platform.invoices i ON i.id = p.invoice_id
+WHERE p.method = 'bank_transfer' AND p.status = 'pending' ORDER BY p.created_at
+`
+
+type PendingBankTransfersRow struct {
+	ID            uuid.UUID
+	TenantID      uuid.UUID
+	InvoiceID     *uuid.UUID
+	InvoiceNumber *string
+	AmountMinor   int64
+	Currency      string
+	Purpose       string
+	CreatedAt     time.Time
+}
+
+func (q *Queries) PendingBankTransfers(ctx context.Context) ([]PendingBankTransfersRow, error) {
+	rows, err := q.db.Query(ctx, pendingBankTransfers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PendingBankTransfersRow
+	for rows.Next() {
+		var i PendingBankTransfersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.InvoiceID,
+			&i.InvoiceNumber,
+			&i.AmountMinor,
+			&i.Currency,
+			&i.Purpose,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const planModuleIDs = `-- name: PlanModuleIDs :many
@@ -1130,6 +2267,47 @@ func (q *Queries) PlanModuleIDs(ctx context.Context, planID uuid.UUID) ([]uuid.U
 	return items, nil
 }
 
+const planTerms = `-- name: PlanTerms :one
+
+SELECT pl.id, pl.key, pl.name, pl.billing_period, pl.trial_days, pl.usage_limits, pl.included_credits, pl.status, p.name AS product_name, p.status AS product_status
+FROM platform.plans pl
+JOIN platform.product_versions pv ON pv.id = pl.product_version_id
+JOIN platform.products p ON p.id = pv.product_id
+WHERE pl.id = $1
+`
+
+type PlanTermsRow struct {
+	ID              uuid.UUID
+	Key             string
+	Name            string
+	BillingPeriod   string
+	TrialDays       int32
+	UsageLimits     []byte
+	IncludedCredits []byte
+	Status          string
+	ProductName     string
+	ProductStatus   string
+}
+
+// Billing: purchases, invoices, payments, renewals, dunning and reconciliation (Phase 7).
+func (q *Queries) PlanTerms(ctx context.Context, id uuid.UUID) (PlanTermsRow, error) {
+	row := q.db.QueryRow(ctx, planTerms, id)
+	var i PlanTermsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.Name,
+		&i.BillingPeriod,
+		&i.TrialDays,
+		&i.UsageLimits,
+		&i.IncludedCredits,
+		&i.Status,
+		&i.ProductName,
+		&i.ProductStatus,
+	)
+	return i, err
+}
+
 const publishVersion = `-- name: PublishVersion :execrows
 UPDATE platform.product_versions SET status = 'published', effective_from = now()
 WHERE id = $1 AND status = 'draft'
@@ -1141,6 +2319,161 @@ func (q *Queries) PublishVersion(ctx context.Context, versionID uuid.UUID) (int6
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const purchasablePlans = `-- name: PurchasablePlans :many
+SELECT pl.id, pl.key, pl.name, pl.billing_period, pl.trial_days, pl.usage_limits, pl.included_credits, p.key AS product_key, p.name AS product_name,
+  p.description AS product_description, pr.currency, pr.amount_minor
+FROM platform.plans pl
+JOIN platform.product_versions pv ON pv.id = pl.product_version_id
+JOIN platform.products p ON p.id = pv.product_id
+JOIN platform.prices pr ON pr.plan_id = pl.id AND pr.valid_to IS NULL
+WHERE pl.status = 'active' AND p.status = 'active' AND pv.status = 'published'
+ORDER BY p.name, pl.name, pr.currency
+`
+
+type PurchasablePlansRow struct {
+	ID                 uuid.UUID
+	Key                string
+	Name               string
+	BillingPeriod      string
+	TrialDays          int32
+	UsageLimits        []byte
+	IncludedCredits    []byte
+	ProductKey         string
+	ProductName        string
+	ProductDescription string
+	Currency           string
+	AmountMinor        int64
+}
+
+// Plans a tenant may buy: active plans of active products, with a current price.
+func (q *Queries) PurchasablePlans(ctx context.Context) ([]PurchasablePlansRow, error) {
+	rows, err := q.db.Query(ctx, purchasablePlans)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PurchasablePlansRow
+	for rows.Next() {
+		var i PurchasablePlansRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Key,
+			&i.Name,
+			&i.BillingPeriod,
+			&i.TrialDays,
+			&i.UsageLimits,
+			&i.IncludedCredits,
+			&i.ProductKey,
+			&i.ProductName,
+			&i.ProductDescription,
+			&i.Currency,
+			&i.AmountMinor,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const purchaseByKey = `-- name: PurchaseByKey :one
+SELECT id FROM platform.purchase_requests WHERE tenant_id = $1 AND idempotency_key = $2
+`
+
+type PurchaseByKeyParams struct {
+	TenantID       uuid.UUID
+	IdempotencyKey string
+}
+
+func (q *Queries) PurchaseByKey(ctx context.Context, arg PurchaseByKeyParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, purchaseByKey, arg.TenantID, arg.IdempotencyKey)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const putSetting = `-- name: PutSetting :exec
+INSERT INTO platform.settings (key, value, updated_by, updated_at) VALUES ($1, $2, $3, now())
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()
+`
+
+type PutSettingParams struct {
+	Key       string
+	Value     []byte
+	UpdatedBy *uuid.UUID
+}
+
+func (q *Queries) PutSetting(ctx context.Context, arg PutSettingParams) error {
+	_, err := q.db.Exec(ctx, putSetting, arg.Key, arg.Value, arg.UpdatedBy)
+	return err
+}
+
+const recordRefund = `-- name: RecordRefund :exec
+UPDATE platform.payments SET refund_status = $1, refund_ref = $2,
+  refunded_amount_minor = CASE WHEN $1 = 'succeeded' THEN amount_minor ELSE refunded_amount_minor END,
+  refunded_at = CASE WHEN $1 = 'succeeded' THEN now() ELSE refunded_at END,
+  status = CASE WHEN $1 = 'succeeded' THEN 'refunded' ELSE status END
+WHERE id = $3
+`
+
+type RecordRefundParams struct {
+	RefundStatus *string
+	RefundRef    *string
+	ID           uuid.UUID
+}
+
+func (q *Queries) RecordRefund(ctx context.Context, arg RecordRefundParams) error {
+	_, err := q.db.Exec(ctx, recordRefund, arg.RefundStatus, arg.RefundRef, arg.ID)
+	return err
+}
+
+const refundsToMake = `-- name: RefundsToMake :many
+SELECT p.id, p.tenant_id, p.amount_minor, p.currency, p.method, p.refund_status, p.created_at
+FROM platform.payments p
+WHERE p.refund_status IN ('pending','failed') ORDER BY p.created_at
+`
+
+type RefundsToMakeRow struct {
+	ID           uuid.UUID
+	TenantID     uuid.UUID
+	AmountMinor  int64
+	Currency     string
+	Method       string
+	RefundStatus *string
+	CreatedAt    time.Time
+}
+
+func (q *Queries) RefundsToMake(ctx context.Context) ([]RefundsToMakeRow, error) {
+	rows, err := q.db.Query(ctx, refundsToMake)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RefundsToMakeRow
+	for rows.Next() {
+		var i RefundsToMakeRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.AmountMinor,
+			&i.Currency,
+			&i.Method,
+			&i.RefundStatus,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const reserveCredits = `-- name: ReserveCredits :execrows
@@ -1159,6 +2492,85 @@ func (q *Queries) ReserveCredits(ctx context.Context, arg ReserveCreditsParams) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const resolveReconciliationIssue = `-- name: ResolveReconciliationIssue :execrows
+UPDATE platform.reconciliation_issues SET status = 'resolved', resolved_by = $1, resolved_at = now(), note = $2 WHERE id = $3 AND status = 'open'
+`
+
+type ResolveReconciliationIssueParams struct {
+	ResolvedBy *uuid.UUID
+	Note       *string
+	ID         uuid.UUID
+}
+
+func (q *Queries) ResolveReconciliationIssue(ctx context.Context, arg ResolveReconciliationIssueParams) (int64, error) {
+	result, err := q.db.Exec(ctx, resolveReconciliationIssue, arg.ResolvedBy, arg.Note, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const reviewQueue = `-- name: ReviewQueue :many
+SELECT pr.id, pr.tenant_id, pr.plan_id, pl.name AS plan_name, pr.quantity, pr.quote_snapshot, pr.status, pr.currency,
+  pr.payment_method, pr.invoice_id, pr.created_at, pr.submitted_at, pr.reviewed_at, pr.rejection_reason
+FROM platform.purchase_requests pr
+JOIN platform.plans pl ON pl.id = pr.plan_id
+WHERE ($1::text IS NULL OR pr.status = $1)
+ORDER BY pr.submitted_at NULLS LAST, pr.created_at LIMIT 200
+`
+
+type ReviewQueueRow struct {
+	ID              uuid.UUID
+	TenantID        uuid.UUID
+	PlanID          uuid.UUID
+	PlanName        string
+	Quantity        int32
+	QuoteSnapshot   []byte
+	Status          string
+	Currency        *string
+	PaymentMethod   *string
+	InvoiceID       *uuid.UUID
+	CreatedAt       time.Time
+	SubmittedAt     *time.Time
+	ReviewedAt      *time.Time
+	RejectionReason *string
+}
+
+func (q *Queries) ReviewQueue(ctx context.Context, status *string) ([]ReviewQueueRow, error) {
+	rows, err := q.db.Query(ctx, reviewQueue, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReviewQueueRow
+	for rows.Next() {
+		var i ReviewQueueRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.PlanID,
+			&i.PlanName,
+			&i.Quantity,
+			&i.QuoteSnapshot,
+			&i.Status,
+			&i.Currency,
+			&i.PaymentMethod,
+			&i.InvoiceID,
+			&i.CreatedAt,
+			&i.SubmittedAt,
+			&i.ReviewedAt,
+			&i.RejectionReason,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const setGrantStatus = `-- name: SetGrantStatus :exec
@@ -1189,6 +2601,104 @@ func (q *Queries) SetGrantStatus(ctx context.Context, arg SetGrantStatusParams) 
 	return err
 }
 
+const setInvoiceStatus = `-- name: SetInvoiceStatus :execrows
+UPDATE platform.invoices SET status = $1, paid_at = CASE WHEN $1 = 'paid' THEN now() ELSE paid_at END
+WHERE id = $2 AND status = ANY($3::text[])
+`
+
+type SetInvoiceStatusParams struct {
+	Status       string
+	ID           uuid.UUID
+	FromStatuses []string
+}
+
+func (q *Queries) SetInvoiceStatus(ctx context.Context, arg SetInvoiceStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setInvoiceStatus, arg.Status, arg.ID, arg.FromStatuses)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setPaymentCheckout = `-- name: SetPaymentCheckout :exec
+UPDATE platform.payments SET provider_payment_ref = $1, checkout_url = $2 WHERE id = $3
+`
+
+type SetPaymentCheckoutParams struct {
+	Ref         *string
+	CheckoutUrl *string
+	ID          uuid.UUID
+}
+
+func (q *Queries) SetPaymentCheckout(ctx context.Context, arg SetPaymentCheckoutParams) error {
+	_, err := q.db.Exec(ctx, setPaymentCheckout, arg.Ref, arg.CheckoutUrl, arg.ID)
+	return err
+}
+
+const setPurchaseInvoice = `-- name: SetPurchaseInvoice :exec
+UPDATE platform.purchase_requests SET invoice_id = $1 WHERE id = $2
+`
+
+type SetPurchaseInvoiceParams struct {
+	InvoiceID *uuid.UUID
+	ID        uuid.UUID
+}
+
+func (q *Queries) SetPurchaseInvoice(ctx context.Context, arg SetPurchaseInvoiceParams) error {
+	_, err := q.db.Exec(ctx, setPurchaseInvoice, arg.InvoiceID, arg.ID)
+	return err
+}
+
+const setPurchaseStatus = `-- name: SetPurchaseStatus :execrows
+UPDATE platform.purchase_requests SET status = $1 WHERE id = $2 AND status = ANY($3::text[])
+`
+
+type SetPurchaseStatusParams struct {
+	Status       string
+	ID           uuid.UUID
+	FromStatuses []string
+}
+
+func (q *Queries) SetPurchaseStatus(ctx context.Context, arg SetPurchaseStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setPurchaseStatus, arg.Status, arg.ID, arg.FromStatuses)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const setSubscriptionBilling = `-- name: SetSubscriptionBilling :exec
+UPDATE platform.subscriptions SET status = $1, current_period_start = $2, current_period_end = $3,
+  past_due_since = $4, dunning_attempts = $5, next_retry_at = $6,
+  provider_payment_method_ref = COALESCE($7, provider_payment_method_ref)
+WHERE id = $8
+`
+
+type SetSubscriptionBillingParams struct {
+	Status             string
+	CurrentPeriodStart *time.Time
+	CurrentPeriodEnd   *time.Time
+	PastDueSince       *time.Time
+	DunningAttempts    int32
+	NextRetryAt        *time.Time
+	MethodRef          *string
+	ID                 uuid.UUID
+}
+
+func (q *Queries) SetSubscriptionBilling(ctx context.Context, arg SetSubscriptionBillingParams) error {
+	_, err := q.db.Exec(ctx, setSubscriptionBilling,
+		arg.Status,
+		arg.CurrentPeriodStart,
+		arg.CurrentPeriodEnd,
+		arg.PastDueSince,
+		arg.DunningAttempts,
+		arg.NextRetryAt,
+		arg.MethodRef,
+		arg.ID,
+	)
+	return err
+}
+
 const setSubscriptionStatus = `-- name: SetSubscriptionStatus :execrows
 UPDATE platform.subscriptions SET status = $1 WHERE id = $2 AND status = $3
 `
@@ -1201,6 +2711,37 @@ type SetSubscriptionStatusParams struct {
 
 func (q *Queries) SetSubscriptionStatus(ctx context.Context, arg SetSubscriptionStatusParams) (int64, error) {
 	result, err := q.db.Exec(ctx, setSubscriptionStatus, arg.Status, arg.ID, arg.FromStatus)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const settlePayment = `-- name: SettlePayment :execrows
+UPDATE platform.payments SET status = $1, failure_code = $2, provider_method_ref = COALESCE($3, provider_method_ref),
+  provider_payment_ref = COALESCE($4, provider_payment_ref), verified_by = $5,
+  verified_at = CASE WHEN $1 = 'succeeded' THEN now() ELSE verified_at END
+WHERE id = $6 AND status = 'pending'
+`
+
+type SettlePaymentParams struct {
+	Status      string
+	FailureCode *string
+	MethodRef   *string
+	Ref         *string
+	VerifiedBy  *uuid.UUID
+	ID          uuid.UUID
+}
+
+func (q *Queries) SettlePayment(ctx context.Context, arg SettlePaymentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, settlePayment,
+		arg.Status,
+		arg.FailureCode,
+		arg.MethodRef,
+		arg.Ref,
+		arg.VerifiedBy,
+		arg.ID,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -1222,6 +2763,17 @@ func (q *Queries) SettleReservation(ctx context.Context, arg SettleReservationPa
 	var balance int64
 	err := row.Scan(&balance)
 	return balance, err
+}
+
+const subscriptionForPurchase = `-- name: SubscriptionForPurchase :one
+SELECT id FROM platform.subscriptions WHERE purchase_request_id = $1
+`
+
+func (q *Queries) SubscriptionForPurchase(ctx context.Context, purchaseRequestID *uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, subscriptionForPurchase, purchaseRequestID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const upsertEffective = `-- name: UpsertEffective :one

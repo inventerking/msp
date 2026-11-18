@@ -1,0 +1,90 @@
+# Monitoring for the testing server: Prometheus, Alertmanager, Grafana and node-exporter.
+#   docker compose -f compose.yaml -f compose.monitoring.yaml up -d --build --wait
+# Nothing here is published publicly. Grafana listens on the server's loopback only; reach it by
+# SSH tunnel, as with Mailpit. Alerts go to Mailpit until a real receiver is configured.
+services:
+  api:
+    environment:
+      METRICS_ADDR: 0.0.0.0:9100
+    networks: [monitoring]
+  worker:
+    environment:
+      METRICS_ADDR: 0.0.0.0:9100
+    networks: [monitoring]
+
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: 20m, max-file: "5"}}
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus:/prometheus
+    networks: [monitoring]
+
+  alertmanager:
+    image: prom/alertmanager:v0.35.0
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: 20m, max-file: "5"}}
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+    command: [--config.file=/etc/alertmanager/alertmanager.yml, --storage.path=/alertmanager]
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager:/alertmanager
+    # Mailpit is on the internal network.
+    networks: [monitoring, internal]
+
+  grafana:
+    image: grafana/grafana:13.2.6
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: 20m, max-file: "5"}}
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?add GRAFANA_ADMIN_PASSWORD to .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+    ports: ["127.0.0.1:${GRAFANA_PORT:-53000}:3000"]
+    networks: [monitoring, grafana_ui]
+
+  # Host disk, memory and CPU, plus backup and drill results written by the scripts as text files.
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: 20m, max-file: "5"}}
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --collector.textfile.directory=/textfile
+    volumes:
+      - /:/host:ro,rslave
+      - ./metrics-textfile:/textfile:ro
+    networks: [monitoring]
+
+networks:
+  # No route out: monitoring only talks to the stack.
+  monitoring: {internal: true}
+  grafana_ui:
+
+volumes:
+  prometheus:
+  alertmanager:
+  grafana:

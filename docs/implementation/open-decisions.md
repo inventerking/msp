@@ -6,7 +6,7 @@ Approval sets the direction, but these items still need work before they are clo
 
 | ID | Still needed | By |
 |---|---|---|
-| D-04 | Evaluate merchant-of-record options, then choose a provider | Before Phase 7 |
+| D-04 | Evaluate merchant-of-record options, then choose a provider. Phase 7 built payments behind a provider-neutral interface (decided 2026-11-18), so this no longer blocks the build | Before real payments |
 | D-05 | Select each provider, and check licence and data terms | Before the phase that needs it |
 | D-09, D-10, D-12 | Legal opinion and jurisdiction rules, through the product owner's boss. If the review disagrees, the decision is reopened | Before handover, or before any real use |
 | D-13 | Choose the production region. Deferred: no production deployment is planned yet, and EU is the working assumption | Before real customer data is stored |
@@ -14,6 +14,7 @@ Approval sets the direction, but these items still need work before they are clo
 | D-19 | The product owner's boss takes responsibility for legal review after handover (decided 2026-11-06). An earlier look at D-09, D-10 and D-12 is recommended, to reduce rework | Before real use |
 | D-21 | Choose specific libraries and tools in the agreed review | Start of Phase 1 |
 | D-23 | Environments decided 2026-11-06: local Docker first, then a testing server. Production hosting is decided after handover | After handover |
+| D-01, D-18 | Built in Phase 7 as recommended: card payments are taken at submission, a rejected purchase is refunded automatically, and unpaid subscriptions are suspended and then end under an admin-set policy. The review target (24 hours by default) is a setting. Legal review of the notices is question L-26 and L-27 in the [legal review pack](../legal/review-pack.md) | Before real payments |
 
 **Rules until legal review is complete:** the local and testing environments use synthetic data only. They send no email to real recipients, using a test sink instead. They run assessments only against domains the team controls, and don't track real visitors.
 

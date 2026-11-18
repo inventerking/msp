@@ -26,6 +26,64 @@ func (q *Queries) AcceptInvitation(ctx context.Context, arg AcceptInvitationPara
 	return err
 }
 
+const acceptanceCounts = `-- name: AcceptanceCounts :many
+SELECT document_id, count(*)::int AS accepted FROM identity.document_acceptances GROUP BY document_id
+`
+
+type AcceptanceCountsRow struct {
+	DocumentID uuid.UUID
+	Accepted   int32
+}
+
+func (q *Queries) AcceptanceCounts(ctx context.Context) ([]AcceptanceCountsRow, error) {
+	rows, err := q.db.Query(ctx, acceptanceCounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AcceptanceCountsRow
+	for rows.Next() {
+		var i AcceptanceCountsRow
+		if err := rows.Scan(&i.DocumentID, &i.Accepted); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const acceptedDocuments = `-- name: AcceptedDocuments :many
+SELECT document_id, workspace_id FROM identity.document_acceptances WHERE user_id = $1
+`
+
+type AcceptedDocumentsRow struct {
+	DocumentID  uuid.UUID
+	WorkspaceID *uuid.UUID
+}
+
+func (q *Queries) AcceptedDocuments(ctx context.Context, userID uuid.UUID) ([]AcceptedDocumentsRow, error) {
+	rows, err := q.db.Query(ctx, acceptedDocuments, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AcceptedDocumentsRow
+	for rows.Next() {
+		var i AcceptedDocumentsRow
+		if err := rows.Scan(&i.DocumentID, &i.WorkspaceID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const addAdminRole = `-- name: AddAdminRole :exec
 INSERT INTO identity.platform_admin_role_assignments (admin_id, role, granted_by, granted_at)
 VALUES ($1, $2, $3, now())
@@ -1019,6 +1077,22 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow
 	return i, err
 }
 
+const insertAcceptance = `-- name: InsertAcceptance :exec
+INSERT INTO identity.document_acceptances (user_id, workspace_id, document_id) VALUES ($1, $2, $3)
+ON CONFLICT DO NOTHING
+`
+
+type InsertAcceptanceParams struct {
+	UserID      uuid.UUID
+	WorkspaceID *uuid.UUID
+	DocumentID  uuid.UUID
+}
+
+func (q *Queries) InsertAcceptance(ctx context.Context, arg InsertAcceptanceParams) error {
+	_, err := q.db.Exec(ctx, insertAcceptance, arg.UserID, arg.WorkspaceID, arg.DocumentID)
+	return err
+}
+
 const listAdmins = `-- name: ListAdmins :many
 SELECT a.id, a.email, a.display_name, a.status,
        COALESCE(ARRAY(SELECT ra.role FROM identity.platform_admin_role_assignments ra WHERE ra.admin_id = a.id ORDER BY ra.role), '{}')::text[] AS roles
@@ -1501,6 +1575,19 @@ func (q *Queries) RevokeUserSessions(ctx context.Context, arg RevokeUserSessions
 	return err
 }
 
+const seatsInUse = `-- name: SeatsInUse :one
+SELECT ((SELECT count(*) FROM identity.memberships m WHERE m.tenant_id = $1::uuid AND m.status = 'active')
+      + (SELECT count(*) FROM identity.invitations i WHERE i.tenant_id = $1::uuid AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > now()))::int
+`
+
+// Active members plus invitations still open: both hold a seat under a plan's limit.
+func (q *Queries) SeatsInUse(ctx context.Context, tenantID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, seatsInUse, tenantID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const setAdminPassword = `-- name: SetAdminPassword :exec
 UPDATE identity.platform_admins SET password_hash = $1 WHERE id = $2
 `
@@ -1554,6 +1641,46 @@ type SetSessionTenantParams struct {
 func (q *Queries) SetSessionTenant(ctx context.Context, arg SetSessionTenantParams) error {
 	_, err := q.db.Exec(ctx, setSessionTenant, arg.TenantID, arg.ID)
 	return err
+}
+
+const tenantNames = `-- name: TenantNames :many
+SELECT id, name FROM identity.tenants WHERE id = ANY($1::uuid[])
+`
+
+type TenantNamesRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+func (q *Queries) TenantNames(ctx context.Context, ids []uuid.UUID) ([]TenantNamesRow, error) {
+	rows, err := q.db.Query(ctx, tenantNames, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TenantNamesRow
+	for rows.Next() {
+		var i TenantNamesRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const tenantOwnerID = `-- name: TenantOwnerID :one
+SELECT owner_user_id FROM identity.tenants WHERE id = $1
+`
+
+func (q *Queries) TenantOwnerID(ctx context.Context, id uuid.UUID) (*uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, tenantOwnerID, id)
+	var owner_user_id *uuid.UUID
+	err := row.Scan(&owner_user_id)
+	return owner_user_id, err
 }
 
 const touchAdminLogin = `-- name: TouchAdminLogin :exec

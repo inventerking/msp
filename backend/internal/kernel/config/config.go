@@ -41,6 +41,9 @@ type Config struct {
 	SendingDomainCheck string
 	// FileScanner is clamav, or allow-all, which is refused outside local development.
 	FileScanner string
+	// MetricsAddr serves Prometheus metrics on a separate listener. Empty turns it off. Never
+	// publish it: it is for the monitoring network only.
+	MetricsAddr string
 	// TrustForwarded uses X-Forwarded-For. Enable only behind a trusted proxy such as Traefik.
 	TrustForwarded bool
 }
@@ -66,6 +69,7 @@ func Load() (Config, error) {
 		AppBaseURL:         strings.TrimRight(get("APP_BASE_URL", "http://localhost:5180"), "/"),
 		AuthRatePerMinute:  authRate(),
 		TrustForwarded:     os.Getenv("TRUST_FORWARDED") == "true",
+		MetricsAddr:        os.Getenv("METRICS_ADDR"),
 		S3Endpoint:         os.Getenv("S3_ENDPOINT"),
 		S3Bucket:           get("S3_BUCKET", "msp-files"),
 		S3AccessKey:        os.Getenv("S3_ACCESS_KEY"),

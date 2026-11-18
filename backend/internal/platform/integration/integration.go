@@ -83,6 +83,7 @@ type breaker struct {
 
 // Service implements provider management and calls.
 type Service struct {
+	payments  map[string]PaymentProvider
 	pools     *db.Pools
 	keys      crypto.Keys
 	mu        sync.Mutex

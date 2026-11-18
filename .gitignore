@@ -32,3 +32,7 @@ deploy/testing/seaweedfs/
 .eslintcache
 .vite/
 graphify-out/
+deploy/testing/drills/
+deploy/testing/backup.log
+deploy/testing/metrics-textfile/*.prom
+deploy/testing/backup-offsite.env

@@ -1,11 +1,12 @@
 import { unwrap } from "@msp/api-client";
-import { Badge, Card, EmptyState, ErrorState, PageHeader, SkeletonRows, Table } from "@msp/ui";
-import { useQuery } from "@tanstack/react-query";
+import { Badge, Button, Card, EmptyState, ErrorState, PageHeader, SkeletonRows, Table } from "@msp/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api, tenantKey, useMe } from "../app/api";
 import { errorText } from "../app/errors";
 import { statusTone } from "../app/moduleStatus";
 import { NoPermission } from "../shell/StatusPages";
+import { BillingSections } from "./Billing";
 
 export function Subscription() {
   const { t } = useTranslation();
@@ -14,6 +15,12 @@ export function Subscription() {
   const products = useQuery({ queryKey: tenantKey(me, "products"), queryFn: () => unwrap(api.GET("/catalog/products")), enabled: allowed });
   const subs = useQuery({ queryKey: tenantKey(me, "subscriptions"), queryFn: () => unwrap(api.GET("/subscriptions")), enabled: allowed });
   const usage = useQuery({ queryKey: tenantKey(me, "usage"), queryFn: () => unwrap(api.GET("/usage")), enabled: allowed });
+  const canManage = Boolean(me?.permissions.includes("billing.manage"));
+  const qc = useQueryClient();
+  const stop = useMutation({
+    mutationFn: (id: string) => unwrap(api.POST("/billing/subscriptions/{id}/cancel", { params: { path: { id } } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: tenantKey(me) }),
+  });
   if (!allowed) return <NoPermission />;
   return (
     <>
@@ -50,6 +57,7 @@ export function Subscription() {
           ) : null}
         </Card>
       </section>
+      <BillingSections />
       <section className="mb-6">
         <h2 className="mb-2 text-sm font-medium text-ink-soft">{t("subscription.subscriptions")}</h2>
         <Card>
@@ -58,8 +66,15 @@ export function Subscription() {
           {subs.data?.data.length === 0 ? <EmptyState title={t("subscription.noSubscriptions")} /> : null}
           {subs.data?.data.length ? (
             <Table>
-              <thead><tr><th>{t("subscription.plan")}</th><th>{t("subscription.status")}</th><th>{t("subscription.started")}</th></tr></thead>
-              <tbody>{subs.data.data.map((s) => <tr key={s.id}><td>{s.plan_name}</td><td><code className="text-xs">{s.status}</code></td><td className="text-ink-soft">{new Date(s.created_at).toLocaleDateString()}</td></tr>)}</tbody>
+              <thead><tr><th>{t("subscription.plan")}</th><th>{t("subscription.status")}</th><th>{t("subscription.started")}</th><th><span className="sr-only">{t("billing.actions")}</span></th></tr></thead>
+              <tbody>{subs.data.data.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.plan_name}</td>
+                  <td><code className="text-xs">{s.status}</code></td>
+                  <td className="text-ink-soft">{new Date(s.created_at).toLocaleDateString()}</td>
+                  <td className="text-right">{canManage && ["active", "trialing", "past_due"].includes(s.status) ? <Button size="sm" variant="secondary" disabled={stop.isPending} onClick={() => stop.mutate(s.id)}>{t("billing.stopRenewing")}</Button> : null}</td>
+                </tr>
+              ))}</tbody>
             </Table>
           ) : null}
         </Card>

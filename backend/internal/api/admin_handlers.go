@@ -1,11 +1,13 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
 
 	"mspengine/internal/api/adminapi"
+	"mspengine/internal/kernel/apperr"
 	"mspengine/internal/kernel/authctx"
 	"mspengine/internal/platform/commercial/repo"
 )
@@ -290,7 +292,23 @@ func (h adminHandlers) CreatePlan(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &b) {
 		return
 	}
-	p, err := h.commercial.CreatePlan(r.Context(), repo.CreatePlanParams{ProductVersionID: b.ProductVersionId, Key: b.Key, Name: b.Name, BillingPeriod: string(b.BillingPeriod), TrialDays: int32(b.TrialDays)}) //nolint:gosec // The contract limits this to 0-365.
+	limits, credits := map[string]any{}, map[string]int{}
+	if b.Seats != nil {
+		limits["seats"] = *b.Seats
+	}
+	if b.IncludedCredits != nil {
+		for meter, n := range *b.IncludedCredits {
+			if meter != "ai_credits" && meter != "lead_credits" {
+				writeError(w, r, apperr.Validation(apperr.FieldError{Field: "included_credits", Code: "unknown_meter"}))
+				return
+			}
+			credits[meter] = n
+		}
+	}
+	limitsRaw, _ := json.Marshal(limits)
+	creditsRaw, _ := json.Marshal(credits)
+	p, err := h.commercial.CreatePlan(r.Context(), repo.CreatePlanParams{ProductVersionID: b.ProductVersionId, Key: b.Key, Name: b.Name, BillingPeriod: string(b.BillingPeriod),
+		TrialDays: int32(b.TrialDays), UsageLimits: limitsRaw, IncludedCredits: creditsRaw}) //nolint:gosec // The contract limits this to 0-365.
 	if err != nil {
 		writeError(w, r, err)
 		return

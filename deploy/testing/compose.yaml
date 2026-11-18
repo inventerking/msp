@@ -3,8 +3,14 @@
 # stays in Mailpit. Mailpit cannot deliver to real inboxes.
 name: msp-testing
 
+# Container logs rotate by size, so they cannot fill the disk.
+x-logging: &logging
+  driver: json-file
+  options: {max-size: 20m, max-file: "5"}
+
 x-hardening: &hardening
   restart: unless-stopped
+  logging: *logging
   security_opt: ["no-new-privileges:true"]
   cap_drop: [ALL]
   read_only: true
@@ -77,6 +83,7 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
     restart: "no"
+    logging: *logging
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     read_only: true
@@ -125,10 +132,39 @@ services:
     tmpfs: [/tmp]
     networks: [edge]
 
+  # WAL is archived continuously and encrypted by pgBackRest into the pgbackups volume. Run
+  # ./backup.sh daily for base backups, and ./restore-drill.sh to prove a restore works. For an
+  # off-host copy, put a second repository's settings in backup-offsite.env (see README).
   postgres:
-    image: pgvector/pgvector:0.8.7-pg18-trixie
+    image: msp-engine-postgres:testing
+    build: {context: ../.., dockerfile: deploy/docker/postgres.Dockerfile}
     restart: unless-stopped
+    logging: *logging
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=pgbackrest archive-push %p
+      - -c
+      - archive_timeout=60
+    env_file:
+      - path: ./backup-offsite.env
+        required: false
     environment:
+      PGBACKREST_STANZA: msp
+      PGBACKREST_PG1_PATH: /var/lib/postgresql/18/docker
+      PGBACKREST_REPO1_PATH: /backups
+      PGBACKREST_REPO1_CIPHER_TYPE: aes-256-cbc
+      PGBACKREST_REPO1_CIPHER_PASS: ${BACKUP_CIPHER_PASS:?run init-env.sh or add BACKUP_CIPHER_PASS to .env}
+      PGBACKREST_REPO1_RETENTION_FULL: "7"
+      PGBACKREST_COMPRESS_TYPE: zst
+      PGBACKREST_START_FAST: "y"
+      PGBACKREST_ARCHIVE_ASYNC: "n"
+      PGBACKREST_LOG_LEVEL_FILE: "off"
+      PGBACKREST_LOG_LEVEL_CONSOLE: warn
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
       DB_APP_PASSWORD: ${DB_APP_PASSWORD}
@@ -136,6 +172,7 @@ services:
       DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql
+      - pgbackups:/backups
       - ./postgres/00-roles.sh:/docker-entrypoint-initdb.d/00-roles.sh:ro
     networks: [internal]
     healthcheck:
@@ -147,6 +184,7 @@ services:
   redis:
     image: redis:8.8-alpine
     restart: unless-stopped
+    logging: *logging
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     networks: [internal]
     healthcheck:
@@ -158,6 +196,7 @@ services:
   seaweedfs:
     image: chrislusf/seaweedfs:4.52
     restart: unless-stopped
+    logging: *logging
     command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json", "-master.volumeSizeLimitMB=256", "-ip.bind=0.0.0.0"]
     volumes:
       - seaweed:/data
@@ -168,6 +207,7 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:9.2
     restart: unless-stopped
+    logging: *logging
     command: ["gotenberg", "--chromium-deny-list=^(?!(file:///tmp/|data:)).*", "--chromium-disable-javascript=true", "--api-port=3000"]
     networks: [internal]
 
@@ -176,12 +216,14 @@ services:
   clamav:
     image: clamav/clamav:1.5
     restart: unless-stopped
+    logging: *logging
     networks: [internal, clamav_updates]
 
   # The email sink. Its web page is published to the server's loopback only: reach it by SSH tunnel.
   mailpit:
     image: axllent/mailpit:v1.33
     restart: unless-stopped
+    logging: *logging
     ports: ["127.0.0.1:${MAILPIT_PORT:-58025}:8025"]
     networks: [internal, mail_ui]
 
@@ -194,4 +236,6 @@ networks:
 
 volumes:
   pgdata:
+  # Keep a copy off this host too: a backup on the same disk does not survive losing the disk.
+  pgbackups:
   seaweed:

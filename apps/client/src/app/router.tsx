@@ -8,6 +8,7 @@ import { Shell } from "../shell/Shell";
 import { ForgotPassword, Login, Mfa, Register, ResetPassword, VerifyEmail } from "../platform/auth";
 import { Dashboard } from "../platform/Dashboard";
 import { Profile } from "../platform/Profile";
+import { FakeCheckout, LegalDocuments, ReportAbuse } from "../platform/Public";
 import { Settings } from "../platform/Settings";
 import { Subscription } from "../platform/Subscription";
 import { Team } from "../platform/Team";
@@ -21,6 +22,9 @@ export const router = createBrowserRouter([
   { path: "/reset-password", Component: ResetPassword },
   { path: "/mfa", Component: Mfa },
   { path: "/invite/:token", Component: AcceptInvite },
+  { path: "/fake-checkout/:ref", Component: FakeCheckout },
+  { path: "/legal", Component: LegalDocuments },
+  { path: "/report-abuse", Component: ReportAbuse },
   ...modules.flatMap((m) => (m.publicRoutes ?? []).map((r) => ({ path: r.path, lazy: r.load }))),
   {
     Component: RequireSession,

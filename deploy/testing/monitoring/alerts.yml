@@ -1,0 +1,101 @@
+# Thresholds are starting points from docs/architecture/observability-and-reliability.md. Each
+# alert names the runbook to follow, under docs/operations/runbooks/.
+groups:
+  - name: availability
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations: {summary: "{{ $labels.job }} is not reachable", runbook: incident.md}
+      - alert: HighErrorRate
+        expr: sum(rate(msp_http_requests_total{code=~"5.."}[5m])) / clamp_min(sum(rate(msp_http_requests_total[5m])), 1e-9) > 0.02
+        for: 10m
+        labels: {severity: critical}
+        annotations: {summary: "More than 2% of API requests are failing", runbook: incident.md}
+      - alert: SlowAPI
+        expr: histogram_quantile(0.95, sum by (le) (rate(msp_http_request_duration_seconds_bucket{route!~".*(stream|export|pdf|chat|events|ws).*"}[5m]))) > 0.5
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "API p95 latency is above 500 ms", runbook: incident.md}
+      - alert: MetricsSourceFailing
+        expr: msp_metrics_source_up == 0
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "Metrics source {{ $labels.source }} cannot be read", runbook: incident.md}
+      - alert: DatabasePoolSaturated
+        expr: msp_db_pool_acquired_connections / msp_db_pool_max_connections > 0.9
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "{{ $labels.job }} {{ $labels.pool }} pool is over 90% in use", runbook: incident.md}
+
+  - name: background-work
+    rules:
+      - alert: JobBacklog
+        expr: max by (queue) (msp_jobs_oldest_seconds{status="queued"}) > 900
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "Jobs on {{ $labels.queue }} have waited over 15 minutes", runbook: incident.md}
+      - alert: OutboxStuck
+        expr: max(msp_outbox_oldest_unpublished_seconds) > 300
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Events have not been published for over 5 minutes", runbook: incident.md}
+      - alert: DeadLetters
+        expr: max(msp_dead_letters_unresolved) > 0
+        for: 30m
+        labels: {severity: warning}
+        annotations: {summary: "Failed jobs or events are waiting for a decision on the Jobs page", runbook: incident.md}
+
+  - name: backups
+    rules:
+      - alert: WALArchivingFailing
+        expr: increase(msp_pg_archive_failed_total[15m]) > 0
+        labels: {severity: critical}
+        annotations: {summary: "WAL archiving is failing; the recovery point is growing", runbook: restore.md}
+      - alert: WALArchivingStale
+        expr: max(msp_pg_archive_last_success_age_seconds) > 900 or max(msp_pg_archive_last_success_age_seconds) < 0
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "No WAL archived in 15 minutes, beyond the recovery point target", runbook: restore.md}
+      - alert: BackupStale
+        expr: time() - msp_backup_last_success_timestamp_seconds > 26 * 3600 or absent(msp_backup_last_success_timestamp_seconds)
+        for: 30m
+        labels: {severity: critical}
+        annotations: {summary: "No successful base backup in 26 hours", runbook: restore.md}
+      - alert: RestoreDrillOverdue
+        expr: time() - msp_restore_drill_last_success_timestamp_seconds > 35 * 86400 or absent(msp_restore_drill_last_success_timestamp_seconds)
+        for: 1h
+        labels: {severity: warning}
+        annotations: {summary: "No passing restore drill in 35 days", runbook: restore.md}
+      - alert: DiskFilling
+        expr: node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes < 0.15
+        for: 15m
+        labels: {severity: critical}
+        annotations: {summary: "Less than 15% disk space left", runbook: incident.md}
+
+  - name: billing-and-trust
+    rules:
+      - alert: PurchaseReviewOverdue
+        expr: max(msp_billing_review_oldest_seconds) > max(msp_billing_review_target_seconds)
+        labels: {severity: warning}
+        annotations: {summary: "A purchase has waited longer than the review target", runbook: payments.md}
+      - alert: RefundNotCompleted
+        expr: max(msp_billing_refunds_pending) > 0
+        for: 24h
+        labels: {severity: warning}
+        annotations: {summary: "A refund has been pending or failed for a day", runbook: payments.md}
+      - alert: ReconciliationDifferences
+        expr: max(msp_billing_reconciliation_open_issues) > 0
+        labels: {severity: warning}
+        annotations: {summary: "Reconciliation found differences with the payment provider", runbook: payments.md}
+      - alert: ReconciliationNotRunning
+        expr: max(msp_billing_reconciliation_age_seconds) > 2 * 86400
+        for: 1h
+        labels: {severity: warning}
+        annotations: {summary: "Payment reconciliation has not completed in two days", runbook: payments.md}
+      - alert: AbuseReportsWaiting
+        expr: max(msp_abuse_reports_open) > 0
+        for: 24h
+        labels: {severity: warning}
+        annotations: {summary: "Abuse reports have waited over a day", runbook: abuse.md}

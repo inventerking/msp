@@ -240,6 +240,202 @@ paths:
       responses:
         "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Subscription"}}}}
         default: {$ref: "#/components/responses/Problem"}
+  /billing/purchases:
+    get:
+      operationId: listPurchaseQueue
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin, platform_analyst]
+      parameters: [{name: status, in: query, required: false, schema: {type: string, maxLength: 32}}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminPurchaseList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/purchases/{id}/approve:
+    post:
+      operationId: approvePurchase
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Reason"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/SubscriptionRef"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/purchases/{id}/reject:
+    post:
+      operationId: rejectPurchase
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Reason"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/bank-transfers:
+    get:
+      operationId: listBankTransfers
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin, platform_analyst]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/BankTransferList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/payments/{id}/mark-paid:
+    post:
+      operationId: markPaymentPaid
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PaymentReference"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/refunds:
+    get:
+      operationId: listRefunds
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin, platform_analyst]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/RefundList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/payments/{id}/retry-refund:
+    post:
+      operationId: retryRefund
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/payments/{id}/mark-refunded:
+    post:
+      operationId: markRefunded
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Note"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/dunning-policy:
+    get:
+      operationId: getDunningPolicy
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin, platform_analyst]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/DunningPolicy"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    put:
+      operationId: putDunningPolicy
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/DunningPolicy"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/DunningPolicy"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/bank-instructions:
+    get:
+      operationId: getBankInstructions
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin, platform_analyst]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/BankInstructions"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    put:
+      operationId: putBankInstructions
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/BankInstructions"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/BankInstructions"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/reconciliation:
+    get:
+      operationId: getReconciliation
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin, platform_analyst]
+      parameters: [{name: status, in: query, required: false, schema: {type: string, maxLength: 32}}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Reconciliation"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/reconciliation/run:
+    post:
+      operationId: runReconciliation
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/Reconciliation"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /billing/reconciliation/issues/{id}/resolve:
+    post:
+      operationId: resolveReconciliationIssue
+      x-access: admin
+      x-admin-roles: [super_admin, billing_admin]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Note"}}}}
+      responses:
+        "204": {description: Done}
+        default: {$ref: "#/components/responses/Problem"}
+  /legal/documents:
+    get:
+      operationId: listAdminLegalDocuments
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminLegalDocumentList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    post:
+      operationId: createLegalDraft
+      x-access: admin
+      x-admin-roles: [super_admin]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/LegalDraft"}}}}
+      responses:
+        "201": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminLegalDocument"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /legal/documents/{id}:
+    get:
+      operationId: getAdminLegalDocument
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminLegalDocument"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+    patch:
+      operationId: updateLegalDraft
+      x-access: admin
+      x-admin-roles: [super_admin]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/LegalDraft"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminLegalDocument"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /legal/documents/{id}/publish:
+    post:
+      operationId: publishLegalDocument
+      x-access: admin
+      x-admin-roles: [super_admin]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/PublishLegal"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AdminLegalDocument"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /abuse-reports:
+    get:
+      operationId: listAbuseReports
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      parameters: [{name: status, in: query, required: false, schema: {type: string, maxLength: 32}}]
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AbuseReportList"}}}}
+        default: {$ref: "#/components/responses/Problem"}
+  /abuse-reports/{id}:
+    patch:
+      operationId: reviewAbuseReport
+      x-access: admin
+      x-admin-roles: [super_admin, platform_support]
+      parameters: [{$ref: "#/components/parameters/Id"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AbuseReview"}}}}
+      responses:
+        "200": {description: OK, content: {application/json: {schema: {$ref: "#/components/schemas/AbuseReport"}}}}
+        default: {$ref: "#/components/responses/Problem"}
   /subscriptions/{id}/activate:
     post:
       operationId: activateSubscription
@@ -735,6 +931,195 @@ components:
       required: [data]
       properties:
         data: {type: array, items: {$ref: "#/components/schemas/TenantUser"}}
+    SubscriptionRef:
+      type: object
+      required: [subscription_id]
+      properties:
+        subscription_id: {type: string, format: uuid}
+    AdminPurchase:
+      type: object
+      required: [id, tenant_id, tenant_name, plan_name, status, quantity, quote, waiting_hours, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid}
+        tenant_name: {type: string}
+        plan_name: {type: string}
+        status: {type: string}
+        quantity: {type: integer}
+        quote: {type: object, additionalProperties: true}
+        payment_method: {type: string}
+        invoice_id: {type: string, format: uuid}
+        rejection_reason: {type: string}
+        waiting_hours: {type: number, format: double}
+        over_target: {type: boolean}
+        created_at: {type: string, format: date-time}
+        submitted_at: {type: string, format: date-time}
+        reviewed_at: {type: string, format: date-time}
+    AdminPurchaseList:
+      type: object
+      required: [data, review_target_hours]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/AdminPurchase"}}
+        review_target_hours: {type: integer}
+    BankTransfer:
+      type: object
+      required: [payment_id, tenant_id, tenant_name, amount_minor, currency, purpose, created_at]
+      properties:
+        payment_id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid}
+        tenant_name: {type: string}
+        invoice_id: {type: string, format: uuid}
+        invoice_number: {type: string}
+        amount_minor: {type: integer, format: int64}
+        currency: {type: string}
+        purpose: {type: string}
+        created_at: {type: string, format: date-time}
+    BankTransferList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/BankTransfer"}}
+    PaymentReference:
+      type: object
+      required: [reference]
+      additionalProperties: false
+      properties:
+        reference: {type: string, minLength: 1, maxLength: 200}
+    Refund:
+      type: object
+      required: [payment_id, tenant_id, tenant_name, amount_minor, currency, method, refund_status, created_at]
+      properties:
+        payment_id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid}
+        tenant_name: {type: string}
+        amount_minor: {type: integer, format: int64}
+        currency: {type: string}
+        method: {type: string}
+        refund_status: {type: string}
+        created_at: {type: string, format: date-time}
+    RefundList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/Refund"}}
+    Note:
+      type: object
+      required: [note]
+      additionalProperties: false
+      properties:
+        note: {type: string, minLength: 1, maxLength: 1000}
+    DunningPolicy:
+      type: object
+      required: [retry_days, suspend_after_days, expire_after_days, bank_transfer_due_days, review_target_hours]
+      additionalProperties: false
+      properties:
+        retry_days: {type: array, maxItems: 10, items: {type: integer, minimum: 1, maximum: 365}}
+        suspend_after_days: {type: integer, minimum: 1, maximum: 365}
+        expire_after_days: {type: integer, minimum: 2, maximum: 365}
+        bank_transfer_due_days: {type: integer, minimum: 1, maximum: 90}
+        review_target_hours: {type: integer, minimum: 1, maximum: 720}
+    BankInstructions:
+      type: object
+      required: [text]
+      additionalProperties: false
+      properties:
+        text: {type: string, maxLength: 2000, description: "Shown to tenants paying by bank transfer, with the invoice number as the reference"}
+    ReconciliationRun:
+      type: object
+      required: [id, provider, window_start, window_end, checked, issues, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        provider: {type: string}
+        window_start: {type: string, format: date-time}
+        window_end: {type: string, format: date-time}
+        checked: {type: integer}
+        issues: {type: integer}
+        status: {type: string}
+        error: {type: string}
+        created_at: {type: string, format: date-time}
+    ReconciliationIssue:
+      type: object
+      required: [id, run_id, provider, provider_ref, kind, detail, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        run_id: {type: string, format: uuid}
+        provider: {type: string}
+        provider_ref: {type: string}
+        payment_id: {type: string, format: uuid}
+        kind: {type: string}
+        detail: {type: object, additionalProperties: true}
+        status: {type: string}
+        note: {type: string}
+        resolved_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    Reconciliation:
+      type: object
+      required: [runs, issues]
+      properties:
+        runs: {type: array, items: {$ref: "#/components/schemas/ReconciliationRun"}}
+        issues: {type: array, items: {$ref: "#/components/schemas/ReconciliationIssue"}}
+    AdminLegalDocument:
+      type: object
+      required: [id, kind, version, title, status, requires_acceptance, counsel_reviewed, accepted_count, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string}
+        version: {type: integer}
+        title: {type: string}
+        body: {type: string}
+        status: {type: string, enum: [draft, published, retired]}
+        requires_acceptance: {type: boolean}
+        counsel_reviewed: {type: boolean}
+        accepted_count: {type: integer}
+        published_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    AdminLegalDocumentList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/AdminLegalDocument"}}
+    LegalDraft:
+      type: object
+      required: [kind, title, body, requires_acceptance]
+      additionalProperties: false
+      properties:
+        kind: {type: string, enum: [terms, privacy, dpa, acceptable_use, subprocessors]}
+        title: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, minLength: 1, maxLength: 200000}
+        requires_acceptance: {type: boolean}
+    PublishLegal:
+      type: object
+      required: [counsel_reviewed]
+      additionalProperties: false
+      properties:
+        counsel_reviewed: {type: boolean, description: "Whether counsel reviewed this text, as you know it"}
+    AbuseReport:
+      type: object
+      required: [id, category, details, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        category: {type: string}
+        subject_url: {type: string}
+        details: {type: string}
+        reporter_email: {type: string}
+        target_tenant_id: {type: string, format: uuid}
+        status: {type: string, enum: [new, reviewing, actioned, dismissed]}
+        decision: {type: string}
+        reviewed_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    AbuseReportList:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: "#/components/schemas/AbuseReport"}}
+    AbuseReview:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status: {type: string, enum: [reviewing, actioned, dismissed]}
+        decision: {type: string, maxLength: 2000}
+        target_tenant_id: {type: string, format: uuid}
     Reason:
       type: object
       required: [reason]
@@ -780,6 +1165,11 @@ components:
         name: {type: string, minLength: 2, maxLength: 120}
         billing_period: {type: string, enum: [monthly, annual, custom]}
         trial_days: {type: integer, minimum: 0, maximum: 365}
+        seats: {type: integer, minimum: 1, maximum: 100000, description: "Members allowed per unit bought. Omit for no limit"}
+        included_credits:
+          type: object
+          description: "Credits granted each paid period, by meter, such as ai_credits"
+          additionalProperties: {type: integer, minimum: 0, maximum: 10000000}
     Price:
       type: object
       required: [id, currency, amount_minor, valid_from]

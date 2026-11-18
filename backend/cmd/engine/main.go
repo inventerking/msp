@@ -159,8 +159,10 @@ func runAPI(ctx context.Context, c config.Config) error {
 	if err != nil {
 		return err
 	}
+	reg := g.APIMetrics()
+	reg.Serve(ctx, c.MetricsAddr)
 	handler, err := api.New(api.Deps{Config: c, Identity: g.Identity, Commercial: g.Commercial, Keys: g.Keys, Limiter: ratelimit.New(rdb), Hub: g.Hub, DB: pools.App, Redis: rdb,
-		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops, Modules: g.Modules, OutreachPolicy: g.Outreach})
+		Shared: g.Shared, Files: g.Files, Notify: g.Notify, Integrate: g.Integration, AI: g.AI, Pools: pools, Ops: g.Ops, Modules: g.Modules, OutreachPolicy: g.Outreach, Trust: g.Trust, FakeCheckout: g.FakeCheckout(), Metrics: reg})
 	if err != nil {
 		return err
 	}
@@ -197,6 +199,7 @@ func runWorker(ctx context.Context, c config.Config) error {
 	if err := g.EnsureSchedules(ctx); err != nil {
 		return err
 	}
+	g.WorkerMetrics().Serve(ctx, c.MetricsAddr)
 	runner, bus := g.Worker(app.WorkerID())
 	done := make(chan struct{})
 	go func() {

@@ -48,16 +48,16 @@ Status: planning, pending approval. Module-specific criteria are section 22 of e
 - [ ] All module acceptance criteria met
 - [ ] End-to-end two-tenant scenario passes
 - [ ] No open critical or high security findings
-- [ ] Independent penetration test complete, with findings resolved or formally accepted
-- [ ] Legal review complete for terms, privacy, DPA, outreach rules, tracking, and assessment authorization
-- [ ] Load tests meet targets, or targets are formally revised
-- [ ] CRM p95 unaffected, within target, at peak visitor load
-- [ ] Backup restore drill passed and timed
-- [ ] Monitoring, alerts and on-call in place
-- [ ] Incident and data-breach runbooks written
+- [ ] Independent penetration test complete, with findings resolved or formally accepted. *Scope written: [penetration-test-scope](../security/penetration-test-scope.md)*
+- [ ] Legal review complete for terms, privacy, DPA, outreach rules, tracking, and assessment authorization. *Questions collected in the [legal review pack](../legal/review-pack.md)*
+- [ ] Load tests meet targets, or targets are formally revised. *2026-11-18: CRM met; ingest not met, see [load-testing](../operations/load-testing.md)*
+- [ ] CRM p95 unaffected, within target, at peak visitor load. *Not met: needs the separate ingest path*
+- [x] Backup restore drill passed and timed. *Testing setup, 2026-11-18: 19 seconds; repeat on the testing server and in production*
+- [ ] Monitoring, alerts and on-call in place. *Monitoring and alerts built for the testing server; no on-call rota or real alert receiver yet*
+- [x] Incident and data-breach runbooks written. *[runbooks](../operations/README.md)*
 - [ ] Open decisions needed by launch closed
-- [ ] Abuse process in place: reporting, review, and suspension
-- [ ] Sub-processor list and provider data terms confirmed
+- [x] Abuse process in place: reporting, review, and suspension
+- [ ] Sub-processor list and provider data terms confirmed. *No providers chosen yet (D-05)*
 
 ## Definition of done per feature
 

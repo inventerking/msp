@@ -356,6 +356,294 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/billing/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPurchaseQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/purchases/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approvePurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/purchases/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectPurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/bank-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBankTransfers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/payments/{id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markPaymentPaid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listRefunds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/payments/{id}/retry-refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/payments/{id}/mark-refunded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markRefunded"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/dunning-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDunningPolicy"];
+        put: operations["putDunningPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/bank-instructions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBankInstructions"];
+        put: operations["putBankInstructions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReconciliation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/reconciliation/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["runReconciliation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/reconciliation/issues/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resolveReconciliationIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminLegalDocuments"];
+        put?: never;
+        post: operations["createLegalDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminLegalDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateLegalDraft"];
+        trace?: never;
+    };
+    "/legal/documents/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["publishLegalDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/abuse-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAbuseReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/abuse-reports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["reviewAbuseReport"];
+        trace?: never;
+    };
     "/subscriptions/{id}/activate": {
         parameters: {
             query?: never;
@@ -920,6 +1208,190 @@ export interface components {
         TenantUserList: {
             data: components["schemas"]["TenantUser"][];
         };
+        SubscriptionRef: {
+            /** Format: uuid */
+            subscription_id: string;
+        };
+        AdminPurchase: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            tenant_name: string;
+            plan_name: string;
+            status: string;
+            quantity: number;
+            quote: {
+                [key: string]: unknown;
+            };
+            payment_method?: string;
+            /** Format: uuid */
+            invoice_id?: string;
+            rejection_reason?: string;
+            /** Format: double */
+            waiting_hours: number;
+            over_target?: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            submitted_at?: string;
+            /** Format: date-time */
+            reviewed_at?: string;
+        };
+        AdminPurchaseList: {
+            data: components["schemas"]["AdminPurchase"][];
+            review_target_hours: number;
+        };
+        BankTransfer: {
+            /** Format: uuid */
+            payment_id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            tenant_name: string;
+            /** Format: uuid */
+            invoice_id?: string;
+            invoice_number?: string;
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
+            purpose: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        BankTransferList: {
+            data: components["schemas"]["BankTransfer"][];
+        };
+        PaymentReference: {
+            reference: string;
+        };
+        Refund: {
+            /** Format: uuid */
+            payment_id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            tenant_name: string;
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
+            method: string;
+            refund_status: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        RefundList: {
+            data: components["schemas"]["Refund"][];
+        };
+        Note: {
+            note: string;
+        };
+        DunningPolicy: {
+            retry_days: number[];
+            suspend_after_days: number;
+            expire_after_days: number;
+            bank_transfer_due_days: number;
+            review_target_hours: number;
+        };
+        BankInstructions: {
+            /** @description Shown to tenants paying by bank transfer, with the invoice number as the reference */
+            text: string;
+        };
+        ReconciliationRun: {
+            /** Format: uuid */
+            id: string;
+            provider: string;
+            /** Format: date-time */
+            window_start: string;
+            /** Format: date-time */
+            window_end: string;
+            checked: number;
+            issues: number;
+            status: string;
+            error?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ReconciliationIssue: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            run_id: string;
+            provider: string;
+            provider_ref: string;
+            /** Format: uuid */
+            payment_id?: string;
+            kind: string;
+            detail: {
+                [key: string]: unknown;
+            };
+            status: string;
+            note?: string;
+            /** Format: date-time */
+            resolved_at?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        Reconciliation: {
+            runs: components["schemas"]["ReconciliationRun"][];
+            issues: components["schemas"]["ReconciliationIssue"][];
+        };
+        AdminLegalDocument: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            version: number;
+            title: string;
+            body?: string;
+            /** @enum {string} */
+            status: "draft" | "published" | "retired";
+            requires_acceptance: boolean;
+            counsel_reviewed: boolean;
+            accepted_count: number;
+            /** Format: date-time */
+            published_at?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AdminLegalDocumentList: {
+            data: components["schemas"]["AdminLegalDocument"][];
+        };
+        LegalDraft: {
+            /** @enum {string} */
+            kind: "terms" | "privacy" | "dpa" | "acceptable_use" | "subprocessors";
+            title: string;
+            body: string;
+            requires_acceptance: boolean;
+        };
+        PublishLegal: {
+            /** @description Whether counsel reviewed this text, as you know it */
+            counsel_reviewed: boolean;
+        };
+        AbuseReport: {
+            /** Format: uuid */
+            id: string;
+            category: string;
+            subject_url?: string;
+            details: string;
+            reporter_email?: string;
+            /** Format: uuid */
+            target_tenant_id?: string;
+            /** @enum {string} */
+            status: "new" | "reviewing" | "actioned" | "dismissed";
+            decision?: string;
+            /** Format: date-time */
+            reviewed_at?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AbuseReportList: {
+            data: components["schemas"]["AbuseReport"][];
+        };
+        AbuseReview: {
+            /** @enum {string} */
+            status: "reviewing" | "actioned" | "dismissed";
+            decision?: string;
+            /** Format: uuid */
+            target_tenant_id?: string;
+        };
         Reason: {
             reason: string;
         };
@@ -957,6 +1429,12 @@ export interface components {
             /** @enum {string} */
             billing_period: "monthly" | "annual" | "custom";
             trial_days: number;
+            /** @description Members allowed per unit bought. Omit for no limit */
+            seats?: number;
+            /** @description Credits granted each paid period, by meter, such as ai_credits */
+            included_credits?: {
+                [key: string]: number;
+            };
         };
         Price: {
             /** Format: uuid */
@@ -1756,6 +2234,528 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Subscription"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listPurchaseQueue: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPurchaseList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    approvePurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reason"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionRef"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    rejectPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reason"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listBankTransfers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankTransferList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    markPaymentPaid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentReference"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listRefunds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    retryRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    markRefunded: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Note"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDunningPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DunningPolicy"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    putDunningPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DunningPolicy"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DunningPolicy"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getBankInstructions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankInstructions"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    putBankInstructions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankInstructions"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankInstructions"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getReconciliation: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reconciliation"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    runReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reconciliation"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    resolveReconciliationIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Note"];
+            };
+        };
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAdminLegalDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalDocumentList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createLegalDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalDraft"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalDocument"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAdminLegalDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalDocument"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateLegalDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalDraft"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalDocument"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    publishLegalDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishLegal"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLegalDocument"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAbuseReports: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbuseReportList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    reviewAbuseReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AbuseReview"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbuseReport"];
                 };
             };
             default: components["responses"]["Problem"];
