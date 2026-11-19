@@ -28,6 +28,7 @@ services:
       - "traefik.http.routers.msp_admin.service=msp_admin"
       - "traefik.http.services.msp_admin.loadbalancer.server.port=8080"
   mailpit:
+    ports: !reset []
     networks: [internal, mail_ui,traefik_network]
     labels:
       - "traefik.enable=true"
