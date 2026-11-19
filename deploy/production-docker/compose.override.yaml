@@ -1,0 +1,33 @@
+# Connects the two web apps to the Traefik already running on this server. Docker Compose reads
+# this file automatically with compose.yaml. Traefik provides HTTPS, certificates and the
+# http-to-https redirect; the web containers pass API requests on to the backend.
+# The hostnames come from APP_HOST and ADMIN_HOST in .env.
+
+services:
+  client:
+    networks: [internal, traefik_network]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.routers.msp_client.rule=Host(`${APP_HOST}`)"
+      - "traefik.http.routers.msp_client.entrypoints=websecure"
+      - "traefik.http.routers.msp_client.tls=true"
+      - "traefik.http.routers.msp_client.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.msp_client.service=msp_client"
+      - "traefik.http.services.msp_client.loadbalancer.server.port=8080"
+
+  admin:
+    networks: [internal, traefik_network]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.routers.msp_admin.rule=Host(`${ADMIN_HOST}`)"
+      - "traefik.http.routers.msp_admin.entrypoints=websecure"
+      - "traefik.http.routers.msp_admin.tls=true"
+      - "traefik.http.routers.msp_admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.msp_admin.service=msp_admin"
+      - "traefik.http.services.msp_admin.loadbalancer.server.port=8080"
+
+networks:
+  traefik_network:
+    external: true

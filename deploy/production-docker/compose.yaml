@@ -1,0 +1,263 @@
+# The whole app on one server. In this folder:
+#   ./init-env.sh          once: fills .env with generated secrets (it never changes existing values)
+#   docker compose up -d   builds, migrates and starts everything
+# compose.override.yaml is read automatically and connects the two web apps to the server's
+# existing Traefik, which provides HTTPS. Nothing in this file publishes a public port.
+#
+# Until the legal review is done (see docs/implementation/open-decisions.md): synthetic data only.
+# APP_ENV is "testing" on purpose: email goes to Mailpit, which cannot reach real inboxes, and
+# all external providers are fakes. The backend refuses fakes under any other non-local APP_ENV.
+name: msp-production
+
+x-logging: &logging
+  driver: json-file
+  options: {max-size: 20m, max-file: "5"}
+
+x-hardening: &hardening
+  restart: unless-stopped
+  logging: *logging
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  read_only: true
+
+x-backend-env: &backend-env
+  APP_ENV: testing
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: msp_engine
+  DB_APP_PASSWORD: ${DB_APP_PASSWORD:?run ./init-env.sh first}
+  DB_PLATFORM_PASSWORD: ${DB_PLATFORM_PASSWORD:?run ./init-env.sh first}
+  DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD:?run ./init-env.sh first}
+  REDIS_ADDR: redis:6379
+  SMTP_ADDR: mailpit:1025
+  MAIL_FROM: no-reply@${APP_HOST}
+  APP_BASE_URL: https://${APP_HOST:?set APP_HOST in .env}
+  ALLOWED_ORIGINS: https://${APP_HOST},https://${ADMIN_HOST:?set ADMIN_HOST in .env}
+  # nginx in the web containers is the only way in. It passes the visitor's address, which it
+  # takes from Traefik's X-Forwarded-For.
+  TRUST_FORWARDED: "true"
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?run ./init-env.sh first}
+  # During a key rotation: the new key's ID, and the old keys as id:base64 pairs (see the runbook).
+  ENCRYPTION_KEY_ID: ${ENCRYPTION_KEY_ID:-env-1}
+  ENCRYPTION_KEYS_PREVIOUS: ${ENCRYPTION_KEYS_PREVIOUS:-}
+  HMAC_KEY: ${HMAC_KEY:?run ./init-env.sh first}
+  S3_ENDPOINT: http://seaweedfs:8333
+  S3_BUCKET: msp-files
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?run ./init-env.sh first}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?run ./init-env.sh first}
+  GOTENBERG_URL: http://gotenberg:3000
+  FILE_SCANNER: clamav
+  CLAMAV_ADDR: clamav:3310
+  RESEARCH_FETCHER: fake
+  ASSESSMENT_PROBE: fake
+  SENDING_DOMAIN_CHECK: fake
+
+services:
+  # Brings the database up to date, then exits. The API and worker wait for it.
+  migrate:
+    image: msp-engine-backend:production
+    build: {context: ../.., dockerfile: deploy/docker/backend.Dockerfile}
+    command: [migrate]
+    environment:
+      APP_ENV: testing
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: msp_engine
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?run ./init-env.sh first}
+    networks: [internal]
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+    logging: *logging
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+
+  api:
+    <<: *hardening
+    image: msp-engine-backend:production
+    command: [api]
+    environment:
+      <<: *backend-env
+      HTTP_ADDR: 0.0.0.0:8088
+    # nginx uses the alias: the web containers also sit on the shared Traefik network, where
+    # another stack may have a container called "api".
+    networks:
+      internal: {aliases: [msp-api]}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      seaweedfs: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "/engine", "healthcheck"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  # Serves only the visitor tracker endpoint, with its own small database pool, so tracking
+  # traffic cannot use up the API's connections. nginx-client.conf sends /api/v1/public/collect here.
+  ingest:
+    <<: *hardening
+    image: msp-engine-backend:production
+    command: [ingest]
+    environment:
+      <<: *backend-env
+      HTTP_ADDR: 0.0.0.0:8089
+      INGEST_DB_CONNS: "10"
+    networks:
+      internal: {aliases: [msp-ingest]}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "/engine", "healthcheck"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  worker:
+    <<: *hardening
+    image: msp-engine-backend:production
+    command: [worker]
+    environment: *backend-env
+    networks: [internal]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      seaweedfs: {condition: service_started}
+
+  # Serves the built client app and passes /api/ to the API, except admin routes.
+  client:
+    <<: *hardening
+    image: msp-engine-client:production
+    build: {context: ../.., dockerfile: deploy/docker/web.Dockerfile, args: {APP: client}}
+    volumes: ["./nginx-client.conf:/etc/nginx/conf.d/default.conf:ro"]
+    tmpfs: [/tmp]
+    networks: [internal]
+    depends_on:
+      api: {condition: service_healthy}
+      ingest: {condition: service_healthy}
+
+  # Serves the built admin app and passes only /api/v1/admin/ to the API.
+  admin:
+    <<: *hardening
+    image: msp-engine-admin:production
+    build: {context: ../.., dockerfile: deploy/docker/web.Dockerfile, args: {APP: admin}}
+    volumes: ["./nginx-admin.conf:/etc/nginx/conf.d/default.conf:ro"]
+    tmpfs: [/tmp]
+    networks: [internal]
+    depends_on:
+      api: {condition: service_healthy}
+
+  # PostgreSQL with pgvector and pgBackRest. The change log (WAL) is archived continuously and
+  # encrypted into the pgbackups volume; ./backup.sh takes the daily base backup.
+  postgres:
+    image: msp-engine-postgres:production
+    build: {context: ../.., dockerfile: deploy/docker/postgres.Dockerfile}
+    restart: unless-stopped
+    logging: *logging
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=pgbackrest archive-push %p
+      - -c
+      - archive_timeout=60
+    environment:
+      PGBACKREST_STANZA: msp
+      PGBACKREST_PG1_PATH: /var/lib/postgresql/18/docker
+      PGBACKREST_REPO1_PATH: /backups
+      PGBACKREST_REPO1_CIPHER_TYPE: aes-256-cbc
+      PGBACKREST_REPO1_CIPHER_PASS: ${BACKUP_CIPHER_PASS:?run ./init-env.sh first}
+      PGBACKREST_REPO1_RETENTION_FULL: "7"
+      PGBACKREST_COMPRESS_TYPE: zst
+      PGBACKREST_START_FAST: "y"
+      PGBACKREST_ARCHIVE_ASYNC: "n"
+      PGBACKREST_LOG_LEVEL_FILE: "off"
+      PGBACKREST_LOG_LEVEL_CONSOLE: warn
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./init-env.sh first}
+      # Read once, when the database volume is first created, to create the four users.
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      DB_PLATFORM_PASSWORD: ${DB_PLATFORM_PASSWORD}
+      DB_SYSTEM_PASSWORD: ${DB_SYSTEM_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - pgbackups:/backups
+      - ../testing/postgres/00-roles.sh:/docker-entrypoint-initdb.d/00-roles.sh:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d msp_engine"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:8.8-alpine
+    restart: unless-stopped
+    logging: *logging
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # File storage. Its access key comes from .env; the config file is written at start.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.52
+    restart: unless-stopped
+    logging: *logging
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        printf '{"identities":[{"name":"msp-engine","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}'
+        "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" > /tmp/s3.json &&
+        exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json -master.volumeSizeLimitMB=256 -ip.bind=0.0.0.0
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - seaweed:/data
+    networks: [internal]
+
+  # No route out, and it refuses every URL except its own temporary files and inline images.
+  gotenberg:
+    image: gotenberg/gotenberg:9.2
+    restart: unless-stopped
+    logging: *logging
+    command: ["gotenberg", "--chromium-deny-list=^(?!(file:///tmp/|data:)).*", "--chromium-disable-javascript=true", "--api-port=3000"]
+    networks: [internal]
+
+  # Scans every upload. Without it, uploads stay blocked rather than being passed unscanned.
+  # It needs internet access to update its signatures, so it has its own network with a route out.
+  clamav:
+    image: clamav/clamav:1.5
+    restart: unless-stopped
+    logging: *logging
+    networks: [internal, clamav_updates]
+
+  # The email sink: every email ends here, never in a real inbox. Its page is on the server's
+  # loopback only. Reach it with: ssh -L 58025:127.0.0.1:58025 your-server
+  mailpit:
+    image: axllent/mailpit:v1.33
+    restart: unless-stopped
+    logging: *logging
+    ports: ["127.0.0.1:${MAILPIT_PORT:-58025}:8025"]
+    networks: [internal, mail_ui]
+
+networks:
+  # No route to the internet, so the database and backend cannot reach or be reached from outside.
+  internal: {internal: true}
+  mail_ui:
+  clamav_updates:
+
+volumes:
+  pgdata:
+  # Keep a copy off this server too: a backup on the same disk does not survive losing the disk.
+  pgbackups:
+  seaweed:
