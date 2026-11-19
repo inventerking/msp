@@ -27,6 +27,17 @@ services:
       - "traefik.http.routers.msp_admin.tls.certresolver=letsencrypt"
       - "traefik.http.routers.msp_admin.service=msp_admin"
       - "traefik.http.services.msp_admin.loadbalancer.server.port=8080"
+  mailpit:
+    networks: [internal, mail_ui,traefik_network]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.routers.msp_admin.rule=Host(`mailpit.hiksoda.com`)"
+      - "traefik.http.routers.msp_admin.entrypoints=websecure"
+      - "traefik.http.routers.msp_admin.tls=true"
+      - "traefik.http.routers.msp_admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.msp_admin.service=msp_admin"
+      - "traefik.http.services.msp_admin.loadbalancer.server.port=8025"
 
 networks:
   traefik_network:
